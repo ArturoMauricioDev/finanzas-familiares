@@ -4,6 +4,12 @@
     "slug": "finanzas-familiares",
     "version": "1.0.0",
     "scheme": "finanzasfamiliares",
-    "plugins": ["expo-router"]
+    "plugins": ["expo-router"],
+    "android": {
+      "package": "com.finanzasfamiliares.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.finanzasfamiliares.app"
+    }
   }
 }

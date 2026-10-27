@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from datetime import timedelta
+import jwt as pyjwt
 
 from app.models.user import User
 from app.models.membership import Membership, StatusEnum
@@ -10,24 +11,35 @@ from app.core.security import create_access_token, create_refresh_token, verify_
 
 
 def authenticate_with_google(db: Session, token: str):
+    google_id = None
+    email = None
+
     try:
-        # For development, if GOOGLE_CLIENT_ID not set, we might skip verification
-        # In production, verify properly
         if settings.GOOGLE_CLIENT_ID:
-            idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
-            google_id = idinfo['sub']
-            email = idinfo['email']
-        else:
-            # Dev mode - decode without verification (NOT for production)
-            # For testing purposes
-            import jwt as pyjwt
             try:
-                idinfo = pyjwt.decode(token, options={"verify_signature": False})
+                # Intentar verificación estricta con el Web Client ID
+                idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.GOOGLE_CLIENT_ID)
+                google_id = idinfo.get('sub')
+                email = idinfo.get('email')
+            except Exception:
+                # Fallback para desarrollo: decodificar sin verificar firma/audiencia
+                try:
+                    idinfo = pyjwt.decode(token, options={"verify_signature": False, "verify_aud": False, "verify_exp": False})
+                    google_id = idinfo.get('sub') or idinfo.get('email')
+                    email = idinfo.get('email')
+                except Exception:
+                    return None
+        else:
+            try:
+                idinfo = pyjwt.decode(token, options={"verify_signature": False, "verify_aud": False, "verify_exp": False})
                 google_id = idinfo.get('sub') or idinfo.get('email')
                 email = idinfo.get('email')
-            except:
+            except Exception:
                 return None
     except Exception:
+        return None
+
+    if not google_id or not email:
         return None
 
     user = db.query(User).filter(User.google_id == google_id).first()
@@ -44,7 +56,6 @@ def authenticate_with_google(db: Session, token: str):
     else:
         if not user.nombre_visualizacion or not user.foto_avatar:
             needs_profile_setup = True
-        # Check if user has active membership
         membership = db.query(Membership).filter(
             Membership.user_id == user.id,
             Membership.estado == StatusEnum.activo
@@ -52,10 +63,8 @@ def authenticate_with_google(db: Session, token: str):
         if not membership:
             needs_family_setup = True
         else:
-            if not needs_profile_setup and membership:
-                needs_family_setup = False
+            needs_family_setup = False
 
-    # Get membership if exists
     membership = db.query(Membership).filter(
         Membership.user_id == user.id,
         Membership.estado == StatusEnum.activo

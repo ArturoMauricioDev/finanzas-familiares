@@ -1,3 +1,6 @@
+import os
+from app.models import user, family, membership, invitation
+from app.db.base import Base
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -9,11 +12,15 @@ import sys
 from os.path import abspath, dirname
 sys.path.insert(0, dirname(dirname(abspath(__file__))))
 
-from app.db.base import Base
-from app.models import user, family, membership, invitation
 
 # this is the Alembic Config object
 config = context.config
+
+
+config = context.config
+database_url = os.getenv("DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
