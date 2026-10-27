@@ -23,13 +23,13 @@
 
 **Purpose**: Project initialization and basic structure per constitution
 
-- [ ] T001 Create project structure per implementation plan (backend/, frontend-web/, frontend-mobile/, docker-compose.yml)
-- [ ] T002 Initialize backend with FastAPI dependencies (pyproject.toml/requirements.txt) in backend/
-- [ ] T003 [P] Initialize frontend-web with Next.js + TypeScript in frontend-web/
-- [ ] T004 [P] Initialize frontend-mobile with Expo + React Native + TypeScript in frontend-mobile/
-- [ ] T005 [P] Configure linting/formatting tools (black/ruff for backend, eslint/prettier for frontends)
-- [ ] T006 Create docker-compose.yml with backend, postgres services
-- [ ] T007 Setup environment configuration (.env.example) for all services
+- [x] T001 Create project structure per implementation plan (backend/, frontend-web/, frontend-mobile/, docker-compose.yml)
+- [x] T002 Initialize backend with FastAPI dependencies (pyproject.toml/requirements.txt) in backend/
+- [x] T003 [P] Initialize frontend-web with Next.js + TypeScript in frontend-web/
+- [x] T004 [P] Initialize frontend-mobile with Expo + React Native + TypeScript in frontend-mobile/
+- [x] T005 [P] Configure linting/formatting tools (black/ruff for backend, eslint/prettier for frontends)
+- [x] T006 Create docker-compose.yml with backend, postgres services
+- [x] T007 Setup environment configuration (.env.example) for all services
 
 ---
 
@@ -39,14 +39,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 Setup PostgreSQL connection and SQLAlchemy base in backend/app/db/
-- [ ] T009 Configure Alembic migrations framework in backend/alembic/
-- [ ] T010 [P] Implement core config (settings) in backend/app/core/config.py
-- [ ] T011 [P] Implement security utilities for JWT (create/verify tokens) in backend/app/core/security.py
-- [ ] T012 [P] Setup API routing structure with /api/v1 prefix in backend/app/api/
-- [ ] T013 [P] Implement error handling and HTTP exception handlers in backend/app/core/errors.py
-- [ ] T014 Create base dependencies (get_db, get_current_user) in backend/app/core/deps.py
-- [ ] T015 Setup CORS and middleware configuration in backend/app/main.py
+- [x] T008 Setup PostgreSQL connection and SQLAlchemy base in backend/app/db/
+- [x] T009 Configure Alembic migrations framework in backend/alembic/
+- [x] T010 [P] Implement core config (settings) in backend/app/core/config.py
+- [x] T011 [P] Implement security utilities for JWT (create/verify tokens) in backend/app/core/security.py
+- [x] T012 [P] Setup API routing structure with /api/v1 prefix in backend/app/api/
+- [x] T013 [P] Implement error handling and HTTP exception handlers in backend/app/core/errors.py
+- [x] T014 Create base dependencies (get_db, get_current_user) in backend/app/core/deps.py
+- [x] T015 Setup CORS and middleware configuration in backend/app/main.py
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -59,28 +59,28 @@
 **Independent Test**: Iniciar sesión con cuenta Google válida -> obtener JWT propio con claims; usuario nuevo -> crear cuenta.
 
 ### Models for User Story 1
-- [ ] T016 [P] [US1] Create User model (id, google_id, email, nombre_visualizacion, foto_avatar, fecha_creacion) in backend/app/models/user.py
-- [ ] T017 [P] [US1] Create base model/mixins if needed in backend/app/models/base.py
+- [x] T016 [P] [US1] Create User model (id, google_id, email, nombre_visualizacion, foto_avatar, fecha_creacion) in backend/app/models/user.py
+- [x] T017 [P] [US1] Create base model/mixins if needed in backend/app/models/base.py
 
 ### Migrations for User Story 1
-- [ ] T018 [US1] Generate Alembic migration for User model in backend/alembic/versions/
+- [x] T018 [US1] Generate Alembic migration for User model in backend/alembic/versions/
 
 ### Schemas for User Story 1
-- [ ] T019 [P] [US1] Create auth schemas (GoogleTokenRequest, TokenResponse, UserResponse) in backend/app/schemas/auth.py
-- [ ] T020 [P] [US1] Create user schemas in backend/app/schemas/user.py
+- [x] T019 [P] [US1] Create auth schemas (GoogleTokenRequest, TokenResponse, UserResponse) in backend/app/schemas/auth.py
+- [x] T020 [P] [US1] Create user schemas in backend/app/schemas/user.py
 
 ### Services for User Story 1
-- [ ] T021 [US1] Implement Google token verification service in backend/app/services/auth_service.py
-- [ ] T022 [US1] Implement user creation/retrieval logic in backend/app/services/user_service.py
+- [x] T021 [US1] Implement Google token verification service in backend/app/services/auth_service.py
+- [x] T022 [US1] Implement user creation/retrieval logic in backend/app/services/user_service.py
 
 ### API Endpoints for User Story 1
-- [ ] T023 [US1] Implement POST /auth/google endpoint in backend/app/api/v1/auth.py
-- [ ] T024 [US1] Implement POST /auth/refresh endpoint in backend/app/api/v1/auth.py
+- [x] T023 [US1] Implement POST /auth/google endpoint in backend/app/api/v1/auth.py
+- [x] T024 [US1] Implement POST /auth/refresh endpoint in backend/app/api/v1/auth.py
 
 ### Frontend for User Story 1
-- [ ] T025 [P] [US1] Setup Google Sign-In client config in frontend-web/lib/auth.ts
-- [ ] T026 [P] [US1] Setup Google Sign-In client config in frontend-mobile/lib/auth.ts
-- [ ] T027 [US1] Create auth pages/screens for Google login in frontend-web/app/auth/ and frontend-mobile/app/auth/
+- [x] T025 [P] [US1] Setup Google Sign-In client config in frontend-web/lib/auth.ts
+- [x] T026 [P] [US1] Setup Google Sign-In client config in frontend-mobile/lib/auth.ts
+- [x] T027 [US1] Create auth pages/screens for Google login in frontend-web/app/auth/ and frontend-mobile/app/auth/
 
 **Checkpoint**: User Story 1 functional - Google auth + JWT issuance working
 
@@ -93,13 +93,13 @@
 **Independent Test**: Usuario nuevo tras login Google -> forzado a configurar perfil -> guardar -> redirigir a flujo de grupo.
 
 ### Schemas for User Story 2
-- [ ] T028 [P] [US2] Create profile update schema in backend/app/schemas/user.py
+- [x] T028 [P] [US2] Create profile update schema in backend/app/schemas/user.py
 
 ### Services for User Story 2
-- [ ] T029 [US2] Implement profile setup service logic in backend/app/services/user_service.py
+- [x] T029 [US2] Implement profile setup service logic in backend/app/services/user_service.py
 
 ### API Endpoints for User Story 2
-- [ ] T030 [US2] Implement PUT /users/me/profile endpoint in backend/app/api/v1/users.py
+- [x] T030 [US2] Implement PUT /users/me/profile endpoint in backend/app/api/v1/users.py
 
 ### Frontend for User Story 2
 - [ ] T031 [US2] Create profile setup form/page in frontend-web/app/profile/setup/
@@ -131,22 +131,22 @@
 **Independent Test**: Usuario sin grupo crea grupo -> family creada, membership admin, tokens actualizados con family_id/role. Intento de crear segundo grupo -> 400.
 
 ### Models for User Story 4
-- [ ] T036 [P] [US4] Create Family model (id, nombre, moneda_local, creado_por, fecha_creacion) in backend/app/models/family.py
-- [ ] T037 [P] [US4] Create Membership model (id, user_id, family_id, role, parentesco, estado, fecha_union) in backend/app/models/membership.py
+- [x] T036 [P] [US4] Create Family model (id, nombre, moneda_local, creado_por, fecha_creacion) in backend/app/models/family.py
+- [x] T037 [P] [US4] Create Membership model (id, user_id, family_id, role, parentesco, estado, fecha_union) in backend/app/models/membership.py
 
 ### Migrations for User Story 4
-- [ ] T038 [US4] Generate Alembic migration for Family and Membership models in backend/alembic/versions/
+- [x] T038 [US4] Generate Alembic migration for Family and Membership models in backend/alembic/versions/
 
 ### Schemas for User Story 4
-- [ ] T039 [P] [US4] Create family schemas (CreateFamilyRequest, FamilyResponse) in backend/app/schemas/family.py
-- [ ] T040 [P] [US4] Create membership schemas in backend/app/schemas/membership.py
+- [x] T039 [P] [US4] Create family schemas (CreateFamilyRequest, FamilyResponse) in backend/app/schemas/family.py
+- [x] T040 [P] [US4] Create membership schemas in backend/app/schemas/membership.py
 
 ### Services for User Story 4
-- [ ] T041 [US4] Implement family creation service (validate no existing active membership, create family+membership admin) in backend/app/services/family_service.py
+- [x] T041 [US4] Implement family creation service (validate no existing active membership, create family+membership admin) in backend/app/services/family_service.py
 
 ### API Endpoints for User Story 4
-- [ ] T042 [US4] Implement POST /families endpoint in backend/app/api/v1/families.py
-- [ ] T043 [US4] Implement GET /families/me endpoint in backend/app/api/v1/families.py
+- [x] T042 [US4] Implement POST /families endpoint in backend/app/api/v1/families.py
+- [x] T043 [US4] Implement GET /families/me endpoint in backend/app/api/v1/families.py
 
 ### Frontend for User Story 4
 - [ ] T044 [US4] Create group creation form in frontend-web/app/family/create/
@@ -163,24 +163,24 @@
 **Independent Test**: Admin genera invitación -> otro usuario se une con role member; al llegar a 10 miembros, siguiente unión rechazada con 400; solo admin puede promover/expulsar/generar invitación.
 
 ### Models for User Story 5
-- [ ] T046 [P] [US5] Create Invitation model (id, family_id, token, generado_por, fecha_creacion, expira_en, usado) in backend/app/models/invitation.py
+- [x] T046 [P] [US5] Create Invitation model (id, family_id, token, generado_por, fecha_creacion, expira_en, usado) in backend/app/models/invitation.py
 
 ### Migrations for User Story 5
-- [ ] T047 [US5] Generate Alembic migration for Invitation model in backend/alembic/versions/
+- [x] T047 [US5] Generate Alembic migration for Invitation model in backend/alembic/versions/
 
 ### Schemas for User Story 5
-- [ ] T048 [P] [US5] Create invitation schemas in backend/app/schemas/invitation.py
+- [x] T048 [P] [US5] Create invitation schemas in backend/app/schemas/invitation.py
 
 ### Services for User Story 5
-- [ ] T049 [US5] Implement invitation generation service (admin only, token generation) in backend/app/services/invitation_service.py
-- [ ] T050 [US5] Implement join via invitation service (validate token, check member count < 10, create membership member, mark token used) in backend/app/services/invitation_service.py
-- [ ] T051 [US5] Implement member management service (promote to admin, deactivate membership - admin only) in backend/app/services/family_service.py
+- [x] T049 [US5] Implement invitation generation service (admin only, token generation) in backend/app/services/invitation_service.py
+- [x] T050 [US5] Implement join via invitation service (validate token, check member count < 10, create membership member, mark token used) in backend/app/services/invitation_service.py
+- [x] T051 [US5] Implement member management service (promote to admin, deactivate membership - admin only) in backend/app/services/family_service.py
 
 ### API Endpoints for User Story 5
-- [ ] T052 [US5] Implement POST /families/me/invitations (admin only) in backend/app/api/v1/invitations.py
-- [ ] T053 [US5] Implement POST /invitations/join in backend/app/api/v1/invitations.py
-- [ ] T054 [US5] Implement POST /families/me/members/:user_id/promote (admin only) in backend/app/api/v1/families.py
-- [ ] T055 [US5] Implement DELETE /families/me/members/:user_id (admin only) in backend/app/api/v1/families.py
+- [x] T052 [US5] Implement POST /families/me/invitations (admin only) in backend/app/api/v1/invitations.py
+- [x] T053 [US5] Implement POST /invitations/join in backend/app/api/v1/invitations.py
+- [x] T054 [US5] Implement POST /families/me/members/:user_id/promote (admin only) in backend/app/api/v1/families.py
+- [x] T055 [US5] Implement DELETE /families/me/members/:user_id (admin only) in backend/app/api/v1/families.py
 
 ### Frontend for User Story 5
 - [ ] T056 [US5] Create invite generation UI (admin only) in frontend-web/app/family/members/
@@ -196,12 +196,12 @@
 
 **Purpose**: Improvements affecting multiple user stories, security, validation
 
-- [ ] T060 [P] Add role-based authorization checks across protected endpoints (ensure admin/member enforced)
-- [ ] T061 [P] Add validation for "no second group" and member limit (10) in all relevant services
-- [ ] T062 [P] Ensure JWT claims include user_id, family_id, role; update tokens on profile/family changes
-- [ ] T063 [P] Add proper HTTP error codes (400, 401, 403) per contracts
-- [ ] T064 [P] Add input validation with Pydantic schemas
-- [ ] T065 [P] Security hardening (token expiry, secure token generation for invitations)
+- [x] T060 [P] Add role-based authorization checks across protected endpoints (ensure admin/member enforced)
+- [x] T061 [P] Add validation for "no second group" and member limit (10) in all relevant services
+- [x] T062 [P] Ensure JWT claims include user_id, family_id, role; update tokens on profile/family changes
+- [x] T063 [P] Add proper HTTP error codes (400, 401, 403) per contracts
+- [x] T064 [P] Add input validation with Pydantic schemas
+- [x] T065 [P] Security hardening (token expiry, secure token generation for invitations)
 - [ ] T066 Run quickstart.md validation scenarios
 - [ ] T067 [P] Update documentation/README with setup instructions
 

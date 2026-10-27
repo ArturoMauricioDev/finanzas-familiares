@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "finanzas-familiares",
+    "slug": "finanzas-familiares",
+    "version": "1.0.0",
+    "scheme": "finanzasfamiliares",
+    "plugins": ["expo-router"]
+  }
+}
