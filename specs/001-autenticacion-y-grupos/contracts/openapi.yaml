@@ -1,0 +1,220 @@
+# API Contracts: Autenticación, Registro y Gestión de Grupos Familiares
+
+Base path: `/api/v1`  
+Auth: Bearer JWT (propio) excepto endpoints de auth con Google.
+
+## Auth
+
+### POST /auth/google
+Intercambia ID token de Google por JWT propio.
+
+**Request**
+```json
+{
+  "id_token": "string"
+}
+```
+
+**Response 200**
+```json
+{
+  "access_token": "string",
+  "refresh_token": "string",
+  "token_type": "bearer",
+  "user": {
+    "id": "uuid",
+    "email": "string",
+    "nombre_visualizacion": "string|null",
+    "foto_avatar": "string|null",
+    "family_id": "uuid|null",
+    "role": "admin|member|null"
+  },
+  "needs_profile_setup": true|false,
+  "needs_family_setup": true|false
+}
+```
+
+**Errors**: 401 si token Google inválido.
+
+### POST /auth/refresh
+Renueva tokens.
+
+**Request**
+```json
+{
+  "refresh_token": "string"
+}
+```
+
+**Response 200**: mismo formato que /auth/google (tokens nuevos)
+
+**Errors**: 401 si refresh inválido/expirado.
+
+## Users / Profile
+
+### PUT /users/me/profile
+Configura perfil inicial (obligatorio si needs_profile_setup).
+
+**Auth**: required  
+**Request**
+```json
+{
+  "nombre_visualizacion": "string",
+  "foto_avatar": "string"
+}
+```
+
+**Response 200**
+```json
+{
+  "id": "uuid",
+  "nombre_visualizacion": "string",
+  "foto_avatar": "string",
+  "family_id": "uuid|null",
+  "role": "admin|member|null"
+}
+```
+
+**Errors**: 401 no auth.
+
+## Families
+
+### POST /families
+Crear grupo familiar (solo si usuario sin grupo activo).
+
+**Auth**: required (sin family_id o sin membership activo)  
+**Request**
+```json
+{
+  "nombre": "string",
+  "moneda_local": "string" // ISO 4217
+}
+```
+
+**Response 201**
+```json
+{
+  "family": {
+    "id": "uuid",
+    "nombre": "string",
+    "moneda_local": "string",
+    "creado_por": "uuid",
+    "fecha_creacion": "datetime"
+  },
+  "membership": {
+    "role": "admin",
+    "estado": "activo"
+  },
+  "tokens": { // nuevos tokens con family_id/role
+    "access_token": "string",
+    "refresh_token": "string",
+    "token_type": "bearer"
+  }
+}
+```
+
+**Errors**: 400 si ya pertenece a grupo activo (FR-007/edge case).
+
+### GET /families/me
+Obtener info del grupo del usuario autenticado.
+
+**Auth**: required + pertenece a grupo  
+**Response 200**
+```json
+{
+  "family": { "...": "..." },
+  "members": [
+    {
+      "user_id": "uuid",
+      "nombre_visualizacion": "string",
+      "foto_avatar": "string",
+      "role": "admin|member",
+      "parentesco": "string|null",
+      "estado": "activo"
+    }
+  ],
+  "member_count": 5
+}
+```
+
+**Errors**: 403 si sin grupo (redirigir a setup).
+
+## Invitations
+
+### POST /families/me/invitations
+Generar enlace de invitación (solo admin).
+
+**Auth**: required + role admin + pertenece a grupo  
+**Request**
+```json
+{
+  "expira_en_horas": 72 // opcional, default configurable
+}
+```
+
+**Response 201**
+```json
+{
+  "invitation_id": "uuid",
+  "token": "string",
+  "link": "string", // e.g. https://app/invite?token=...
+  "expira_en": "datetime"
+}
+```
+
+**Errors**: 403 si no es admin.
+
+### POST /invitations/join
+Unirse a grupo mediante token.
+
+**Auth**: required + sin grupo activo  
+**Request**
+```json
+{
+  "token": "string",
+  "parentesco": "string|null" // opcional al unirse
+}
+```
+
+**Response 200**
+```json
+{
+  "family_id": "uuid",
+  "role": "member",
+  "estado": "activo",
+  "tokens": { // nuevos tokens con claims actualizados
+    "access_token": "string",
+    "refresh_token": "string",
+    "token_type": "bearer"
+  }
+}
+```
+
+**Errors**: 400 si token inválido/expirado/usado (FR-006 edge), 400 si grupo ya tiene 10 miembros activos (FR-008), 400 si usuario ya tiene grupo (FR-007).
+
+## Members Management (Admin)
+
+### POST /families/me/members/:user_id/promote
+Promover miembro a admin (solo admin).
+
+**Auth**: required + role admin  
+**Response 200**: membership actualizado
+
+**Errors**: 403 si no admin.
+
+### DELETE /families/me/members/:user_id
+Expulsar/dar de baja miembro (solo admin). Marcar membership como inactivo.
+
+**Auth**: required + role admin  
+**Response 200**
+```json
+{ "success": true }
+```
+
+**Errors**: 403 si no admin; no puede auto-expulsarse o acciones inválidas según reglas.
+
+## Error Codes
+- 400 Bad Request: límite alcanzado, segundo grupo, token inválido/expirado/usado
+- 401 Unauthorized: JWT ausente/inválido
+- 403 Forbidden: sin permisos (no admin) o sin grupo donde se requiere
+- 409 Conflict: conflictos de unicidad (email/google_id ya existe) según corresponda
