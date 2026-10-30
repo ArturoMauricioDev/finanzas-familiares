@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.models.user import User
 from app.schemas.user import ProfileUpdateRequest, UserResponse
@@ -16,10 +16,12 @@ def update_profile(db: Session, user_id: str, request: ProfileUpdateRequest):
     db.refresh(user)
 
     from app.models.membership import Membership, StatusEnum
-    membership = db.query(Membership).filter(
-        Membership.user_id == user.id,
-        Membership.estado == StatusEnum.activo
-    ).first()
+
+    membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == user.id, Membership.estado == StatusEnum.activo)
+        .first()
+    )
 
     return UserResponse(
         id=str(user.id),

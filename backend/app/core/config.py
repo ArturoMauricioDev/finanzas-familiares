@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings
 from typing import Optional
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -9,6 +10,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_IDS: Optional[str] = None
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8081"
+    INVITATION_LINK_BASE: str = "http://localhost:3000/invite"
 
     class Config:
         env_file = ".env"

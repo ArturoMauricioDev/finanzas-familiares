@@ -1,7 +1,9 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db, get_current_user
+from app.core.deps import get_current_user, get_db
 from app.schemas.family import CreateFamilyRequest, FamilyCreateResponse, FamilyDetailResponse
 from app.services import family_service
 
@@ -27,7 +29,7 @@ def get_my_family(
 
 @router.post("/me/members/{user_id}/promote")
 def promote_member(
-    user_id: str,
+    user_id: UUID,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -36,7 +38,7 @@ def promote_member(
 
 @router.delete("/me/members/{user_id}")
 def remove_member(
-    user_id: str,
+    user_id: UUID,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):

@@ -1,10 +1,11 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class CreateInvitationRequest(BaseModel):
-    expira_en_horas: int = 72
+    expira_en_horas: int = Field(default=72, ge=1, le=720)
 
 
 class InvitationResponse(BaseModel):
@@ -15,8 +16,8 @@ class InvitationResponse(BaseModel):
 
 
 class JoinInvitationRequest(BaseModel):
-    token: str
-    parentesco: Optional[str] = None
+    token: str = Field(min_length=1)
+    parentesco: Optional[str] = Field(default=None, max_length=80)
 
 
 class TokensResponse(BaseModel):

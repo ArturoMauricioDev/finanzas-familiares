@@ -5,11 +5,14 @@
     "version": "1.0.0",
     "scheme": "finanzasfamiliares",
     "plugins": ["expo-router"],
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
     "android": {
       "package": "com.finanzasfamiliares.app"
     },
     "ios": {
-      "bundleIdentifier": "com.finanzasfamiliares.app"
+      "bundleIdentifier": "com.finanzasfamiliares.app",
+      "supportsTablet": true
     }
   }
 }

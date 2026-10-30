@@ -1,8 +1,9 @@
+import enum
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum
+
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-import enum
 
 from app.db.base import Base
 
@@ -19,6 +20,17 @@ class StatusEnum(str, enum.Enum):
 
 class Membership(Base):
     __tablename__ = "memberships"
+    __table_args__ = (
+        Index(
+            "uq_memberships_active_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("estado = 'activo'"),
+            sqlite_where=text("estado = 'activo'"),
+        ),
+        Index("ix_memberships_family_estado", "family_id", "estado"),
+        Index("ix_memberships_user_estado", "user_id", "estado"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

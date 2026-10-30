@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
@@ -8,6 +9,7 @@ from app.db.base import Base
 
 class Invitation(Base):
     __tablename__ = "invitations"
+    __table_args__ = (Index("ix_invitations_family_usado", "family_id", "usado"),)
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)

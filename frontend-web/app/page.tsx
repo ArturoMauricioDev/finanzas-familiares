@@ -1,5 +1,31 @@
-import { redirect } from 'next/navigation';
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+import { Loading, Page } from "@/components/ui";
+import { getSession } from "@/lib/session";
 
 export default function Home() {
-  redirect('/auth/login');
+  const router = useRouter();
+
+  useEffect(() => {
+    const session = getSession();
+
+    if (!session?.access_token) {
+      router.replace("/auth/login");
+    } else if (session.needs_profile_setup) {
+      router.replace("/profile/setup");
+    } else if (session.needs_family_setup) {
+      router.replace("/family/select");
+    } else {
+      router.replace("/family/members");
+    }
+  }, [router]);
+
+  return (
+    <Page title="Finanzas Familiares">
+      <Loading />
+    </Page>
+  );
 }

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db
-from app.schemas.auth import GoogleTokenRequest, TokenResponse, RefreshTokenRequest
+from app.schemas.auth import GoogleTokenRequest, RefreshTokenRequest, TokenResponse
 from app.services import auth_service
 
 router = APIRouter()
@@ -20,5 +20,7 @@ def google_auth(request: GoogleTokenRequest, db: Session = Depends(get_db)):
 def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
     result = auth_service.refresh_tokens(db, request.refresh_token)
     if not result:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+        )
     return result

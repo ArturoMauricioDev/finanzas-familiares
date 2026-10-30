@@ -1,12 +1,13 @@
 # API Contracts: Autenticación, Registro y Gestión de Grupos Familiares
 
 Base path: `/api/v1`  
-Auth: Bearer JWT (propio) excepto endpoints de auth con Google.
+Auth: Bearer JWT (propio) excepto `POST /auth/google` y `POST /auth/refresh`.
 
 ## Auth
 
 ### POST /auth/google
-Intercambia ID token de Google por JWT propio.
+
+Intercambia un Google ID token por un JWT propio.
 
 **Request**
 ```json
@@ -29,15 +30,19 @@ Intercambia ID token de Google por JWT propio.
     "family_id": "uuid|null",
     "role": "admin|member|null"
   },
-  "needs_profile_setup": true|false,
-  "needs_family_setup": true|false
+  "needs_profile_setup": true,
+  "needs_family_setup": true
 }
 ```
 
-**Errors**: 401 si token Google inválido.
+**Validation / security**: el backend DEBE verificar firma, audiencia, emisor y expiración del
+token con `google-auth`. No existe fallback de decodificación sin verificar.
+
+**Errors**: `401` si el Google token es inválido, expirado, de otra audiencia o no verificable.
 
 ### POST /auth/refresh
-Renueva tokens.
+
+Renueva tokens y devuelve el estado actual de onboarding.
 
 **Request**
 ```json
@@ -46,16 +51,18 @@ Renueva tokens.
 }
 ```
 
-**Response 200**: mismo formato que /auth/google (tokens nuevos)
+**Response 200**: mismo formato que `/auth/google`, con tokens nuevos y claims actualizados.
 
-**Errors**: 401 si refresh inválido/expirado.
+**Errors**: `401` si el refresh token es inválido, expirado o de tipo incorrecto.
 
 ## Users / Profile
 
 ### PUT /users/me/profile
-Configura perfil inicial (obligatorio si needs_profile_setup).
 
-**Auth**: required  
+Configura el perfil inicial (obligatorio si `needs_profile_setup=true`).
+
+**Auth**: required
+
 **Request**
 ```json
 {
@@ -75,19 +82,21 @@ Configura perfil inicial (obligatorio si needs_profile_setup).
 }
 ```
 
-**Errors**: 401 no auth.
+**Errors**: `401` no autenticado; `422` si `nombre_visualizacion` o `foto_avatar` están vacíos.
 
 ## Families
 
 ### POST /families
-Crear grupo familiar (solo si usuario sin grupo activo).
 
-**Auth**: required (sin family_id o sin membership activo)  
+Crea un grupo familiar (sólo si el usuario no tiene membresía activa).
+
+**Auth**: required (sin membresía activa)
+
 **Request**
 ```json
 {
   "nombre": "string",
-  "moneda_local": "string" // ISO 4217
+  "moneda_local": "string"
 }
 ```
 
@@ -105,7 +114,7 @@ Crear grupo familiar (solo si usuario sin grupo activo).
     "role": "admin",
     "estado": "activo"
   },
-  "tokens": { // nuevos tokens con family_id/role
+  "tokens": {
     "access_token": "string",
     "refresh_token": "string",
     "token_type": "bearer"
@@ -113,16 +122,28 @@ Crear grupo familiar (solo si usuario sin grupo activo).
 }
 ```
 
-**Errors**: 400 si ya pertenece a grupo activo (FR-007/edge case).
+**Behavior**: `Family` y `Membership(admin)` se crean en una sola transacción. Los tokens
+devueltos incluyen `family_id` y `role`.
+
+**Errors**: `400` si ya pertenece a un grupo activo; `401` no autenticado; `422` si `nombre` está
+vacío o `moneda_local` no es un código ISO 4217 de 3 letras.
 
 ### GET /families/me
-Obtener info del grupo del usuario autenticado.
 
-**Auth**: required + pertenece a grupo  
+Obtiene el grupo y sus miembros activos.
+
+**Auth**: required + pertenece a grupo
+
 **Response 200**
 ```json
 {
-  "family": { "...": "..." },
+  "family": {
+    "id": "uuid",
+    "nombre": "string",
+    "moneda_local": "string",
+    "creado_por": "uuid",
+    "fecha_creacion": "datetime"
+  },
   "members": [
     {
       "user_id": "uuid",
@@ -137,18 +158,20 @@ Obtener info del grupo del usuario autenticado.
 }
 ```
 
-**Errors**: 403 si sin grupo (redirigir a setup).
+**Errors**: `401` no autenticado; `403` si el usuario no pertenece a un grupo (redirigir a setup).
 
 ## Invitations
 
 ### POST /families/me/invitations
-Generar enlace de invitación (solo admin).
 
-**Auth**: required + role admin + pertenece a grupo  
+Genera un enlace de invitación (sólo admin).
+
+**Auth**: required + role admin + pertenece a grupo
+
 **Request**
 ```json
 {
-  "expira_en_horas": 72 // opcional, default configurable
+  "expira_en_horas": 72
 }
 ```
 
@@ -157,22 +180,28 @@ Generar enlace de invitación (solo admin).
 {
   "invitation_id": "uuid",
   "token": "string",
-  "link": "string", // e.g. https://app/invite?token=...
+  "link": "string",
   "expira_en": "datetime"
 }
 ```
 
-**Errors**: 403 si no es admin.
+**Behavior**: token único e impredecible, con expiración. El `link` se construye con una URL base
+configurable, no hardcodeada.
+
+**Errors**: `401` no autenticado; `403` si no es admin; `422` si `expira_en_horas` está fuera del
+rango permitido (1–720).
 
 ### POST /invitations/join
-Unirse a grupo mediante token.
 
-**Auth**: required + sin grupo activo  
+Une al usuario autenticado a un grupo mediante un token.
+
+**Auth**: required + sin membresía activa
+
 **Request**
 ```json
 {
   "token": "string",
-  "parentesco": "string|null" // opcional al unirse
+  "parentesco": "string|null"
 }
 ```
 
@@ -182,7 +211,7 @@ Unirse a grupo mediante token.
   "family_id": "uuid",
   "role": "member",
   "estado": "activo",
-  "tokens": { // nuevos tokens con claims actualizados
+  "tokens": {
     "access_token": "string",
     "refresh_token": "string",
     "token_type": "bearer"
@@ -190,31 +219,58 @@ Unirse a grupo mediante token.
 }
 ```
 
-**Errors**: 400 si token inválido/expirado/usado (FR-006 edge), 400 si grupo ya tiene 10 miembros activos (FR-008), 400 si usuario ya tiene grupo (FR-007).
+**Behavior**: valida token, expiración y uso; cuenta miembros activos; crea `Membership(member)` y
+marca `usado=true` en una sola transacción. Los tokens devueltos incluyen `family_id` y `role`.
+
+**Errors**: `400` si el token es inválido, expirado o ya usado; `400` si el grupo alcanzó 10
+miembros activos; `400` si el usuario ya pertenece a un grupo; `401` no autenticado.
 
 ## Members Management (Admin)
 
 ### POST /families/me/members/:user_id/promote
-Promover miembro a admin (solo admin).
 
-**Auth**: required + role admin  
-**Response 200**: membership actualizado
+Promueve un miembro a admin (sólo admin).
 
-**Errors**: 403 si no admin.
+**Auth**: required + role admin
+
+**Response 200**
+```json
+{
+  "success": true
+}
+```
+
+**Errors**: `401` no autenticado; `403` si no es admin; `404` si el miembro no pertenece al grupo o
+está inactivo.
 
 ### DELETE /families/me/members/:user_id
-Expulsar/dar de baja miembro (solo admin). Marcar membership como inactivo.
 
-**Auth**: required + role admin  
+Expulsa o da de baja a un miembro (sólo admin). Marca la membresía como `inactivo`.
+
+**Auth**: required + role admin
+
 **Response 200**
 ```json
 { "success": true }
 ```
 
-**Errors**: 403 si no admin; no puede auto-expulsarse o acciones inválidas según reglas.
+**Errors**: `400` si el admin intenta expulsarse a sí mismo o si dejaría al grupo sin
+administradores; `401` no autenticado; `403` si no es admin; `404` si el miembro no pertenece al
+grupo o está inactivo.
 
 ## Error Codes
-- 400 Bad Request: límite alcanzado, segundo grupo, token inválido/expirado/usado
-- 401 Unauthorized: JWT ausente/inválido
-- 403 Forbidden: sin permisos (no admin) o sin grupo donde se requiere
-- 409 Conflict: conflictos de unicidad (email/google_id ya existe) según corresponda
+
+- `400 Bad Request`: límite de 10 alcanzado, segundo grupo, token inválido/expirado/usado,
+  auto-expulsión o último admin.
+- `401 Unauthorized`: JWT propio ausente/inválido o Google token inválido.
+- `403 Forbidden`: sin permisos (no admin) o sin grupo donde se requiere.
+- `404 Not Found`: miembro inexistente o inactivo.
+- `409 Conflict`: conflictos de unicidad (email/google_id) según corresponda.
+- `422 Unprocessable Entity`: validación de payload (moneda, perfil, expiración, campos vacíos).
+
+## Cross-Cutting Notes
+
+- Todos los errores DEBEN tener cuerpo `{"detail": "..."}` y la UI DEBE traducirlos a mensajes
+  claros.
+- CORS DEBE usar una lista de orígenes permitidos (no `*` con credenciales).
+- Las URLs base de API, Client IDs de Google y URL de invitación se configuran por entorno.
