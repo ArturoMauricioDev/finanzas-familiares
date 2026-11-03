@@ -37,6 +37,13 @@ def test_invalid_currency_is_rejected(client, db):
     assert response.status_code == 422
 
 
+def test_non_iso_currency_codes_are_rejected(client, db):
+    for index, code in enumerate(["AAA", "ZZZ"]):
+        user = create_user(db, email=f"currency-{index}@example.com")
+        response = _create_family(client, user, moneda=code)
+        assert response.status_code == 422
+
+
 def test_get_family_without_membership_returns_403(client, db):
     user = create_user(db)
     response = client.get("/api/v1/families/me", headers=auth_headers(user))
@@ -170,3 +177,43 @@ def test_last_admin_cannot_be_removed(client, db):
     )
     assert membership is not None
     assert membership.estado == StatusEnum.activo
+
+
+def test_admin_can_remove_another_admin_when_one_remains(client, db):
+    admin = create_user(db, email="admin@example.com")
+    create_response = _create_family(client, admin)
+    family_id = uuid.UUID(create_response.json()["family"]["id"])
+
+    other_admin = create_user(db, email="other-admin@example.com")
+    db.add(
+        Membership(
+            user_id=other_admin.id,
+            family_id=family_id,
+            role=RoleEnum.admin,
+            estado=StatusEnum.activo,
+        )
+    )
+    db.commit()
+
+    response = client.delete(
+        f"/api/v1/families/me/members/{other_admin.id}",
+        headers=auth_headers(admin, family_id=family_id, role="admin"),
+    )
+
+    assert response.status_code == 200
+    db.expire_all()
+    removed = (
+        db.query(Membership)
+        .filter(
+            Membership.user_id == other_admin.id,
+            Membership.family_id == family_id,
+        )
+        .one()
+    )
+    remaining = (
+        db.query(Membership)
+        .filter(Membership.user_id == admin.id, Membership.family_id == family_id)
+        .one()
+    )
+    assert removed.estado == StatusEnum.inactivo
+    assert remaining.estado == StatusEnum.activo

@@ -51,7 +51,7 @@ Variables principales en `.env`:
 
 ```bash
 cd frontend-web
-npm install
+pnpm install
 ```
 
 Crea `frontend-web/.env.local`:
@@ -64,7 +64,7 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-web-client-id
 Ejecuta:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 La aplicación queda en `http://localhost:3000`.
@@ -73,7 +73,7 @@ La aplicación queda en `http://localhost:3000`.
 
 ```bash
 cd frontend-mobile
-npm install
+pnpm install
 ```
 
 Crea `frontend-mobile/.env`:
@@ -88,7 +88,7 @@ EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=your-google-ios-client-id
 Ejecuta:
 
 ```bash
-npm start
+pnpm start
 ```
 
 El esquema de redirección OAuth es `finanzasfamiliares://auth/login`. En un dispositivo físico,
@@ -115,15 +115,15 @@ docker compose exec backend black --check .
 
 # Web
 cd frontend-web
-npm run typecheck
-npm run lint
-npm test
+pnpm run typecheck
+pnpm run lint
+pnpm test
 
 # Mobile
 cd frontend-mobile
-npm run typecheck
-npm run lint
-npm test
+pnpm run typecheck
+pnpm run lint
+pnpm test
 ```
 
 Los escenarios manuales end-to-end están descritos en

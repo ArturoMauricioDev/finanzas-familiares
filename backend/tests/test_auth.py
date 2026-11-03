@@ -1,6 +1,8 @@
 from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token, verify_token
+from app.models.user import User
 from app.services import auth_service
+from tests.conftest import create_user
 
 
 def test_invalid_google_token_returns_401(client):
@@ -98,3 +100,53 @@ def test_refresh_token_contains_refresh_type():
     token = create_refresh_token({"user_id": "user-1"})
     payload = verify_token(token)
     assert payload["type"] == "refresh"
+
+
+def _mock_google_identity(monkeypatch, sub="google-new", email="new@example.com"):
+    def fake_verify(_token, _request, _audience):
+        return {"sub": sub, "email": email}
+
+    monkeypatch.setattr(auth_service.id_token, "verify_oauth2_token", fake_verify)
+
+
+def test_google_login_creates_user_and_returns_claims(client, db, monkeypatch):
+    _mock_google_identity(monkeypatch)
+
+    response = client.post("/api/v1/auth/google", json={"id_token": "valid-google-token"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["needs_profile_setup"] is True
+    assert body["needs_family_setup"] is True
+    assert body["user"]["email"] == "new@example.com"
+    assert body["user"]["family_id"] is None
+    assert body["user"]["role"] is None
+
+    access_payload = verify_token(body["access_token"])
+    assert access_payload["type"] == "access"
+    assert access_payload["user_id"] == body["user"]["id"]
+    assert access_payload["family_id"] is None
+    assert access_payload["role"] is None
+
+    user = db.query(User).filter(User.google_id == "google-new").one()
+    assert user.email == "new@example.com"
+    assert user.nombre_visualizacion is None
+    assert user.foto_avatar is None
+
+
+def test_google_login_reuses_existing_user(client, db, monkeypatch):
+    user = create_user(db, email="existing@example.com", google_id="google-existing")
+    _mock_google_identity(
+        monkeypatch,
+        sub="google-existing",
+        email="existing@example.com",
+    )
+
+    response = client.post("/api/v1/auth/google", json={"id_token": "valid-google-token"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["id"] == str(user.id)
+    assert body["needs_profile_setup"] is False
+    assert body["needs_family_setup"] is True
+    assert db.query(User).filter(User.google_id == "google-existing").count() == 1

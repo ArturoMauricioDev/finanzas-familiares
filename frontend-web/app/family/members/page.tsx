@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button, Card, ErrorMessage, Loading, Page, SuccessMessage } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, refreshSession } from "@/lib/api";
 import { clearSession } from "@/lib/session";
 import type { FamilyDetail, Invitation } from "@/lib/types";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -20,14 +20,24 @@ export default function FamilyMembersPage() {
   const [loading, setLoading] = useState(true);
 
   const handleError = useCallback(
-    (err: unknown) => {
+    async (err: unknown) => {
       if (err instanceof ApiError && err.status === 401) {
         clearSession();
         router.replace("/auth/login");
         return;
       }
       if (err instanceof ApiError && err.status === 403) {
-        router.replace("/family/select");
+        const reconciled = await refreshSession();
+        if (!reconciled) {
+          clearSession();
+          router.replace("/auth/login");
+          return;
+        }
+        if (reconciled.needs_family_setup) {
+          router.replace("/family/select");
+          return;
+        }
+        setError(err.message);
         return;
       }
       setError(err instanceof Error ? err.message : "No se pudo cargar el grupo.");
@@ -42,7 +52,7 @@ export default function FamilyMembersPage() {
       const data = await api.getFamily();
       setFamily(data);
     } catch (err) {
-      handleError(err);
+      await handleError(err);
     } finally {
       setLoading(false);
     }
@@ -62,7 +72,7 @@ export default function FamilyMembersPage() {
       setInvitation(data);
       setMessage("Invitación generada. Comparte el enlace con tu familia.");
     } catch (err) {
-      handleError(err);
+      await handleError(err);
     }
   };
 
@@ -84,7 +94,7 @@ export default function FamilyMembersPage() {
       setMessage("Miembro promovido a administrador.");
       await loadFamily();
     } catch (err) {
-      handleError(err);
+      await handleError(err);
     }
   };
 
@@ -97,7 +107,7 @@ export default function FamilyMembersPage() {
       setMessage("Miembro dado de baja.");
       await loadFamily();
     } catch (err) {
-      handleError(err);
+      await handleError(err);
     }
   };
 

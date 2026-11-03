@@ -1,14 +1,22 @@
-import { api } from "../lib/api";
+import { api, ApiError } from "../lib/api";
+import * as sessionModule from "../lib/session";
 
 jest.mock("../lib/session", () => ({
   getAccessToken: jest.fn(async () => "test-token"),
+  getSession: jest.fn(async () => null),
+  applyTokenResponse: jest.fn(),
+  clearSession: jest.fn(async () => {}),
 }));
 
 const fetchMock = jest.fn();
+const mockSession = sessionModule as jest.Mocked<typeof sessionModule>;
 
 beforeEach(() => {
   fetchMock.mockReset();
   global.fetch = fetchMock as unknown as typeof fetch;
+  mockSession.getSession.mockResolvedValue(null);
+  mockSession.applyTokenResponse.mockReset();
+  mockSession.clearSession.mockReset();
 });
 
 function jsonResponse(body: unknown, status = 200) {
@@ -81,5 +89,106 @@ describe("mobile api client", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("/families/me/invitations");
     expect(fetchMock.mock.calls[1][0]).toContain("/invitations/join");
     expect(fetchMock.mock.calls[2][0]).toContain("/members/user-1/promote");
+  });
+
+  it("refreshes the session and retries once after a 401", async () => {
+    mockSession.getSession.mockResolvedValue({
+      access_token: "old-access",
+      refresh_token: "refresh-token",
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: "Ana",
+        foto_avatar: "https://example.com/ana.png",
+        family_id: "family-1",
+        role: "admin",
+      },
+      needs_profile_setup: false,
+      needs_family_setup: false,
+    });
+    mockSession.applyTokenResponse.mockResolvedValue({
+      access_token: "new-access",
+      refresh_token: "new-refresh",
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: "Ana",
+        foto_avatar: "https://example.com/ana.png",
+        family_id: "family-1",
+        role: "admin",
+      },
+      needs_profile_setup: false,
+      needs_family_setup: false,
+    });
+
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ detail: "Invalid or expired token" }, 401))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          access_token: "new-access",
+          refresh_token: "new-refresh",
+          token_type: "bearer",
+          user: { id: "user-1", email: "ana@example.com" },
+          needs_profile_setup: false,
+          needs_family_setup: false,
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ family: {}, members: [], member_count: 0 }));
+
+    await api.getFamily();
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toContain("/auth/refresh");
+    expect(fetchMock.mock.calls[2][0]).toContain("/families/me");
+    expect(mockSession.applyTokenResponse).toHaveBeenCalled();
+  });
+
+  it("can refresh after an earlier 401 without a refresh token", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ detail: "Missing authentication token" }, 401));
+
+    await expect(api.getFamily()).rejects.toBeInstanceOf(ApiError);
+
+    const refreshedSession = {
+      access_token: "new-access",
+      refresh_token: "new-refresh",
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: "Ana",
+        foto_avatar: "https://example.com/ana.png",
+        family_id: "family-1",
+        role: "admin",
+      },
+      needs_profile_setup: false,
+      needs_family_setup: false,
+    };
+
+    mockSession.getSession.mockResolvedValue({
+      ...refreshedSession,
+      access_token: "old-access",
+      refresh_token: "refresh-token",
+    });
+    mockSession.applyTokenResponse.mockResolvedValue(refreshedSession);
+
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ detail: "Invalid or expired token" }, 401))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          access_token: "new-access",
+          refresh_token: "new-refresh",
+          token_type: "bearer",
+          user: { id: "user-1", email: "ana@example.com" },
+          needs_profile_setup: false,
+          needs_family_setup: false,
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ family: {}, members: [], member_count: 0 }));
+
+    await api.getFamily();
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[2][0]).toContain("/auth/refresh");
+    expect(fetchMock.mock.calls[3][0]).toContain("/families/me");
+    expect(mockSession.applyTokenResponse).toHaveBeenCalled();
   });
 });

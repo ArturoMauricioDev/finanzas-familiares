@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
 
-import { api } from "../lib/api";
+import { api, ApiError, refreshSession } from "../lib/api";
 import * as auth from "../lib/auth";
 import * as session from "../lib/session";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -49,12 +49,16 @@ jest.mock("../lib/session", () => ({
   applyInvitationJoined: jest.fn(),
   updateSession: jest.fn(),
   clearSession: jest.fn(),
+  getPendingInviteToken: jest.fn(async () => null),
+  savePendingInviteToken: jest.fn(async () => {}),
+  clearPendingInviteToken: jest.fn(async () => {}),
 }));
 
 jest.mock("../lib/api", () => {
   const actual = jest.requireActual("../lib/api");
   return {
     ...actual,
+    refreshSession: jest.fn(),
     api: {
       signInWithGoogle: jest.fn(),
       updateProfile: jest.fn(),
@@ -77,6 +81,7 @@ const mockAuth = auth as jest.Mocked<typeof auth>;
 const mockSession = session as jest.Mocked<typeof session>;
 const mockUseAuthGuard = useAuthGuard as jest.Mock;
 const mockUseIdTokenAuthRequest = useIdTokenAuthRequest as jest.Mock;
+const mockRefreshSession = refreshSession as jest.Mock;
 
 function buildSession(overrides: Partial<session.SessionState> = {}): session.SessionState {
   return {
@@ -112,6 +117,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   delete mockParams.token;
   mockSession.getSession.mockResolvedValue(null);
+  mockSession.getPendingInviteToken.mockResolvedValue(null);
   mockUseIdTokenAuthRequest.mockReturnValue([{}, null, jest.fn()]);
 });
 
@@ -137,6 +143,29 @@ describe("mobile onboarding flows", () => {
 
     await waitFor(() => expect(mockAuth.signInWithGoogle).toHaveBeenCalledWith("mobile-token"));
     expect(mockRouter.replace).toHaveBeenCalledWith("/profile/setup");
+  });
+
+  it("sends invited users to the invite flow after signing in", async () => {
+    const nextSession = buildSession({ needs_family_setup: true });
+    mockUseIdTokenAuthRequest.mockReturnValue([
+      {},
+      { type: "success", params: { id_token: "mobile-token" } },
+      jest.fn(),
+    ]);
+    mockAuth.signInWithGoogle.mockResolvedValue({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: nextSession.user,
+      needs_profile_setup: false,
+      needs_family_setup: true,
+    });
+    mockSession.applyTokenResponse.mockResolvedValue(nextSession);
+    mockSession.getPendingInviteToken.mockResolvedValue("invite-token");
+
+    render(<LoginScreen />);
+
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/invite"));
   });
 
   it("saves the profile and redirects to family selection", async () => {
@@ -167,6 +196,29 @@ describe("mobile onboarding flows", () => {
       expect.objectContaining({ needs_profile_setup: false }),
     );
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/select");
+  });
+
+  it("sends users with a pending invite to the invite flow after profile setup", async () => {
+    useSession(buildSession({ needs_profile_setup: true, needs_family_setup: true }));
+    mockSession.getPendingInviteToken.mockResolvedValue("invite-token");
+    mockApi.updateProfile.mockResolvedValue({
+      id: "user-1",
+      nombre_visualizacion: "Ana",
+      foto_avatar: "https://example.com/ana.png",
+      family_id: null,
+      role: null,
+    });
+
+    render(<ProfileSetupScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
+    fireEvent.changeText(
+      screen.getByPlaceholderText("https://..."),
+      "https://example.com/ana.png",
+    );
+    fireEvent.press(screen.getByText("Guardar y continuar"));
+
+    await waitFor(() => expect(mockApi.updateProfile).toHaveBeenCalled());
+    expect(mockRouter.replace).toHaveBeenCalledWith("/invite");
   });
 
   it("offers both group selection options", () => {
@@ -200,6 +252,7 @@ describe("mobile onboarding flows", () => {
       }),
     );
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
+    expect(mockSession.clearPendingInviteToken).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
   });
 
@@ -215,6 +268,7 @@ describe("mobile onboarding flows", () => {
 
     render(<InviteScreen />);
     expect(screen.getByPlaceholderText("Token del enlace").props.value).toBe("invite-token");
+    expect(mockSession.savePendingInviteToken).toHaveBeenCalledWith("invite-token");
     fireEvent.changeText(screen.getByPlaceholderText("Ej. hija, hijo, madre"), "hija");
     fireEvent.press(screen.getByText("Unirme al grupo"));
 
@@ -225,7 +279,19 @@ describe("mobile onboarding flows", () => {
       }),
     );
     expect(mockSession.applyInvitationJoined).toHaveBeenCalled();
+    expect(mockSession.clearPendingInviteToken).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
+  });
+
+  it("prefills a saved invitation token", async () => {
+    useSession(buildSession({ needs_family_setup: true }));
+    mockSession.getPendingInviteToken.mockResolvedValue("saved-token");
+
+    render(<InviteScreen />);
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("Token del enlace").props.value).toBe("saved-token"),
+    );
   });
 
   it("lets an admin invite, promote and expel members", async () => {
@@ -277,5 +343,27 @@ describe("mobile onboarding flows", () => {
     fireEvent.press(screen.getByText("Expulsar"));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
     expect(Alert.alert).toHaveBeenCalled();
+  });
+
+  it("reconciles the session when the active membership is gone", async () => {
+    useSession(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "member" },
+      }),
+    );
+    mockApi.getFamily.mockRejectedValue(
+      new ApiError("Aún no perteneces a ningún grupo familiar.", 403),
+    );
+    mockRefreshSession.mockResolvedValue(
+      buildSession({
+        user: { ...buildSession().user, family_id: null, role: null },
+        needs_family_setup: true,
+      }),
+    );
+
+    render(<FamilyMembersScreen />);
+
+    await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));
   });
 });

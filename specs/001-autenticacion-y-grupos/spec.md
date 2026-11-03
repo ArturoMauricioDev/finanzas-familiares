@@ -1,12 +1,18 @@
 # Feature Specification: Autenticación, Registro y Gestión de Grupos Familiares
 
-**Feature Branch**: `001-auth-family-groups`
+**Feature Branch**: `001-autenticacion-y-grupos`
 
 **Created**: 2026-10-27
 
 **Status**: Draft
 
 **Input**: User description: Autenticación, Registro y Gestión de Grupos Familiares
+
+## Clarifications
+
+### Session 2026-11-03
+
+- Q: ¿Deben existir ambas rutas `001-autenticacion-y-grupos` y `001-auth-family-groups` o una sola? → A: Mantener solo `001-autenticacion-y-grupos`; eliminar el duplicado y normalizar `Feature Branch` al slug activo.
 
 ## User Scenarios & Testing *(mandatory)*
 

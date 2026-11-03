@@ -134,6 +134,16 @@ def _require_admin(db: Session, user_id):
     return membership
 
 
+def _lock_family(db: Session, family_id):
+    family = db.query(Family).filter(Family.id == family_id).with_for_update().first()
+    if not family:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Family not found",
+        )
+    return family
+
+
 def promote_member(db: Session, admin_id, user_id):
     admin_membership = _require_admin(db, admin_id)
 
@@ -167,13 +177,33 @@ def remove_member(db: Session, admin_id, user_id):
             detail="Admins cannot remove themselves",
         )
 
+    family_id = admin_membership.family_id
+    _lock_family(db, family_id)
+
+    admin_membership = (
+        db.query(Membership)
+        .filter(
+            Membership.user_id == admin_id,
+            Membership.family_id == family_id,
+            Membership.estado == StatusEnum.activo,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not admin_membership or admin_membership.role != RoleEnum.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can manage members",
+        )
+
     target = (
         db.query(Membership)
         .filter(
             Membership.user_id == user_id,
-            Membership.family_id == admin_membership.family_id,
+            Membership.family_id == family_id,
             Membership.estado == StatusEnum.activo,
         )
+        .with_for_update()
         .first()
     )
     if not target:
@@ -186,7 +216,7 @@ def remove_member(db: Session, admin_id, user_id):
         admin_count = (
             db.query(Membership)
             .filter(
-                Membership.family_id == admin_membership.family_id,
+                Membership.family_id == family_id,
                 Membership.estado == StatusEnum.activo,
                 Membership.role == RoleEnum.admin,
             )

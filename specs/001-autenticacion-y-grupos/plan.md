@@ -32,6 +32,8 @@ El diseño se apoya en cuatro decisiones transversales:
 google-auth; Next.js 15 / React (RC), `@react-oauth/google`; Expo 52, React Native 0.76,
 Expo Router, Google Sign-In SDK para móvil
 
+**Package Manager**: pnpm 12 con `pnpm-lock.yaml` versionado en ambos frontends
+
 **Storage**: PostgreSQL 16 (relacional, ACID). UUID como PK. `DECIMAL` con 2 decimales reservado
 para montos financieros futuros, conforme al Principio III
 

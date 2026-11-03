@@ -11,7 +11,12 @@ import {
   GOOGLE_WEB_CLIENT_ID,
   signInWithGoogle,
 } from "../../lib/auth";
-import { applyTokenResponse, getSession, type SessionState } from "../../lib/session";
+import {
+  applyTokenResponse,
+  getPendingInviteToken,
+  getSession,
+  type SessionState,
+} from "../../lib/session";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -21,10 +26,17 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const redirectFromSession = useCallback(
-    (session: SessionState) => {
-      if (session.needs_profile_setup) router.replace("/profile/setup");
-      else if (session.needs_family_setup) router.replace("/family/select");
-      else router.replace("/family/members");
+    async (session: SessionState) => {
+      if (session.needs_profile_setup) {
+        router.replace("/profile/setup");
+        return;
+      }
+      if (session.needs_family_setup) {
+        const pendingInvite = await getPendingInviteToken();
+        router.replace(pendingInvite ? "/invite" : "/family/select");
+        return;
+      }
+      router.replace("/family/members");
     },
     [router],
   );
@@ -44,7 +56,7 @@ export default function LoginScreen() {
   useEffect(() => {
     const checkSession = async () => {
       const session = await getSession();
-      if (session?.access_token) redirectFromSession(session);
+      if (session?.access_token) await redirectFromSession(session);
     };
     checkSession();
   }, [redirectFromSession]);
@@ -72,7 +84,7 @@ export default function LoginScreen() {
       try {
         const data = await signInWithGoogle(idToken);
         const session = await applyTokenResponse(data);
-        redirectFromSession(session);
+        await redirectFromSession(session);
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");
       } finally {

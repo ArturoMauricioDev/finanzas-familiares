@@ -3,13 +3,17 @@ import { useEffect, useState } from "react";
 
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "../../components/ui";
 import { api } from "../../lib/api";
-import { applyInvitationJoined } from "../../lib/session";
+import {
+  applyInvitationJoined,
+  clearPendingInviteToken,
+  getPendingInviteToken,
+  savePendingInviteToken,
+} from "../../lib/session";
 import { useAuthGuard } from "../../hooks/useAuthGuard";
 
 export default function InviteScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ token?: string | string[] }>();
-  const { session, ready } = useAuthGuard();
   const [token, setToken] = useState("");
   const [parentesco, setParentesco] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -17,11 +21,21 @@ export default function InviteScreen() {
 
   useEffect(() => {
     const value = Array.isArray(params.token) ? params.token[0] : params.token;
-    if (value) setToken(value);
+    if (value) {
+      setToken(value);
+      savePendingInviteToken(value);
+      return;
+    }
+    getPendingInviteToken().then((pending) => {
+      if (pending) setToken(pending);
+    });
   }, [params.token]);
+
+  const { session, ready } = useAuthGuard();
 
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
+      clearPendingInviteToken();
       router.replace("/family/members");
     }
   }, [ready, session, router]);
@@ -36,6 +50,7 @@ export default function InviteScreen() {
         parentesco: parentesco.trim() || undefined,
       });
       await applyInvitationJoined(data);
+      await clearPendingInviteToken();
       router.replace("/family/members");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo unir al grupo.");

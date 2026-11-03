@@ -16,6 +16,7 @@ export interface SessionState {
 }
 
 const SESSION_KEY = "finanzas_familiares_session";
+const PENDING_INVITE_KEY = "finanzas_familiares_pending_invite";
 
 export async function getSession(): Promise<SessionState | null> {
   try {
@@ -40,6 +41,23 @@ export async function updateSession(patch: Partial<SessionState>): Promise<Sessi
 
 export async function clearSession(): Promise<void> {
   await SecureStore.deleteItemAsync(SESSION_KEY);
+}
+
+export async function savePendingInviteToken(token: string): Promise<void> {
+  if (!token) return;
+  await SecureStore.setItemAsync(PENDING_INVITE_KEY, token);
+}
+
+export async function getPendingInviteToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(PENDING_INVITE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function clearPendingInviteToken(): Promise<void> {
+  await SecureStore.deleteItemAsync(PENDING_INVITE_KEY);
 }
 
 export async function getAccessToken(): Promise<string | null> {

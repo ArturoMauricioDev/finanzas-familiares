@@ -1,7 +1,7 @@
-import re
 from datetime import datetime
 from typing import List, Optional
 
+import pycountry
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -21,7 +21,7 @@ class CreateFamilyRequest(BaseModel):
     @classmethod
     def validate_moneda_local(cls, value: str) -> str:
         value = value.strip().upper()
-        if not re.fullmatch(r"[A-Z]{3}", value):
+        if pycountry.currencies.get(alpha_3=value) is None:
             raise ValueError("moneda_local debe ser un código ISO 4217 de 3 letras")
         return value
 

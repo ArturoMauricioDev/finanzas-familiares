@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 
-import { api } from "@/lib/api";
+import { api, ApiError, refreshSession } from "@/lib/api";
 import * as auth from "@/lib/auth";
 import * as session from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -43,12 +43,16 @@ jest.mock("@/lib/session", () => ({
   applyInvitationJoined: jest.fn(),
   updateSession: jest.fn(),
   clearSession: jest.fn(),
+  getPendingInviteToken: jest.fn(() => null),
+  savePendingInviteToken: jest.fn(),
+  clearPendingInviteToken: jest.fn(),
 }));
 
 jest.mock("@/lib/api", () => {
   const actual = jest.requireActual("@/lib/api");
   return {
     ...actual,
+    refreshSession: jest.fn(),
     api: {
       signInWithGoogle: jest.fn(),
       updateProfile: jest.fn(),
@@ -70,6 +74,7 @@ const mockApi = api as jest.Mocked<typeof api>;
 const mockUseAuthGuard = useAuthGuard as jest.Mock;
 const mockSession = session as jest.Mocked<typeof session>;
 const mockAuth = auth as jest.Mocked<typeof auth>;
+const mockRefreshSession = refreshSession as jest.Mock;
 
 function buildSession(overrides: Partial<session.SessionState> = {}): session.SessionState {
   return {
@@ -104,6 +109,7 @@ const family = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockSearchParams.delete("token");
+  mockSession.getPendingInviteToken.mockReturnValue(null);
   window.confirm = jest.fn(() => true);
 });
 
@@ -126,6 +132,25 @@ describe("web onboarding flows", () => {
     await waitFor(() => expect(mockAuth.signInWithGoogle).toHaveBeenCalledWith("google-token"));
     expect(mockSession.applyTokenResponse).toHaveBeenCalled();
     expect(mockRouter.push).toHaveBeenCalledWith("/profile/setup");
+  });
+
+  it("sends invited users to the invite flow after signing in", async () => {
+    const nextSession = buildSession({ needs_family_setup: true });
+    mockAuth.signInWithGoogle.mockResolvedValue({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: nextSession.user,
+      needs_profile_setup: false,
+      needs_family_setup: true,
+    });
+    mockSession.applyTokenResponse.mockReturnValue(nextSession);
+    mockSession.getPendingInviteToken.mockReturnValue("invite-token");
+
+    render(<LoginPage />);
+    fireEvent.click(screen.getByText("Google login"));
+
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/invite"));
   });
 
   it("saves the profile and redirects to family selection", async () => {
@@ -157,6 +182,30 @@ describe("web onboarding flows", () => {
       expect.objectContaining({ needs_profile_setup: false }),
     );
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/select");
+  });
+
+  it("sends users with a pending invite to the invite flow after profile setup", async () => {
+    useSession(buildSession({ needs_profile_setup: true, needs_family_setup: true }));
+    mockSession.getPendingInviteToken.mockReturnValue("invite-token");
+    mockApi.updateProfile.mockResolvedValue({
+      id: "user-1",
+      nombre_visualizacion: "Ana",
+      foto_avatar: "https://example.com/ana.png",
+      family_id: null,
+      role: null,
+    });
+
+    render(<ProfileSetupPage />);
+    fireEvent.change(screen.getByLabelText("Nombre de visualización"), {
+      target: { value: "Ana" },
+    });
+    fireEvent.change(screen.getByLabelText("URL de la foto de avatar"), {
+      target: { value: "https://example.com/ana.png" },
+    });
+    fireEvent.click(screen.getByText("Guardar y continuar"));
+
+    await waitFor(() => expect(mockApi.updateProfile).toHaveBeenCalled());
+    expect(mockRouter.replace).toHaveBeenCalledWith("/invite");
   });
 
   it("offers both group selection options", () => {
@@ -198,6 +247,7 @@ describe("web onboarding flows", () => {
       }),
     );
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
+    expect(mockSession.clearPendingInviteToken).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
   });
 
@@ -213,6 +263,7 @@ describe("web onboarding flows", () => {
 
     render(<InvitePage />);
     expect(screen.getByLabelText("Token de invitación")).toHaveValue("invite-token");
+    expect(mockSession.savePendingInviteToken).toHaveBeenCalledWith("invite-token");
     fireEvent.change(screen.getByLabelText("Parentesco (opcional)"), {
       target: { value: "hija" },
     });
@@ -225,6 +276,7 @@ describe("web onboarding flows", () => {
       }),
     );
     expect(mockSession.applyInvitationJoined).toHaveBeenCalled();
+    expect(mockSession.clearPendingInviteToken).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
   });
 
@@ -274,5 +326,27 @@ describe("web onboarding flows", () => {
     fireEvent.click(screen.getByText("Expulsar"));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
     expect(window.confirm).toHaveBeenCalled();
+  });
+
+  it("reconciles the session when the active membership is gone", async () => {
+    useSession(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "member" },
+      }),
+    );
+    mockApi.getFamily.mockRejectedValue(
+      new ApiError("Aún no perteneces a ningún grupo familiar.", 403),
+    );
+    mockRefreshSession.mockResolvedValue(
+      buildSession({
+        user: { ...buildSession().user, family_id: null, role: null },
+        needs_family_setup: true,
+      }),
+    );
+
+    render(<FamilyMembersPage />);
+
+    await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));
   });
 });

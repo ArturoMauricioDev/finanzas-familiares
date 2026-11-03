@@ -1,5 +1,11 @@
 import { translateApiError } from "./errors";
-import { getAccessToken } from "./session";
+import {
+  applyTokenResponse,
+  clearSession,
+  getAccessToken,
+  getSession,
+  type SessionState,
+} from "./session";
 import type {
   FamilyCreateResponse,
   FamilyDetail,
@@ -28,6 +34,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {},
   authenticated = true,
+  allowRefresh = true,
 ): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
@@ -55,6 +62,13 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401 && authenticated && allowRefresh) {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        return request<T>(path, options, authenticated, false);
+      }
+    }
+
     const detail =
       typeof data === "object" && data !== null && "detail" in data
         ? (data as { detail: unknown }).detail
@@ -64,6 +78,34 @@ async function request<T>(
   }
 
   return data as T;
+}
+
+let refreshPromise: Promise<SessionState | null> | null = null;
+
+export function refreshSession(): Promise<SessionState | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const session = await getSession();
+        if (!session?.refresh_token) return null;
+
+        const data = await request<TokenResponse>(
+          "/auth/refresh",
+          { method: "POST", body: JSON.stringify({ refresh_token: session.refresh_token }) },
+          false,
+          false,
+        );
+        return applyTokenResponse(data);
+      } catch {
+        clearSession();
+        return null;
+      }
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
 }
 
 export const api = {

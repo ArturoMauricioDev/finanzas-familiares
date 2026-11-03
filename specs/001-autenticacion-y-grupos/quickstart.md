@@ -95,10 +95,10 @@ Run the suites defined by the plan:
 docker compose exec backend pytest
 
 # Web tests
-cd frontend-web && npm test
+cd frontend-web && pnpm test
 
 # Mobile tests
-cd frontend-mobile && npm test
+cd frontend-mobile && pnpm test
 ```
 
 Expected coverage includes SC-002 (`401` sin JWT), SC-003 (segundo grupo rechazado), SC-004

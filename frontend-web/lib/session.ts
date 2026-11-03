@@ -14,6 +14,7 @@ export interface SessionState {
 }
 
 const SESSION_KEY = "finanzas_familiares_session";
+const PENDING_INVITE_KEY = "finanzas_familiares_pending_invite";
 
 export function getSession(): SessionState | null {
   if (typeof window === "undefined") return null;
@@ -41,6 +42,21 @@ export function updateSession(patch: Partial<SessionState>): SessionState | null
 export function clearSession(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(SESSION_KEY);
+}
+
+export function savePendingInviteToken(token: string): void {
+  if (typeof window === "undefined" || !token) return;
+  window.localStorage.setItem(PENDING_INVITE_KEY, token);
+}
+
+export function getPendingInviteToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(PENDING_INVITE_KEY);
+}
+
+export function clearPendingInviteToken(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(PENDING_INVITE_KEY);
 }
 
 export function getAccessToken(): string | null {

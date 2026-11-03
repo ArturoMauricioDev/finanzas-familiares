@@ -1,7 +1,7 @@
 import { usePathname, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
-import { getSession, type SessionState } from "../lib/session";
+import { getPendingInviteToken, getSession, type SessionState } from "../lib/session";
 
 const FAMILY_SETUP_PATHS = ["/family/select", "/family/create", "/invite"];
 
@@ -28,17 +28,21 @@ export function useAuthGuard(requireFamily = false) {
         return;
       }
 
+      const familySetupPath = (await getPendingInviteToken())
+        ? "/invite"
+        : "/family/select";
+
       if (
         !current.needs_profile_setup &&
         current.needs_family_setup &&
         !FAMILY_SETUP_PATHS.includes(pathname)
       ) {
-        router.replace("/family/select");
+        router.replace(familySetupPath);
         return;
       }
 
       if (requireFamily && current.needs_family_setup) {
-        router.replace("/family/select");
+        router.replace(familySetupPath);
         return;
       }
 

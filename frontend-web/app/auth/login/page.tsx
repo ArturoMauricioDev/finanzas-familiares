@@ -6,7 +6,15 @@ import { useEffect, useState } from "react";
 
 import { Card, ErrorMessage, Page } from "@/components/ui";
 import { signInWithGoogle } from "@/lib/auth";
-import { applyTokenResponse, getSession } from "@/lib/session";
+import { applyTokenResponse, getPendingInviteToken, getSession } from "@/lib/session";
+
+function nextPath(current: { needs_profile_setup: boolean; needs_family_setup: boolean }): string {
+  if (current.needs_profile_setup) return "/profile/setup";
+  if (current.needs_family_setup) {
+    return getPendingInviteToken() ? "/invite" : "/family/select";
+  }
+  return "/family/members";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,9 +25,7 @@ export default function LoginPage() {
     const session = getSession();
     if (!session?.access_token) return;
 
-    if (session.needs_profile_setup) router.replace("/profile/setup");
-    else if (session.needs_family_setup) router.replace("/family/select");
-    else router.replace("/family/members");
+    router.replace(nextPath(session));
   }, [router]);
 
   const handleSuccess = async (credentialResponse: { credential?: string }) => {
@@ -35,9 +41,7 @@ export default function LoginPage() {
       const data = await signInWithGoogle(credentialResponse.credential);
       const session = applyTokenResponse(data);
 
-      if (session.needs_profile_setup) router.push("/profile/setup");
-      else if (session.needs_family_setup) router.push("/family/select");
-      else router.push("/family/members");
+      router.push(nextPath(session));
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");
     } finally {

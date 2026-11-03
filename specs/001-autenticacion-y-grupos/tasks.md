@@ -399,3 +399,49 @@ Task: "T059 [US5] Create invite screens in frontend-mobile/app/family/ and front
 - [x] T092 Add a shared Spanish user-facing error mapping for 400/401/403/404/422 responses and use it in both frontends instead of surfacing raw backend details, with tests per T081 and Constitution V (partial)
 - [x] T093 Add backend pytest cases proving members are denied promote and expel actions and that the last active admin cannot be removed per T079 and SC-005 (partial)
 - [x] T094 Remove or document the unused root Playwright dependency and lockfile (`package.json`, `package-lock.json`) so tooling stays within the specified project scope per Constitution I (unrequested)
+
+---
+
+## Phase 12: Convergence
+
+**Purpose**: Close remaining gaps between the specification/plan and the current implementation (appended by `/speckit.converge`).
+
+- [X] T095 Reconcile stale sessions when an active membership is lost: on 401/403 from `GET /families/me`, refresh the session (or clear the stale onboarding flags and set `needs_family_setup=true`) before routing to `/family/select`, and prevent the select page from bouncing back to `/family/members`, so expelled users can create or join a group per SC-006, Edge Case "Usuario sin grupo intenta acceder a funcionalidades protegidas", FR-004, FR-010, and US5/AC4 (partial)
+- [X] T096 Wire the existing `/auth/refresh` endpoint into the web and mobile API clients: retry a request once after refreshing, persist the new tokens and onboarding flags, clear the session when refresh fails, and use it on 401 responses so expired access tokens no longer break the flows and claims are renewed per plan "JWT propio" and "Frontend" decisions, FR-002, and spec Assumptions (partial)
+- [X] T097 Preserve the invitation token across login and mandatory profile setup and return the user to the join flow after onboarding on both web and mobile per FR-006, US5/AC1, and T073/T075 (partial)
+- [X] T098 Add a backend pytest covering the successful `POST /auth/google` contract with a mocked verified Google token, asserting account creation, JWT claims (`user_id`, `family_id`, `role`), `needs_profile_setup`/`needs_family_setup`, and repeat-login behavior per plan "Testing", T079, and US1/AC1-2 (partial)
+- [X] T099 Add `frontend-web/.env.example` and `frontend-mobile/.env.example` covering the documented API URL and Google Client ID variables so environment setup covers every service per T007 and plan "Configuración" (partial)
+
+---
+
+## Phase 13: Convergence
+
+**Purpose**: Close remaining gaps between the specification/plan and the current implementation (appended by `/speckit.converge`).
+
+- [X] T100 HIGH: Fix the `refreshPromise` lifecycle in `frontend-web/lib/api.ts` and `frontend-mobile/lib/api.ts` so the cached promise is cleared when no session or refresh token exists, and add a full-suite regression test covering a 401 without a refresh token followed by a successful refresh-and-retry per T096, FR-002, and plan "JWT propio" (partial)
+
+---
+
+## Phase 14: Tooling
+
+**Purpose**: Apply the requested package-manager decision across frontend tooling and documentation.
+
+- [X] T101 Migrate both frontends from npm to pnpm: add `packageManager`, generate `pnpm-lock.yaml`, remove `package-lock.json`, configure pnpm build approvals and mobile hoisted linking, and update README/quickstart commands (user request)
+
+---
+
+## Phase 15: Convergence
+
+**Purpose**: Close remaining gaps between the specification/plan and the current implementation (appended by `/speckit.converge`).
+
+- [ ] T102 Validate `moneda_local` against the actual ISO 4217 code set instead of only `[A-Z]{3}`, and add a regression test rejecting codes like `AAA`/`ZZZ` per FR-005, data-model `moneda_local`, and OpenAPI 422 (partial)
+- [ ] T103 Make last-admin removal atomic by locking the family/membership rows and rechecking the actor status and active admin count before deactivation per FR-010 and data-model membership constraints (partial)
+- [ ] T104 Require `NEXT_PUBLIC_API_URL` and `EXPO_PUBLIC_API_URL` at runtime instead of falling back to hardcoded localhost, and surface a clear configuration error when missing per plan "Configuración" and T082 (contradicts)
+- [ ] T105 Validate and reconcile persisted sessions on app load, including refreshing when onboarding flags are missing or stale and handling the case where the user already has a family, per plan "Frontend", FR-003/FR-004, SC-006, and T095 (partial)
+- [ ] T106 Centralize terminal 401 handling so a failed refresh clears the session and redirects to login from profile setup, family creation, invite join, and members screens on web and mobile per plan "Frontend" and T096 (partial)
+- [ ] T107 Align API payloads with `contracts/openapi.yaml`: serialize 422 validation errors as `{"detail": "..."}` and remove or document the extra `role` field in the promote response per OpenAPI 235-241 and 271-274 (contradicts)
+- [ ] T108 Catch database `IntegrityError` in auth/family/invitation services and map uniqueness or active-membership races to the contracted 409/400 responses instead of 500 per OpenAPI 268 (partial)
+- [ ] T109 Add a discard/back path from the invite flow to `/family/select`, clear invalid or expired tokens after failed joins, and clear stale pending invite tokens for users who already belong to a family on web and mobile per FR-004, SC-006, and plan "invite token preserved" (partial)
+- [ ] T110 Translate transport/network failures and 409 responses to Spanish user-facing messages in both frontends instead of displaying raw `Error.message` values per Constitution V and T092 (partial)
+- [ ] T111 Remove unused and shadow code: unused exception classes, `api.refresh` in both clients, the unused web `GOOGLE_CLIENT_ID` export, unused backend `passlib`/`python-multipart`/`PyJWT` direct dependencies, and mobile `@react-native-async-storage/async-storage` per Constitution VI (unrequested)
+- [ ] T112 Add focused tests for the real `useAuthGuard` redirect logic on web and mobile, covering no session, profile setup, family setup with and without a pending invite, `requireFamily`, and reload behavior per plan "Testing" and T091 (partial)

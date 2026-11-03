@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "@/components/ui";
 import { api } from "@/lib/api";
-import { updateSession } from "@/lib/session";
+import { getPendingInviteToken, updateSession } from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function ProfileSetupPage() {
@@ -26,7 +26,12 @@ export default function ProfileSetupPage() {
   useEffect(() => {
     if (!ready || !session) return;
     if (!session.needs_profile_setup) {
-      router.replace(session.needs_family_setup ? "/family/select" : "/family/members");
+      const destination = session.needs_family_setup
+        ? getPendingInviteToken()
+          ? "/invite"
+          : "/family/select"
+        : "/family/members";
+      router.replace(destination);
     }
   }, [ready, session, router]);
 
@@ -51,7 +56,12 @@ export default function ProfileSetupPage() {
         needs_profile_setup: false,
       });
 
-      router.replace(session.needs_family_setup ? "/family/select" : "/family/members");
+      const destination = session.needs_family_setup
+        ? getPendingInviteToken()
+          ? "/invite"
+          : "/family/select"
+        : "/family/members";
+      router.replace(destination);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el perfil.");
     } finally {

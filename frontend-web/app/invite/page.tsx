@@ -5,13 +5,17 @@ import { Suspense, useEffect, useState } from "react";
 
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "@/components/ui";
 import { api } from "@/lib/api";
-import { applyInvitationJoined } from "@/lib/session";
+import {
+  applyInvitationJoined,
+  clearPendingInviteToken,
+  getPendingInviteToken,
+  savePendingInviteToken,
+} from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 function InviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { session, ready } = useAuthGuard();
   const [token, setToken] = useState("");
   const [parentesco, setParentesco] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,11 +23,20 @@ function InviteContent() {
 
   useEffect(() => {
     const queryToken = searchParams.get("token");
-    if (queryToken) setToken(queryToken);
+    if (queryToken) {
+      setToken(queryToken);
+      savePendingInviteToken(queryToken);
+      return;
+    }
+    const pending = getPendingInviteToken();
+    if (pending) setToken(pending);
   }, [searchParams]);
+
+  const { session, ready } = useAuthGuard();
 
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
+      clearPendingInviteToken();
       router.replace("/family/members");
     }
   }, [ready, session, router]);
@@ -39,6 +52,7 @@ function InviteContent() {
         parentesco: parentesco.trim() || undefined,
       });
       applyInvitationJoined(data);
+      clearPendingInviteToken();
       router.replace("/family/members");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo unir al grupo.");

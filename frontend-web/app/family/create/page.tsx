@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "@/components/ui";
 import { api } from "@/lib/api";
-import { applyFamilyCreated } from "@/lib/session";
+import { applyFamilyCreated, clearPendingInviteToken } from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function FamilyCreatePage() {
@@ -33,6 +33,7 @@ export default function FamilyCreatePage() {
         moneda_local: moneda,
       });
       applyFamilyCreated(data);
+      clearPendingInviteToken();
       router.replace("/family/members");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo crear el grupo.");
