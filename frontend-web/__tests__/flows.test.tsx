@@ -32,7 +32,6 @@ jest.mock("@react-oauth/google", () => ({
 }));
 
 jest.mock("@/lib/auth", () => ({
-  GOOGLE_CLIENT_ID: "test-client",
   signInWithGoogle: jest.fn(),
 }));
 
@@ -310,7 +309,7 @@ describe("web onboarding flows", () => {
       link: "http://localhost:3000/invite?token=invite-token",
       expira_en: "2026-11-02T00:00:00Z",
     });
-    mockApi.promoteMember.mockResolvedValue({ success: true, role: "admin" });
+    mockApi.promoteMember.mockResolvedValue({ success: true });
     mockApi.removeMember.mockResolvedValue({ success: true });
 
     render(<FamilyMembersPage />);

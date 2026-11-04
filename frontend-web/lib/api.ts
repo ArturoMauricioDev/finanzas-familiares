@@ -15,10 +15,22 @@ import type {
   UserResponse,
 } from "./types";
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(
-  /\/$/,
-  "",
-);
+export class ConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigurationError";
+  }
+}
+
+export function getApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!configured) {
+    throw new ConfigurationError(
+      "Falta configurar NEXT_PUBLIC_API_URL para conectar con el servidor.",
+    );
+  }
+  return configured.replace(/\/$/, "");
+}
 
 export class ApiError extends Error {
   status: number;
@@ -28,6 +40,24 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
   }
+}
+
+export type UnauthorizedHandler = () => void;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+}
+
+export function clearUnauthorizedHandler(handler: UnauthorizedHandler): void {
+  if (unauthorizedHandler === handler) {
+    unauthorizedHandler = null;
+  }
+}
+
+function notifyUnauthorized(): void {
+  unauthorizedHandler?.();
 }
 
 async function request<T>(
@@ -46,10 +76,17 @@ async function request<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1${path}`, {
-    ...options,
-    headers,
-  });
+  const baseUrl = getApiBaseUrl();
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/v1${path}`, {
+      ...options,
+      headers,
+    });
+  } catch {
+    throw new ApiError(translateApiError(0), 0);
+  }
 
   const text = await response.text();
   let data: unknown = null;
@@ -67,6 +104,11 @@ async function request<T>(
       if (refreshed) {
         return request<T>(path, options, authenticated, false);
       }
+    }
+
+    if (response.status === 401 && authenticated) {
+      clearSession();
+      notifyUnauthorized();
     }
 
     const detail =
@@ -87,7 +129,10 @@ export function refreshSession(): Promise<SessionState | null> {
     refreshPromise = (async () => {
       try {
         const session = await getSession();
-        if (!session?.refresh_token) return null;
+        if (!session?.refresh_token) {
+          clearSession();
+          return null;
+        }
 
         const data = await request<TokenResponse>(
           "/auth/refresh",
@@ -113,14 +158,6 @@ export const api = {
     return request<TokenResponse>(
       "/auth/google",
       { method: "POST", body: JSON.stringify({ id_token: idToken }) },
-      false,
-    );
-  },
-
-  refresh(refreshToken: string): Promise<TokenResponse> {
-    return request<TokenResponse>(
-      "/auth/refresh",
-      { method: "POST", body: JSON.stringify({ refresh_token: refreshToken }) },
       false,
     );
   },
@@ -160,8 +197,8 @@ export const api = {
     });
   },
 
-  promoteMember(userId: string): Promise<{ success: boolean; role: string }> {
-    return request<{ success: boolean; role: string }>(`/families/me/members/${userId}/promote`, {
+  promoteMember(userId: string): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>(`/families/me/members/${userId}/promote`, {
       method: "POST",
     });
   },

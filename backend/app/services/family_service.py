@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, create_refresh_token
@@ -44,6 +45,17 @@ def create_family(db: Session, user_id, request):
         db.commit()
         db.refresh(family)
         db.refresh(membership)
+    except IntegrityError:
+        db.rollback()
+        if _active_membership(db, user_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already belongs to a family",
+            ) from None
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Family could not be created due to a conflict",
+        ) from None
     except Exception:
         db.rollback()
         raise
@@ -165,7 +177,7 @@ def promote_member(db: Session, admin_id, user_id):
     target.role = RoleEnum.admin
     db.commit()
     db.refresh(target)
-    return {"success": True, "role": target.role.value}
+    return {"success": True}
 
 
 def remove_member(db: Session, admin_id, user_id):

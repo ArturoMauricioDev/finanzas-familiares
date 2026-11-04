@@ -1,4 +1,4 @@
-import { api, ApiError } from "../lib/api";
+import { api, ApiError, getApiBaseUrl } from "../lib/api";
 import * as sessionModule from "../lib/session";
 
 jest.mock("../lib/session", () => ({
@@ -28,6 +28,31 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("api client", () => {
+  it("requires a configured API URL", () => {
+    const original = process.env.NEXT_PUBLIC_API_URL;
+    delete process.env.NEXT_PUBLIC_API_URL;
+
+    try {
+      expect(() => getApiBaseUrl()).toThrow(/NEXT_PUBLIC_API_URL/);
+    } finally {
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_API_URL;
+      } else {
+        process.env.NEXT_PUBLIC_API_URL = original;
+      }
+    }
+  });
+
+  it("translates transport failures to a readable ApiError", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Network request failed"));
+
+    await expect(api.getFamily()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 0,
+      message: "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+    });
+  });
+
   it("exchanges a Google token without an Authorization header", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({

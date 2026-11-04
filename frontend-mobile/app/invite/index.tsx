@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "../../components/ui";
-import { api } from "../../lib/api";
+import { ApiError, api } from "../../lib/api";
 import {
   applyInvitationJoined,
   clearPendingInviteToken,
@@ -53,10 +53,19 @@ export default function InviteScreen() {
       await clearPendingInviteToken();
       router.replace("/family/members");
     } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        await clearPendingInviteToken();
+        setToken("");
+      }
       setError(err instanceof Error ? err.message : "No se pudo unir al grupo.");
     } finally {
       setJoining(false);
     }
+  };
+
+  const discardInvitation = async () => {
+    await clearPendingInviteToken();
+    router.replace("/family/select");
   };
 
   if (!ready || !session) return <Loading />;
@@ -86,6 +95,11 @@ export default function InviteScreen() {
           title={joining ? "Uniéndome..." : "Unirme al grupo"}
           onPress={handleSubmit}
           disabled={joining || !token.trim()}
+        />
+        <Button
+          title="Volver a selección de grupo"
+          variant="secondary"
+          onPress={discardInvitation}
         />
       </Card>
     </Page>

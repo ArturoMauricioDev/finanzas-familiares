@@ -3,7 +3,15 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { getPendingInviteToken, getSession, type SessionState } from "@/lib/session";
+import { clearUnauthorizedHandler, refreshSession, setUnauthorizedHandler } from "@/lib/api";
+import {
+  clearStalePendingInvite,
+  getPendingInviteToken,
+  getSession,
+  reconcileFamilyFlag,
+  sessionNeedsRefresh,
+  type SessionState,
+} from "@/lib/session";
 
 const FAMILY_SETUP_PATHS = ["/family/select", "/family/create", "/invite"];
 
@@ -14,36 +22,67 @@ export function useAuthGuard(requireFamily = false) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const current = getSession();
+    let active = true;
+    const handleUnauthorized = () => router.replace("/auth/login");
+    setUnauthorizedHandler(handleUnauthorized);
 
-    if (!current?.access_token) {
-      router.replace("/auth/login");
-      return;
-    }
+    const redirect = (path: string) => {
+      if (active) router.replace(path);
+    };
 
-    if (current.needs_profile_setup && pathname !== "/profile/setup") {
-      router.replace("/profile/setup");
-      return;
-    }
+    const resolveSession = async () => {
+      let current = getSession();
 
-    const familySetupPath = getPendingInviteToken() ? "/invite" : "/family/select";
+      if (!current?.access_token) {
+        redirect("/auth/login");
+        return;
+      }
 
-    if (
-      !current.needs_profile_setup &&
-      current.needs_family_setup &&
-      !FAMILY_SETUP_PATHS.includes(pathname)
-    ) {
-      router.replace(familySetupPath);
-      return;
-    }
+      if (sessionNeedsRefresh(current)) {
+        const refreshed = await refreshSession();
+        if (!active) return;
+        if (!refreshed) {
+          redirect("/auth/login");
+          return;
+        }
+        current = refreshed;
+      } else {
+        current = reconcileFamilyFlag(current);
+      }
 
-    if (requireFamily && current.needs_family_setup) {
-      router.replace(familySetupPath);
-      return;
-    }
+      clearStalePendingInvite(current);
 
-    setSession(current);
-    setReady(true);
+      if (current.needs_profile_setup && pathname !== "/profile/setup") {
+        redirect("/profile/setup");
+        return;
+      }
+
+      const familySetupPath = getPendingInviteToken() ? "/invite" : "/family/select";
+
+      if (
+        !current.needs_profile_setup &&
+        current.needs_family_setup &&
+        !FAMILY_SETUP_PATHS.includes(pathname)
+      ) {
+        redirect(familySetupPath);
+        return;
+      }
+
+      if (requireFamily && current.needs_family_setup) {
+        redirect(familySetupPath);
+        return;
+      }
+
+      setSession(current);
+      setReady(true);
+    };
+
+    void resolveSession();
+
+    return () => {
+      active = false;
+      clearUnauthorizedHandler(handleUnauthorized);
+    };
   }, [pathname, requireFamily, router]);
 
   return { session, ready };

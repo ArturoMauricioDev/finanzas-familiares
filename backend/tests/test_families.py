@@ -35,6 +35,7 @@ def test_invalid_currency_is_rejected(client, db):
     user = create_user(db)
     response = _create_family(client, user, moneda="MXNX")
     assert response.status_code == 422
+    assert isinstance(response.json()["detail"], str)
 
 
 def test_non_iso_currency_codes_are_rejected(client, db):
@@ -103,7 +104,7 @@ def test_admin_can_promote_and_remove_member(client, db):
         headers=auth_headers(admin),
     )
     assert promote.status_code == 200
-    assert promote.json()["role"] == "admin"
+    assert promote.json() == {"success": True}
 
     remove = client.delete(
         f"/api/v1/families/me/members/{member.id}",

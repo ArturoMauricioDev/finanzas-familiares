@@ -63,6 +63,30 @@ export function getAccessToken(): string | null {
   return getSession()?.access_token ?? null;
 }
 
+export function sessionNeedsRefresh(session: SessionState | null): boolean {
+  if (!session) return false;
+  if (!session.user?.id) return true;
+  return (
+    typeof session.needs_profile_setup !== "boolean" ||
+    typeof session.needs_family_setup !== "boolean"
+  );
+}
+
+export function reconcileFamilyFlag(session: SessionState): SessionState {
+  const needsFamilySetup = !session.user?.family_id;
+  if (session.needs_family_setup === needsFamilySetup) return session;
+
+  const next = { ...session, needs_family_setup: needsFamilySetup };
+  saveSession(next);
+  return next;
+}
+
+export function clearStalePendingInvite(session: SessionState): void {
+  if (session.user?.family_id && !session.needs_family_setup) {
+    clearPendingInviteToken();
+  }
+}
+
 export function applyTokenResponse(data: TokenResponse): SessionState {
   const session: SessionState = {
     access_token: data.access_token,
@@ -72,6 +96,7 @@ export function applyTokenResponse(data: TokenResponse): SessionState {
     needs_family_setup: data.needs_family_setup,
   };
   saveSession(session);
+  clearStalePendingInvite(session);
   return session;
 }
 

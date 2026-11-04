@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "@/components/ui";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import {
   applyInvitationJoined,
   clearPendingInviteToken,
@@ -55,10 +55,19 @@ function InviteContent() {
       clearPendingInviteToken();
       router.replace("/family/members");
     } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        clearPendingInviteToken();
+        setToken("");
+      }
       setError(err instanceof Error ? err.message : "No se pudo unir al grupo.");
     } finally {
       setJoining(false);
     }
+  };
+
+  const discardInvitation = () => {
+    clearPendingInviteToken();
+    router.replace("/family/select");
   };
 
   if (!ready || !session) return <Loading />;
@@ -88,6 +97,9 @@ function InviteContent() {
           />
           <Button type="submit" disabled={joining || !token.trim()}>
             {joining ? "Uniéndome..." : "Unirme al grupo"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={discardInvitation}>
+            Volver a selección de grupo
           </Button>
         </form>
       </Card>

@@ -1,7 +1,9 @@
 import uuid
 
+from fastapi import HTTPException, status
 from google.auth.transport import requests
 from google.oauth2 import id_token
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -64,8 +66,17 @@ def authenticate_with_google(db: Session, token: str):
     if not user:
         user = User(google_id=google_data["google_id"], email=google_data["email"])
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except IntegrityError:
+            db.rollback()
+            user = db.query(User).filter(User.google_id == google_data["google_id"]).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="A user account with this email already exists",
+                ) from None
 
     membership = _active_membership(db, user.id)
     needs_profile_setup = not (user.nombre_visualizacion and user.foto_avatar)

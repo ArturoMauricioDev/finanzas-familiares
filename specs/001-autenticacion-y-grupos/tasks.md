@@ -434,14 +434,30 @@ Task: "T059 [US5] Create invite screens in frontend-mobile/app/family/ and front
 
 **Purpose**: Close remaining gaps between the specification/plan and the current implementation (appended by `/speckit.converge`).
 
-- [ ] T102 Validate `moneda_local` against the actual ISO 4217 code set instead of only `[A-Z]{3}`, and add a regression test rejecting codes like `AAA`/`ZZZ` per FR-005, data-model `moneda_local`, and OpenAPI 422 (partial)
-- [ ] T103 Make last-admin removal atomic by locking the family/membership rows and rechecking the actor status and active admin count before deactivation per FR-010 and data-model membership constraints (partial)
-- [ ] T104 Require `NEXT_PUBLIC_API_URL` and `EXPO_PUBLIC_API_URL` at runtime instead of falling back to hardcoded localhost, and surface a clear configuration error when missing per plan "Configuración" and T082 (contradicts)
-- [ ] T105 Validate and reconcile persisted sessions on app load, including refreshing when onboarding flags are missing or stale and handling the case where the user already has a family, per plan "Frontend", FR-003/FR-004, SC-006, and T095 (partial)
-- [ ] T106 Centralize terminal 401 handling so a failed refresh clears the session and redirects to login from profile setup, family creation, invite join, and members screens on web and mobile per plan "Frontend" and T096 (partial)
-- [ ] T107 Align API payloads with `contracts/openapi.yaml`: serialize 422 validation errors as `{"detail": "..."}` and remove or document the extra `role` field in the promote response per OpenAPI 235-241 and 271-274 (contradicts)
-- [ ] T108 Catch database `IntegrityError` in auth/family/invitation services and map uniqueness or active-membership races to the contracted 409/400 responses instead of 500 per OpenAPI 268 (partial)
-- [ ] T109 Add a discard/back path from the invite flow to `/family/select`, clear invalid or expired tokens after failed joins, and clear stale pending invite tokens for users who already belong to a family on web and mobile per FR-004, SC-006, and plan "invite token preserved" (partial)
-- [ ] T110 Translate transport/network failures and 409 responses to Spanish user-facing messages in both frontends instead of displaying raw `Error.message` values per Constitution V and T092 (partial)
-- [ ] T111 Remove unused and shadow code: unused exception classes, `api.refresh` in both clients, the unused web `GOOGLE_CLIENT_ID` export, unused backend `passlib`/`python-multipart`/`PyJWT` direct dependencies, and mobile `@react-native-async-storage/async-storage` per Constitution VI (unrequested)
-- [ ] T112 Add focused tests for the real `useAuthGuard` redirect logic on web and mobile, covering no session, profile setup, family setup with and without a pending invite, `requireFamily`, and reload behavior per plan "Testing" and T091 (partial)
+- [X] T102 Validate `moneda_local` against the actual ISO 4217 code set instead of only `[A-Z]{3}`, and add a regression test rejecting codes like `AAA`/`ZZZ` per FR-005, data-model `moneda_local`, and OpenAPI 422 (partial)
+- [X] T103 Make last-admin removal atomic by locking the family/membership rows and rechecking the actor status and active admin count before deactivation per FR-010 and data-model membership constraints (partial)
+- [X] T104 Require `NEXT_PUBLIC_API_URL` and `EXPO_PUBLIC_API_URL` at runtime instead of falling back to hardcoded localhost, and surface a clear configuration error when missing per plan "Configuración" and T082 (contradicts)
+- [X] T105 Validate and reconcile persisted sessions on app load, including refreshing when onboarding flags are missing or stale and handling the case where the user already has a family, per plan "Frontend", FR-003/FR-004, SC-006, and T095 (partial)
+- [X] T106 Centralize terminal 401 handling so a failed refresh clears the session and redirects to login from profile setup, family creation, invite join, and members screens on web and mobile per plan "Frontend" and T096 (partial)
+- [X] T107 Align API payloads with `contracts/openapi.yaml`: serialize 422 validation errors as `{"detail": "..."}` and remove or document the extra `role` field in the promote response per OpenAPI 235-241 and 271-274 (contradicts)
+- [X] T108 Catch database `IntegrityError` in auth/family/invitation services and map uniqueness or active-membership races to the contracted 409/400 responses instead of 500 per OpenAPI 268 (partial)
+- [X] T109 Add a discard/back path from the invite flow to `/family/select`, clear invalid or expired tokens after failed joins, and clear stale pending invite tokens for users who already belong to a family on web and mobile per FR-004, SC-006, and plan "invite token preserved" (partial)
+- [X] T110 Translate transport/network failures and 409 responses to Spanish user-facing messages in both frontends instead of displaying raw `Error.message` values per Constitution V and T092 (partial)
+- [X] T111 Remove unused and shadow code: unused exception classes, `api.refresh` in both clients, the unused web `GOOGLE_CLIENT_ID` export, unused backend `passlib`/`python-multipart`/`PyJWT` direct dependencies, and mobile `@react-native-async-storage/async-storage` per Constitution VI (unrequested)
+- [X] T112 Add focused tests for the real `useAuthGuard` redirect logic on web and mobile, covering no session, profile setup, family setup with and without a pending invite, `requireFamily`, and reload behavior per plan "Testing" and T091 (partial)
+
+---
+
+## Phase 16: Convergence
+
+**Purpose**: Close remaining gaps between the specification/plan and the current implementation (appended by `/speckit.converge`).
+
+- [X] T113 HIGH: Reconcile persisted sessions on app load in `frontend-web/hooks/useAuthGuard.ts` and `frontend-mobile/hooks/useAuthGuard.ts`: refresh when onboarding flags are missing or stale, update the stored session and onboarding flags, and handle users who already have a family before routing per plan "Frontend", FR-003, FR-004, SC-006, and T105 (partial)
+- [X] T114 Require `NEXT_PUBLIC_API_URL` and `EXPO_PUBLIC_API_URL` at runtime instead of falling back to hardcoded `http://localhost:8000`, and surface a clear configuration error when missing in `frontend-web/lib/api.ts` and `frontend-mobile/lib/api.ts` per plan "Configuración" and T104 (contradicts)
+- [X] T115 Centralize terminal 401 handling so a failed refresh clears the session and redirects to login from profile setup, family creation, invite join, and members screens on web and mobile per plan "Frontend", T096, and T106 (partial)
+- [X] T116 Align API payloads with `contracts/openapi.yaml`: serialize 422 validation errors as `{"detail": "..."}` and remove or document the extra `role` field in the promote response per OpenAPI 422/promote responses and T107 (contradicts)
+- [X] T117 Catch database `IntegrityError` in auth/family/invitation services and map uniqueness or active-membership races to the contracted 409/400 responses instead of 500 per OpenAPI 409 and T108 (partial)
+- [X] T118 Add a discard/back path from the invite flow to `/family/select`, clear invalid or expired tokens after failed joins, and clear stale pending invite tokens for users who already belong to a family on web and mobile per FR-004, SC-006, plan "invite token preserved", and T109 (partial)
+- [X] T119 Remove unused and shadow code: unused exception classes, `api.refresh` in both clients, the unused web `GOOGLE_CLIENT_ID` export, unused backend `passlib`/`python-multipart`/`PyJWT` direct dependencies, and mobile `@react-native-async-storage/async-storage` per Constitution VI and T111 (unrequested)
+- [X] T120 Translate transport/network failures and 409 responses to Spanish user-facing messages in both frontends instead of displaying raw `Error.message` values per Constitution V and T110 (partial)
+- [X] T121 Add focused tests for the real `useAuthGuard` redirect logic on web and mobile, covering no session, profile setup, family setup with and without a pending invite, `requireFamily`, and reload behavior per plan "Testing" and T112 (partial)

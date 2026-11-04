@@ -180,10 +180,7 @@ describe("mobile onboarding flows", () => {
 
     render(<ProfileSetupScreen />);
     fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
-    fireEvent.changeText(
-      screen.getByPlaceholderText("https://..."),
-      "https://example.com/ana.png",
-    );
+    fireEvent.changeText(screen.getByPlaceholderText("https://..."), "https://example.com/ana.png");
     fireEvent.press(screen.getByText("Guardar y continuar"));
 
     await waitFor(() =>
@@ -211,10 +208,7 @@ describe("mobile onboarding flows", () => {
 
     render(<ProfileSetupScreen />);
     fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
-    fireEvent.changeText(
-      screen.getByPlaceholderText("https://..."),
-      "https://example.com/ana.png",
-    );
+    fireEvent.changeText(screen.getByPlaceholderText("https://..."), "https://example.com/ana.png");
     fireEvent.press(screen.getByText("Guardar y continuar"));
 
     await waitFor(() => expect(mockApi.updateProfile).toHaveBeenCalled());
@@ -324,7 +318,7 @@ describe("mobile onboarding flows", () => {
       link: "http://localhost:3000/invite?token=invite-token",
       expira_en: "2026-11-02T00:00:00Z",
     });
-    mockApi.promoteMember.mockResolvedValue({ success: true, role: "admin" });
+    mockApi.promoteMember.mockResolvedValue({ success: true });
     mockApi.removeMember.mockResolvedValue({ success: true });
     jest.spyOn(Alert, "alert").mockImplementation((_title, _message, buttons) => {
       buttons?.find((button) => button.style === "destructive")?.onPress?.();

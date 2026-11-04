@@ -8,8 +8,12 @@ describe("translateApiError", () => {
     expect(translateApiError(403, "Only admins can create invitations")).toBe(
       "Solo los administradores pueden generar invitaciones.",
     );
-    expect(translateApiError(400, "Invitation expired")).toBe(
-      "Esta invitación ha expirado.",
+    expect(translateApiError(400, "Invitation expired")).toBe("Esta invitación ha expirado.");
+  });
+
+  it("translates conflict responses", () => {
+    expect(translateApiError(409)).toBe(
+      "La acción entra en conflicto con el estado actual. Actualiza e inténtalo de nuevo.",
     );
   });
 

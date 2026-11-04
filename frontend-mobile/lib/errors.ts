@@ -19,13 +19,20 @@ const DETAIL_MESSAGES: Record<string, string> = {
   "Invitation expired": "Esta invitación ha expirado.",
   "Invitation family not found": "El grupo de la invitación ya no existe.",
   "Family has reached maximum member limit": "El grupo alcanzó el límite de 10 integrantes.",
+  "A user account with this email already exists": "Ya existe una cuenta con este correo.",
+  "Family could not be created due to a conflict":
+    "No se pudo crear el grupo por un conflicto. Inténtalo de nuevo.",
+  "Invitation could not be completed due to a conflict":
+    "No se pudo completar la unión por un conflicto. Inténtalo de nuevo.",
 };
 
 const STATUS_MESSAGES: Record<number, string> = {
+  0: "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
   400: "La solicitud no es válida.",
   401: "Tu sesión no es válida. Vuelve a iniciar sesión.",
   403: "No tienes permisos para realizar esta acción.",
   404: "No encontramos el recurso solicitado.",
+  409: "La acción entra en conflicto con el estado actual. Actualiza e inténtalo de nuevo.",
   422: "Revisa los datos ingresados e inténtalo de nuevo.",
 };
 

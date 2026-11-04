@@ -65,6 +65,30 @@ export async function getAccessToken(): Promise<string | null> {
   return session?.access_token ?? null;
 }
 
+export function sessionNeedsRefresh(session: SessionState | null): boolean {
+  if (!session) return false;
+  if (!session.user?.id) return true;
+  return (
+    typeof session.needs_profile_setup !== "boolean" ||
+    typeof session.needs_family_setup !== "boolean"
+  );
+}
+
+export async function reconcileFamilyFlag(session: SessionState): Promise<SessionState> {
+  const needsFamilySetup = !session.user?.family_id;
+  if (session.needs_family_setup === needsFamilySetup) return session;
+
+  const next = { ...session, needs_family_setup: needsFamilySetup };
+  await saveSession(next);
+  return next;
+}
+
+export async function clearStalePendingInvite(session: SessionState): Promise<void> {
+  if (session.user?.family_id && !session.needs_family_setup) {
+    await clearPendingInviteToken();
+  }
+}
+
 export async function applyTokenResponse(data: TokenResponse): Promise<SessionState> {
   const session: SessionState = {
     access_token: data.access_token,
@@ -74,6 +98,7 @@ export async function applyTokenResponse(data: TokenResponse): Promise<SessionSt
     needs_family_setup: data.needs_family_setup,
   };
   await saveSession(session);
+  await clearStalePendingInvite(session);
   return session;
 }
 

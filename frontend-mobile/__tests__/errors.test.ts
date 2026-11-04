@@ -13,6 +13,12 @@ describe("mobile translateApiError", () => {
     );
   });
 
+  it("translates conflict responses", () => {
+    expect(translateApiError(409)).toBe(
+      "La acción entra en conflicto con el estado actual. Actualiza e inténtalo de nuevo.",
+    );
+  });
+
   it("falls back to a Spanish status message for validation payloads", () => {
     expect(translateApiError(422, ["nombre: Field required"])).toBe(
       "Revisa los datos ingresados e inténtalo de nuevo.",

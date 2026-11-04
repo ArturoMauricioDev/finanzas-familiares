@@ -2,6 +2,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -125,6 +126,17 @@ def join_invitation(db: Session, user_id, request):
         invitation.usado = True
         db.commit()
         db.refresh(membership)
+    except IntegrityError:
+        db.rollback()
+        if _active_membership(db, user_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already belongs to a family",
+            ) from None
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Invitation could not be completed due to a conflict",
+        ) from None
     except Exception:
         db.rollback()
         raise

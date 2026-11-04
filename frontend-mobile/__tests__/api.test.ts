@@ -1,6 +1,8 @@
 import { api, ApiError } from "../lib/api";
 import * as sessionModule from "../lib/session";
 
+jest.mock("../lib/env", () => ({ API_URL: "http://localhost:8000" }));
+
 jest.mock("../lib/session", () => ({
   getAccessToken: jest.fn(async () => "test-token"),
   getSession: jest.fn(async () => null),
@@ -28,6 +30,16 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("mobile api client", () => {
+  it("translates transport failures to a readable ApiError", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Network request failed"));
+
+    await expect(api.getFamily()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 0,
+      message: "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+    });
+  });
+
   it("signs in with Google without an Authorization header", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({
@@ -80,7 +92,7 @@ describe("mobile api client", () => {
           tokens: { access_token: "a", refresh_token: "r", token_type: "bearer" },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ success: true, role: "admin" }));
+      .mockResolvedValueOnce(jsonResponse({ success: true }));
 
     await api.createInvitation();
     await api.joinInvitation({ token: "t" });
