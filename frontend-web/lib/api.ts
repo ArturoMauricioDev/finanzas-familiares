@@ -1,4 +1,4 @@
-import { translateApiError } from "./errors";
+import { ApiError, ConfigurationError, resolveError } from "./errors";
 import {
   applyTokenResponse,
   clearSession,
@@ -15,31 +15,12 @@ import type {
   UserResponse,
 } from "./types";
 
-export class ConfigurationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ConfigurationError";
-  }
-}
-
 export function getApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (!configured) {
-    throw new ConfigurationError(
-      "Falta configurar NEXT_PUBLIC_API_URL para conectar con el servidor.",
-    );
+    throw new ConfigurationError("errors.details.missingWebApiUrl");
   }
   return configured.replace(/\/$/, "");
-}
-
-export class ApiError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-  }
 }
 
 export type UnauthorizedHandler = () => void;
@@ -85,7 +66,8 @@ async function request<T>(
       headers,
     });
   } catch {
-    throw new ApiError(translateApiError(0), 0);
+    const descriptor = resolveError(0);
+    throw new ApiError(0, descriptor.key, descriptor.fallback);
   }
 
   const text = await response.text();
@@ -115,8 +97,8 @@ async function request<T>(
       typeof data === "object" && data !== null && "detail" in data
         ? (data as { detail: unknown }).detail
         : undefined;
-    const message = translateApiError(response.status, detail);
-    throw new ApiError(message, response.status);
+    const descriptor = resolveError(response.status, detail);
+    throw new ApiError(response.status, descriptor.key, descriptor.fallback);
   }
 
   return data as T;
@@ -209,5 +191,7 @@ export const api = {
     });
   },
 };
+
+export { ApiError, ConfigurationError };
 
 export const signInWithGoogle = api.signInWithGoogle;

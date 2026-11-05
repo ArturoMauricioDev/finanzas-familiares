@@ -1,33 +1,28 @@
 <!--
 Sync Impact Report
-- Version change: none (plantilla sin completar) → 1.0.0
-- Modified principles: N/A (ratificación inicial; no existían principios definidos)
-- Added principles:
-  - I. Naturaleza y Alcance del Proyecto
-  - II. Stack Tecnológico y Contenedorización
-  - III. Reglas de Dominio y Lógica de Negocio (Inmutables)
-  - IV. No-Objetivos y Alcance Excluido (Out of Scope)
-  - V. Estructura, Estilo y Manejo de Errores
-  - VI. Comportamiento del Agente de IA (Reglas SDD)
+- Version change: 1.0.0 → 1.1.0
+- Modified principles: I. Naturaleza y Alcance del Proyecto (se incorpora Kitho como nombre canónico del producto)
+- Added principles: none
 - Added sections:
-  - Restricciones Adicionales
-  - Flujo de Desarrollo y Puertas de Calidad
-  - Governance
+  - Identidad de Marca y Nomenclatura
+- Modified sections:
+  - Flujo de Desarrollo y Puertas de Calidad (validación de marca)
+  - Governance (versión y fecha de enmienda)
 - Removed sections: none
 - Follow-up TODOs: none
 -->
 
-# Constitución de la App de Finanzas Familiares
+# Constitución de la App Kitho
 
 ## Core Principles
 
 ### I. Naturaleza y Alcance del Proyecto
 
-Este proyecto consiste en una aplicación de finanzas familiares multiplataforma (Web y Móvil)
-diseñada para registrar presupuestos, ingresos y gastos colaborativos. Su propósito es permitir
-el control financiero transparente, flexible y administrado dentro del núcleo familiar. Todo
-desarrollo DEBE ceñirse estrictamente al alcance definido; las funciones no documentadas DEBEN
-rechazarse.
+Este proyecto consiste en una aplicación de finanzas familiares multiplataforma (Web y Móvil),
+comercializada bajo la marca **Kitho**, diseñada para registrar presupuestos, ingresos y gastos
+colaborativos. Su propósito es permitir el control financiero transparente, flexible y
+administrado dentro del núcleo familiar. Todo desarrollo DEBE ceñirse estrictamente al alcance
+definido; las funciones no documentadas DEBEN rechazarse.
 
 **Razón**: un alcance acotado protege la claridad del dominio financiero y evita funcionalidad
 no validada que comprometa la integridad de los registros.
@@ -123,6 +118,30 @@ errores semánticos y mensajes claros preservan la confianza del usuario.
 **Razón**: la trazabilidad entre especificación e implementación evita decisiones implícitas y
 mantiene la constitución como autoridad final.
 
+## Identidad de Marca y Nomenclatura
+
+- **Nombre de marca registrada**: **Kitho**.
+- **Nombre visible bajo el icono**: **Kitho**.
+- **Ficha en Play Store / App Store (España/Latam)**: **Kitho: Tareas y Finanzas Familiares**.
+- **Ficha en Play Store / App Store (EE.UU./Global)**: **Kitho Family**.
+- **Significado y vibe**: el nombre deriva del inglés antiguo **"Kith"** (familiares y allegados).
+  Es corto, estilizado, fresco y con una personalidad de startup tecnológica.
+- **Atractivo bilingüe**: tiene excelente pronunciación en inglés y en español; suena nativo y no
+  choca fonéticamente en ninguno de los dos idiomas.
+- **Disponibilidad**: se verificó que está libre de conflicto en la categoría de aplicaciones de
+  organización y gestión familiar.
+- **Uso canónico**: **Kitho** es el nombre del producto en interfaz, documentación y metadatos. La
+  variante **Kitho Family** se reserva para la ficha de EE.UU./Global. **"Finanzas Familiares"**
+  solo puede aparecer como descriptor de categoría en la ficha de España/Latam, nunca como nombre
+  del producto.
+- **Consistencia**: no se permiten traducciones, adaptaciones fonéticas ni variantes no aprobadas
+  del nombre. Cualquier cambio de nomenclatura o de ficha de tienda requiere una enmienda a esta
+  constitución.
+
+**Razón**: una identidad de marca única y bilingüe evita conflictos de naming, facilita el
+reconocimiento del producto y mantiene coherencia entre la interfaz, las tiendas y la
+documentación.
+
 ## Restricciones Adicionales
 
 - La moneda definida al crear el Grupo Familiar es única y aplica a todos los registros del grupo.
@@ -143,6 +162,8 @@ mantiene la constitución como autoridad final.
 - Cada cambio DEBE revisarse contra esta constitución y contra los No-Objetivos antes de
   considerarse completo.
 - Los errores técnicos DEBEN mapearse a códigos HTTP semánticos y a mensajes claros en la UI.
+- Los cambios de interfaz, documentación y metadatos DEBEN validarse contra la sección
+  Identidad de Marca y Nomenclatura.
 - Los servicios DEBEN ejecutarse mediante la configuración Docker Compose del proyecto para
   mantener paridad entre desarrollo y producción.
 
@@ -161,4 +182,4 @@ mantiene la constitución como autoridad final.
   reportar el conflicto y solicitar la actualización de la especificación; no DEBE implementar la
   excepción.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-10-26
+**Version**: 1.1.0 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-11-04

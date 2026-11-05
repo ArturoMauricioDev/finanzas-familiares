@@ -1,5 +1,4 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { Alert } from "react-native";
 
 import { api, ApiError, refreshSession } from "../lib/api";
 import * as auth from "../lib/auth";
@@ -7,12 +6,12 @@ import * as session from "../lib/session";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { useIdTokenAuthRequest } from "expo-auth-session/providers/google";
 
-import LoginScreen from "../app/auth/login";
-import ProfileSetupScreen from "../app/profile/setup";
-import FamilySelectScreen from "../app/family/select";
-import FamilyCreateScreen from "../app/family/create";
-import InviteScreen from "../app/invite/index";
-import FamilyMembersScreen from "../app/family/members";
+import LoginScreen from "../app/(auth)/auth/login";
+import ProfileSetupScreen from "../app/(onboarding)/profile/setup";
+import FamilySelectScreen from "../app/(onboarding)/family/select";
+import FamilyCreateScreen from "../app/(onboarding)/family/create";
+import InviteScreen from "../app/(onboarding)/invite/index";
+import FamilyMembersScreen from "../app/(app)/(tabs)/family/members";
 
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
 const mockParams: { token?: string } = {};
@@ -180,14 +179,15 @@ describe("mobile onboarding flows", () => {
 
     render(<ProfileSetupScreen />);
     fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
-    fireEvent.changeText(screen.getByPlaceholderText("https://..."), "https://example.com/ana.png");
     fireEvent.press(screen.getByText("Guardar y continuar"));
 
     await waitFor(() =>
-      expect(mockApi.updateProfile).toHaveBeenCalledWith({
-        nombre_visualizacion: "Ana",
-        foto_avatar: "https://example.com/ana.png",
-      }),
+      expect(mockApi.updateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nombre_visualizacion: "Ana",
+          foto_avatar: expect.stringMatching(/^data:image\/svg\+xml,/),
+        }),
+      ),
     );
     expect(mockSession.updateSession).toHaveBeenCalledWith(
       expect.objectContaining({ needs_profile_setup: false }),
@@ -208,7 +208,6 @@ describe("mobile onboarding flows", () => {
 
     render(<ProfileSetupScreen />);
     fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
-    fireEvent.changeText(screen.getByPlaceholderText("https://..."), "https://example.com/ana.png");
     fireEvent.press(screen.getByText("Guardar y continuar"));
 
     await waitFor(() => expect(mockApi.updateProfile).toHaveBeenCalled());
@@ -320,10 +319,6 @@ describe("mobile onboarding flows", () => {
     });
     mockApi.promoteMember.mockResolvedValue({ success: true });
     mockApi.removeMember.mockResolvedValue({ success: true });
-    jest.spyOn(Alert, "alert").mockImplementation((_title, _message, buttons) => {
-      buttons?.find((button) => button.style === "destructive")?.onPress?.();
-    });
-
     render(<FamilyMembersScreen />);
 
     await screen.findByText("Familia Pérez");
@@ -335,8 +330,8 @@ describe("mobile onboarding flows", () => {
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
 
     fireEvent.press(screen.getByText("Expulsar"));
+    fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
-    expect(Alert.alert).toHaveBeenCalled();
   });
 
   it("reconciles the session when the active membership is gone", async () => {

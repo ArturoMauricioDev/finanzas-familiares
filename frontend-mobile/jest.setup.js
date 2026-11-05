@@ -2,6 +2,18 @@ process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = "test-web-client";
 process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = "test-android-client";
 process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = "test-ios-client";
 
+jest.mock("lucide-react-native", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  const Icon = (props) => React.createElement(View, props);
+  return new Proxy(
+    {},
+    {
+      get: (_target, property) => (property === "__esModule" ? true : Icon),
+    },
+  );
+});
+
 jest.mock("expo-secure-store", () => {
   const store = new Map();
 

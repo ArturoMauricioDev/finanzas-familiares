@@ -1,52 +1,96 @@
-const DETAIL_MESSAGES: Record<string, string> = {
-  "Invalid Google token": "El inicio de sesión con Google no es válido.",
-  "Invalid refresh token": "Tu sesión ha expirado. Vuelve a iniciar sesión.",
-  "Missing authentication token": "Debes iniciar sesión para continuar.",
-  "Invalid or expired token": "Tu sesión ha expirado. Vuelve a iniciar sesión.",
-  "Invalid token type": "Tu sesión no es válida. Vuelve a iniciar sesión.",
-  "Invalid token payload": "Tu sesión no es válida. Vuelve a iniciar sesión.",
-  "User not found": "No encontramos tu cuenta.",
-  "User already belongs to a family": "Ya perteneces a un grupo familiar.",
-  "User does not belong to a family": "Aún no perteneces a ningún grupo familiar.",
-  "Family not found": "No encontramos el grupo familiar.",
-  "Only admins can manage members": "Solo los administradores pueden gestionar integrantes.",
-  "Member not found": "No encontramos a ese integrante en el grupo.",
-  "Admins cannot remove themselves": "No puedes expulsarte a ti mismo del grupo.",
-  "A family must keep at least one admin": "El grupo debe conservar al menos un administrador.",
-  "Only admins can create invitations": "Solo los administradores pueden generar invitaciones.",
-  "Invalid invitation token": "La invitación no es válida.",
-  "Invitation already used": "Esta invitación ya fue utilizada.",
-  "Invitation expired": "Esta invitación ha expirado.",
-  "Invitation family not found": "El grupo de la invitación ya no existe.",
-  "Family has reached maximum member limit": "El grupo alcanzó el límite de 10 integrantes.",
-  "A user account with this email already exists": "Ya existe una cuenta con este correo.",
-  "Family could not be created due to a conflict":
-    "No se pudo crear el grupo por un conflicto. Inténtalo de nuevo.",
-  "Invitation could not be completed due to a conflict":
-    "No se pudo completar la unión por un conflicto. Inténtalo de nuevo.",
-};
+import { errorDetailKeys, errorStatusKeys } from "./generated/error-keys";
 
-const STATUS_MESSAGES: Record<number, string> = {
-  0: "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
-  400: "La solicitud no es válida.",
-  401: "Tu sesión no es válida. Vuelve a iniciar sesión.",
-  403: "No tienes permisos para realizar esta acción.",
-  404: "No encontramos el recurso solicitado.",
-  409: "La acción entra en conflicto con el estado actual. Actualiza e inténtalo de nuevo.",
-  422: "Revisa los datos ingresados e inténtalo de nuevo.",
-};
+export interface ErrorDescriptor {
+  status: number;
+  key: string | null;
+  fallback: string;
+}
 
-export function translateApiError(status: number, detail?: unknown): string {
-  if (typeof detail === "string" && DETAIL_MESSAGES[detail]) {
-    return DETAIL_MESSAGES[detail];
+export class ConfigurationError extends Error {
+  messageKey: string;
+  fallbackDetail: string;
+
+  constructor(messageKey: string, fallbackDetail = "") {
+    super(fallbackDetail || messageKey);
+    this.name = "ConfigurationError";
+    this.messageKey = messageKey;
+    this.fallbackDetail = fallbackDetail;
   }
+}
 
+export class ApiError extends Error {
+  status: number;
+  messageKey: string | null;
+  fallbackDetail: string;
+
+  constructor(status: number, messageKey?: string | null, fallbackDetail?: string);
+  constructor(message: string, status: number);
+  constructor(
+    first: number | string,
+    second?: number | string | null,
+    third?: string,
+  ) {
+    if (typeof first === "number") {
+      const status = first;
+      const messageKey = typeof second === "string" ? second : null;
+      const fallbackDetail = third ?? "";
+      super(fallbackDetail || messageKey || `Error ${status}`);
+      this.name = "ApiError";
+      this.status = status;
+      this.messageKey = messageKey;
+      this.fallbackDetail = fallbackDetail;
+      return;
+    }
+
+    const status = typeof second === "number" ? second : 0;
+    super(first);
+    this.name = "ApiError";
+    this.status = status;
+    this.messageKey = null;
+    this.fallbackDetail = first;
+  }
+}
+
+function detailMessage(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
   if (detail && typeof detail === "object" && !Array.isArray(detail)) {
     const message = (detail as { message?: unknown }).message;
-    if (typeof message === "string" && DETAIL_MESSAGES[message]) {
-      return DETAIL_MESSAGES[message];
-    }
+    if (typeof message === "string") return message;
   }
+  return null;
+}
 
-  return STATUS_MESSAGES[status] ?? "Ocurrió un error inesperado. Inténtalo de nuevo.";
+export function resolveError(status: number, detail?: unknown): ErrorDescriptor {
+  const detailValue = detailMessage(detail);
+  const detailKey = detailValue ? errorDetailKeys[detailValue as keyof typeof errorDetailKeys] : null;
+  const statusKey = errorStatusKeys[String(status) as keyof typeof errorStatusKeys] ?? null;
+
+  return {
+    status,
+    key: detailKey ?? statusKey,
+    fallback: detailValue ?? "",
+  };
+}
+
+export function errorText(
+  error: unknown,
+  translate: (key: string) => string,
+  fallback: string,
+): string {
+  if (error instanceof ApiError) {
+    if (error.messageKey) return translate(error.messageKey);
+    if (error.fallbackDetail) return error.fallbackDetail;
+    const key = errorStatusKeys[String(error.status) as keyof typeof errorStatusKeys];
+    if (key) return translate(key);
+  }
+  if (error instanceof ConfigurationError && error.messageKey) {
+    return translate(error.messageKey);
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+export function translateApiError(status: number, detail?: unknown): string {
+  const descriptor = resolveError(status, detail);
+  return descriptor.key ?? descriptor.fallback;
 }

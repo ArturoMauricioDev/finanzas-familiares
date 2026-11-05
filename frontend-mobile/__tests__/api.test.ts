@@ -36,7 +36,7 @@ describe("mobile api client", () => {
     await expect(api.getFamily()).rejects.toMatchObject({
       name: "ApiError",
       status: 0,
-      message: "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+      messageKey: "errors.status.0",
     });
   });
 
@@ -68,9 +68,9 @@ describe("mobile api client", () => {
     expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
 
-  it("throws ApiError with a readable message", async () => {
+  it("maps validation errors to the descriptor contract", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse({ detail: "La moneda local debe ser un código ISO 4217 válido" }, 422),
+      jsonResponse({ detail: ["moneda_local: debe ser ISO 4217"] }, 422),
     );
 
     await expect(
@@ -78,6 +78,19 @@ describe("mobile api client", () => {
     ).rejects.toMatchObject({
       name: "ApiError",
       status: 422,
+      messageKey: "errors.status.422",
+      fallbackDetail: "",
+    });
+  });
+
+  it("keeps an unknown detail as fallback and a status key", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ detail: "Something exploded" }, 500));
+
+    await expect(api.getFamily()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 500,
+      messageKey: "errors.status.500",
+      fallbackDetail: "Something exploded",
     });
   });
 

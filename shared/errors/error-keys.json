@@ -1,0 +1,39 @@
+{
+  "details": {
+    "Invalid Google token": "errors.details.invalidGoogleToken",
+    "Invalid refresh token": "errors.details.invalidRefreshToken",
+    "Missing authentication token": "errors.details.missingAuthToken",
+    "Invalid or expired token": "errors.details.invalidToken",
+    "Invalid token type": "errors.details.invalidTokenType",
+    "Invalid token payload": "errors.details.invalidTokenPayload",
+    "User not found": "errors.details.userNotFound",
+    "User already belongs to a family": "errors.details.userAlreadyInFamily",
+    "User does not belong to a family": "errors.details.userWithoutFamily",
+    "Family not found": "errors.details.familyNotFound",
+    "Only admins can manage members": "errors.details.adminOnlyMembers",
+    "Member not found": "errors.details.memberNotFound",
+    "Admins cannot remove themselves": "errors.details.adminCannotRemoveSelf",
+    "A family must keep at least one admin": "errors.details.keepOneAdmin",
+    "Only admins can create invitations": "errors.details.adminOnlyInvitations",
+    "Invalid invitation token": "errors.details.invalidInvitation",
+    "Invitation already used": "errors.details.invitationUsed",
+    "Invitation expired": "errors.details.invitationExpired",
+    "Invitation family not found": "errors.details.invitationFamilyNotFound",
+    "Family has reached maximum member limit": "errors.details.memberLimit",
+    "A user account with this email already exists": "errors.details.emailExists",
+    "Family could not be created due to a conflict": "errors.details.familyConflict",
+    "Invitation could not be completed due to a conflict": "errors.details.invitationConflict",
+    "Missing NEXT_PUBLIC_API_URL": "errors.details.missingWebApiUrl",
+    "Missing EXPO_PUBLIC_API_URL": "errors.details.missingMobileApiUrl"
+  },
+  "statuses": {
+    "0": "errors.status.0",
+    "400": "errors.status.400",
+    "401": "errors.status.401",
+    "403": "errors.status.403",
+    "404": "errors.status.404",
+    "409": "errors.status.409",
+    "422": "errors.status.422",
+    "500": "errors.status.500"
+  }
+}

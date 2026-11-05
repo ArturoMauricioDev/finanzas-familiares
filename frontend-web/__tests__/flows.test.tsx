@@ -6,12 +6,12 @@ import * as auth from "@/lib/auth";
 import * as session from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
-import LoginPage from "@/app/auth/login/page";
-import ProfileSetupPage from "@/app/profile/setup/page";
-import FamilySelectPage from "@/app/family/select/page";
-import FamilyCreatePage from "@/app/family/create/page";
-import InvitePage from "@/app/invite/page";
-import FamilyMembersPage from "@/app/family/members/page";
+import LoginPage from "@/app/(auth)/auth/login/page";
+import ProfileSetupPage from "@/app/(onboarding)/profile/setup/page";
+import FamilySelectPage from "@/app/(onboarding)/family/select/page";
+import FamilyCreatePage from "@/app/(onboarding)/family/create/page";
+import InvitePage from "@/app/(onboarding)/invite/page";
+import FamilyMembersPage from "@/app/(app)/family/members/page";
 
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
 const mockSearchParams = new URLSearchParams();
@@ -166,16 +166,15 @@ describe("web onboarding flows", () => {
     fireEvent.change(screen.getByLabelText("Nombre de visualización"), {
       target: { value: "Ana" },
     });
-    fireEvent.change(screen.getByLabelText("URL de la foto de avatar"), {
-      target: { value: "https://example.com/ana.png" },
-    });
     fireEvent.click(screen.getByText("Guardar y continuar"));
 
     await waitFor(() =>
-      expect(mockApi.updateProfile).toHaveBeenCalledWith({
-        nombre_visualizacion: "Ana",
-        foto_avatar: "https://example.com/ana.png",
-      }),
+      expect(mockApi.updateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nombre_visualizacion: "Ana",
+          foto_avatar: expect.stringMatching(/^data:image\/svg\+xml,/),
+        }),
+      ),
     );
     expect(mockSession.updateSession).toHaveBeenCalledWith(
       expect.objectContaining({ needs_profile_setup: false }),
@@ -197,9 +196,6 @@ describe("web onboarding flows", () => {
     render(<ProfileSetupPage />);
     fireEvent.change(screen.getByLabelText("Nombre de visualización"), {
       target: { value: "Ana" },
-    });
-    fireEvent.change(screen.getByLabelText("URL de la foto de avatar"), {
-      target: { value: "https://example.com/ana.png" },
     });
     fireEvent.click(screen.getByText("Guardar y continuar"));
 
@@ -323,8 +319,8 @@ describe("web onboarding flows", () => {
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
 
     fireEvent.click(screen.getByText("Expulsar"));
+    fireEvent.click(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
-    expect(window.confirm).toHaveBeenCalled();
   });
 
   it("reconciles the session when the active membership is gone", async () => {

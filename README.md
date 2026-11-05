@@ -1,7 +1,7 @@
-# Finanzas Familiares
+# Kitho
 
-Aplicación de finanzas familiares con autenticación de Google, perfil obligatorio, grupo familiar
-y gestión de integrantes mediante invitaciones.
+Kitho es una aplicación de finanzas familiares con autenticación de Google, perfil obligatorio,
+grupo familiar y gestión de integrantes mediante invitaciones.
 
 ## Estructura
 
@@ -9,6 +9,8 @@ y gestión de integrantes mediante invitaciones.
 - `frontend-web/`: aplicación Next.js 15.
 - `frontend-mobile/`: aplicación Expo 52 con Expo Router.
 - `specs/001-autenticacion-y-grupos/`: especificación, plan, contratos y tareas.
+- `specs/002-ui-styles-and-views/`: especificación, plan, contratos y quickstart de UI, estilos,
+  navegación y vistas web/móvil.
 
 ## Requisitos
 
@@ -105,6 +107,22 @@ El esquema de redirección OAuth es `finanzasfamiliares://auth/login`. En un dis
 - Añade los Client IDs de Android/iOS en `GOOGLE_CLIENT_IDS` del backend para que los `id_token`
   nativos también sean válidos.
 
+## Artefactos compartidos (feature 002)
+
+Los tokens de diseño, el catálogo de avatar, las claves de error y los catálogos i18n viven en
+`design-tokens/` y `shared/`. Se generan copias versionadas para web y móvil:
+
+```bash
+node scripts/generate-shared.mjs
+node scripts/generate-shared.mjs --check
+node scripts/check-shared.mjs
+node scripts/check-ui.mjs
+```
+
+No edites a mano los archivos `*.generated.*` ni `lib/generated/*`: cambia las fuentes y vuelve a
+generar. `check-ui` impide importar Recharts o Victory Native fuera de `components/charts/` y
+detecta colores literales fuera de los archivos generados.
+
 ## Pruebas y validación
 
 ```bash
@@ -118,16 +136,19 @@ cd frontend-web
 pnpm run typecheck
 pnpm run lint
 pnpm test
+pnpm run build
 
 # Mobile
 cd frontend-mobile
 pnpm run typecheck
 pnpm run lint
 pnpm test
+npx expo-doctor
 ```
 
-Los escenarios manuales end-to-end están descritos en
-`specs/001-autenticacion-y-grupos/quickstart.md`.
+Los escenarios manuales end-to-end de autenticación están en
+`specs/001-autenticacion-y-grupos/quickstart.md`; los de UI, tema, idioma, avatar y navegación
+están en `specs/002-ui-styles-and-views/quickstart.md`.
 
 ## Seguridad
 

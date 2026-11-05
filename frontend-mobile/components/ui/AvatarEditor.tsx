@@ -1,0 +1,187 @@
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SvgXml } from "react-native-svg";
+
+import { useI18n } from "../providers/LocaleProvider";
+import { useTheme } from "../providers/ThemeProvider";
+import { avatarDataUri, defaultAvatarConfig, renderAvatarSvg, type AvatarConfig } from "../../lib/avatar-engine.generated";
+import { avatarOptions } from "../../lib/avatar-options.generated";
+import { shape, spacing } from "../../lib/generated/tokens";
+import { typeStyle } from "../../lib/ui-styles";
+import { Button } from "./Button";
+
+function labelFor(t: (key: string) => string, value: string): string {
+  const key = `avatar.options.${value}`;
+  const translated = t(key);
+  return translated === key ? value : translated;
+}
+
+function ChoiceRow({
+  label,
+  count,
+  value,
+  labels,
+  colors,
+  onChange,
+}: {
+  label: string;
+  count: number;
+  value: number;
+  labels?: readonly string[];
+  colors?: readonly string[];
+  onChange: (value: number) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={styles.control}>
+      <Text style={[typeStyle("labelLarge"), { color: theme.colors.onSurface }]}>{label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
+        {Array.from({ length: count }, (_, index) => {
+          const selected = index === value;
+          return (
+            <Pressable
+              key={index}
+              accessibilityRole="button"
+              accessibilityLabel={labels?.[index] ?? `${label} ${index + 1}`}
+              accessibilityState={{ selected }}
+              onPress={() => onChange(index)}
+              style={[
+                styles.choice,
+                {
+                  borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
+                  backgroundColor: selected ? theme.colors.secondaryContainer : theme.colors.surface,
+                },
+              ]}
+            >
+              {colors ? (
+                <View style={[styles.swatch, { backgroundColor: colors[index] }]} />
+              ) : (
+                <Text
+                  style={[
+                    typeStyle("labelMedium"),
+                    { color: selected ? theme.colors.onSecondaryContainer : theme.colors.onSurface },
+                  ]}
+                >
+                  {labels?.[index] ?? String(index + 1)}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+export function AvatarEditor({
+  seed,
+  initial,
+  onApply,
+}: {
+  seed: string;
+  initial?: AvatarConfig;
+  onApply?: (dataUri: string) => void;
+}) {
+  const { t } = useI18n();
+  const { colors } = useTheme();
+  const [config, setConfig] = useState<AvatarConfig>(initial ?? defaultAvatarConfig(seed));
+  const svg = useMemo(() => renderAvatarSvg(config), [config]);
+  const dataUri = useMemo(() => avatarDataUri(config), [config]);
+
+  const update = (patch: Partial<AvatarConfig>) => setConfig((current) => ({ ...current, ...patch }));
+
+  return (
+    <View style={styles.root}>
+      <SvgXml xml={svg} width={192} height={192} accessibilityLabel={t("avatar.previewAlt")} />
+      <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
+        {t("avatar.previewOnly")}
+      </Text>
+
+      <ChoiceRow
+        label={t("avatar.skin")}
+        count={avatarOptions.skinTones.length}
+        value={config.skinTone}
+        colors={avatarOptions.skinTones}
+        onChange={(skinTone) => update({ skinTone })}
+      />
+      <ChoiceRow
+        label={t("avatar.hair")}
+        count={avatarOptions.hairStyles.length}
+        value={config.hairStyle}
+        labels={avatarOptions.hairStyles.map((value) => labelFor(t, value))}
+        onChange={(hairStyle) => update({ hairStyle })}
+      />
+      <ChoiceRow
+        label={t("avatar.hairColor")}
+        count={avatarOptions.hairColors.length}
+        value={config.hairColor}
+        colors={avatarOptions.hairColors}
+        onChange={(hairColor) => update({ hairColor })}
+      />
+      <ChoiceRow
+        label={t("avatar.facialHair")}
+        count={avatarOptions.facialHair.length}
+        value={config.facialHair}
+        labels={avatarOptions.facialHair.map((value) => labelFor(t, value))}
+        onChange={(facialHair) => update({ facialHair })}
+      />
+      <ChoiceRow
+        label={t("avatar.accessory")}
+        count={avatarOptions.accessories.length}
+        value={config.accessory}
+        labels={avatarOptions.accessories.map((value) => labelFor(t, value))}
+        onChange={(accessory) => update({ accessory })}
+      />
+      <ChoiceRow
+        label={t("avatar.expression")}
+        count={avatarOptions.expressions.length}
+        value={config.expression}
+        labels={avatarOptions.expressions.map((value) => labelFor(t, value))}
+        onChange={(expression) => update({ expression })}
+      />
+
+      <View style={styles.actions}>
+        <Button
+          title={t("avatar.randomize")}
+          variant="secondary"
+          onPress={() => setConfig(defaultAvatarConfig(`${seed}-${Date.now()}`))}
+        />
+        {onApply ? <Button title={t("avatar.apply")} onPress={() => onApply(dataUri)} /> : null}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    gap: spacing[4],
+    alignItems: "center",
+  },
+  control: {
+    width: "100%",
+    gap: spacing[2],
+  },
+  choices: {
+    gap: spacing[2],
+  },
+  choice: {
+    minWidth: spacing[12],
+    minHeight: spacing[12],
+    borderRadius: shape.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing[3],
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  swatch: {
+    width: spacing[6],
+    height: spacing[6],
+    borderRadius: shape.full,
+  },
+  actions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing[2],
+    justifyContent: "center",
+  },
+});

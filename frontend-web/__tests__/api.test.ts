@@ -33,7 +33,7 @@ describe("api client", () => {
     delete process.env.NEXT_PUBLIC_API_URL;
 
     try {
-      expect(() => getApiBaseUrl()).toThrow(/NEXT_PUBLIC_API_URL/);
+      expect(() => getApiBaseUrl()).toThrow("errors.details.missingWebApiUrl");
     } finally {
       if (original === undefined) {
         delete process.env.NEXT_PUBLIC_API_URL;
@@ -49,7 +49,7 @@ describe("api client", () => {
     await expect(api.getFamily()).rejects.toMatchObject({
       name: "ApiError",
       status: 0,
-      message: "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+      messageKey: "errors.status.0",
     });
   });
 
@@ -93,7 +93,19 @@ describe("api client", () => {
     ).rejects.toMatchObject({
       name: "ApiError",
       status: 422,
-      message: "Revisa los datos ingresados e inténtalo de nuevo.",
+      messageKey: "errors.status.422",
+      fallbackDetail: "",
+    });
+  });
+
+  it("keeps an unknown detail as fallback and a status key", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ detail: "Something exploded" }, 500));
+
+    await expect(api.getFamily()).rejects.toMatchObject({
+      name: "ApiError",
+      status: 500,
+      messageKey: "errors.status.500",
+      fallbackDetail: "Something exploded",
     });
   });
 

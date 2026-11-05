@@ -1,4 +1,31 @@
 {
   "extends": "expo",
-  "ignorePatterns": ["node_modules/", ".expo/", "dist/", "coverage/"]
+  "ignorePatterns": ["node_modules/", ".expo/", "dist/", "coverage/"],
+  "overrides": [
+    {
+      "files": ["**/*.{ts,tsx}"],
+      "excludedFiles": ["components/charts/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "victory-native",
+                "message": "Importa gráficos solo desde components/charts/ChartContainer."
+              },
+              {
+                "name": "victory",
+                "message": "Importa gráficos solo desde components/charts/ChartContainer."
+              },
+              {
+                "name": "recharts",
+                "message": "Recharts no se usa en móvil."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
