@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { useTheme } from "../providers/ThemeProvider";
 import { spacing } from "../../lib/generated/tokens";
@@ -8,10 +8,34 @@ export function List({ children }: { children: ReactNode }) {
   return <View style={styles.list}>{children}</View>;
 }
 
-export function ListItem({ children }: { children: ReactNode }) {
+export function ListItem({
+  children,
+  onPress,
+  accessibilityLabel,
+}: {
+  children: ReactNode;
+  onPress?: () => void;
+  accessibilityLabel?: string;
+}) {
   const { colors } = useTheme();
+  const baseStyle = [styles.item, { borderBottomColor: colors.outlineVariant }];
+
+  if (!onPress) {
+    return <View style={baseStyle}>{children}</View>;
+  }
+
   return (
-    <View style={[styles.item, { borderBottomColor: colors.outlineVariant }]}>{children}</View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [
+        baseStyle,
+        { backgroundColor: pressed ? colors.surfaceContainerHigh : "transparent" },
+      ]}
+    >
+      {children}
+    </Pressable>
   );
 }
 

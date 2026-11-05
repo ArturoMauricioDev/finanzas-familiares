@@ -88,7 +88,7 @@ export default function SettingsPage() {
       <Card variant="outlined" className="space-y-4">
         <div>
           <h2 className="text-title-large text-on-surface">{t("nav.profile")}</h2>
-          <p className="text-body-medium text-on-surface-variant">{t("settings.legalBody")}</p>
+          <p className="text-body-medium text-on-surface-variant">{t("settings.accountBody")}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => router.push("/profile/edit")}>
               {t("profile.editTitle")}
@@ -106,6 +106,11 @@ export default function SettingsPage() {
         <p className="text-label-medium text-on-surface-variant">
           {t("settings.version", { version: APP_VERSION })} · {brand.name}
         </p>
+      </Card>
+
+      <Card variant="outlined" className="space-y-2">
+        <h2 className="text-title-large text-on-surface">{t("legal.title")}</h2>
+        <p className="text-body-medium text-on-surface-variant">{t("legal.body")}</p>
       </Card>
 
       <ConfirmDialog

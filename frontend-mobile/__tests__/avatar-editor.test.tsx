@@ -11,6 +11,8 @@ describe("mobile avatar editor", () => {
       "Tono de piel",
       "Cabello",
       "Color de cabello",
+      "Ropa",
+      "Ojos",
       "Barba",
       "Accesorio",
       "Expresión",
@@ -41,5 +43,15 @@ describe("mobile avatar editor", () => {
 
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply.mock.calls[0][0]).toMatch(/^data:image\/svg\+xml,/);
+  });
+
+  it("shows the spec 003 notice when saving without persisting", () => {
+    const onApply = jest.fn();
+    render(<AvatarEditor seed="user-1" onApply={onApply} />);
+
+    fireEvent.press(screen.getByText("Guardar"));
+
+    expect(screen.getByText(/se guardará en una próxima versión/i)).toBeTruthy();
+    expect(onApply).not.toHaveBeenCalled();
   });
 });

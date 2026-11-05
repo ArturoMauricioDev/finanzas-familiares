@@ -4,11 +4,17 @@ import { SvgXml } from "react-native-svg";
 
 import { useI18n } from "../providers/LocaleProvider";
 import { useTheme } from "../providers/ThemeProvider";
-import { avatarDataUri, defaultAvatarConfig, renderAvatarSvg, type AvatarConfig } from "../../lib/avatar-engine.generated";
+import {
+  avatarDataUri,
+  defaultAvatarConfig,
+  renderAvatarSvg,
+  type AvatarConfig,
+} from "../../lib/avatar-engine.generated";
 import { avatarOptions } from "../../lib/avatar-options.generated";
 import { shape, spacing } from "../../lib/generated/tokens";
 import { typeStyle } from "../../lib/ui-styles";
 import { Button } from "./Button";
+import { InlineBanner } from "./InlineBanner";
 
 function labelFor(t: (key: string) => string, value: string): string {
   const key = `avatar.options.${value}`;
@@ -45,11 +51,15 @@ function ChoiceRow({
               accessibilityLabel={labels?.[index] ?? `${label} ${index + 1}`}
               accessibilityState={{ selected }}
               onPress={() => onChange(index)}
-              style={[
+              style={({ pressed }) => [
                 styles.choice,
                 {
                   borderColor: selected ? theme.colors.primary : theme.colors.outlineVariant,
-                  backgroundColor: selected ? theme.colors.secondaryContainer : theme.colors.surface,
+                  backgroundColor: selected
+                    ? theme.colors.secondaryContainer
+                    : pressed
+                      ? theme.colors.surfaceContainerHigh
+                      : theme.colors.surface,
                 },
               ]}
             >
@@ -77,18 +87,31 @@ export function AvatarEditor({
   seed,
   initial,
   onApply,
+  onDirtyChange,
 }: {
   seed: string;
   initial?: AvatarConfig;
   onApply?: (dataUri: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useI18n();
   const { colors } = useTheme();
   const [config, setConfig] = useState<AvatarConfig>(initial ?? defaultAvatarConfig(seed));
+  const [notice, setNotice] = useState(false);
   const svg = useMemo(() => renderAvatarSvg(config), [config]);
   const dataUri = useMemo(() => avatarDataUri(config), [config]);
 
-  const update = (patch: Partial<AvatarConfig>) => setConfig((current) => ({ ...current, ...patch }));
+  const update = (patch: Partial<AvatarConfig>) => {
+    setConfig((current) => ({ ...current, ...patch }));
+    setNotice(false);
+    onDirtyChange?.(true);
+  };
+
+  const randomize = () => {
+    setConfig(defaultAvatarConfig(`${seed}-${Date.now()}`));
+    setNotice(false);
+    onDirtyChange?.(true);
+  };
 
   return (
     <View style={styles.root}>
@@ -119,6 +142,20 @@ export function AvatarEditor({
         onChange={(hairColor) => update({ hairColor })}
       />
       <ChoiceRow
+        label={t("avatar.clothes")}
+        count={avatarOptions.clothes.length}
+        value={config.clothes}
+        labels={avatarOptions.clothes.map((value) => labelFor(t, value))}
+        onChange={(clothes) => update({ clothes })}
+      />
+      <ChoiceRow
+        label={t("avatar.eyes")}
+        count={avatarOptions.eyes.length}
+        value={config.eyes}
+        labels={avatarOptions.eyes.map((value) => labelFor(t, value))}
+        onChange={(eyes) => update({ eyes })}
+      />
+      <ChoiceRow
         label={t("avatar.facialHair")}
         count={avatarOptions.facialHair.length}
         value={config.facialHair}
@@ -140,13 +177,14 @@ export function AvatarEditor({
         onChange={(expression) => update({ expression })}
       />
 
+      {notice ? <InlineBanner message={t("avatar.saveUnavailable")} tone="info" /> : null}
+
       <View style={styles.actions}>
-        <Button
-          title={t("avatar.randomize")}
-          variant="secondary"
-          onPress={() => setConfig(defaultAvatarConfig(`${seed}-${Date.now()}`))}
-        />
-        {onApply ? <Button title={t("avatar.apply")} onPress={() => onApply(dataUri)} /> : null}
+        <Button title={t("avatar.randomize")} variant="secondary" onPress={randomize} />
+        <Button title={t("common.save")} onPress={() => setNotice(true)} />
+        {onApply ? (
+          <Button title={t("avatar.apply")} variant="tonal" onPress={() => onApply(dataUri)} />
+        ) : null}
       </View>
     </View>
   );

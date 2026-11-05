@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useI18n } from "../providers/LocaleProvider";
 import { useTheme } from "../providers/ThemeProvider";
 import { spacing } from "../../lib/generated/tokens";
 import { typeStyle } from "../../lib/ui-styles";
@@ -11,14 +12,16 @@ export interface BreadcrumbItem {
 
 export function Breadcrumbs({
   items,
-  label = "Ruta de navegación",
+  label,
 }: {
   items: BreadcrumbItem[];
   label?: string;
 }) {
+  const { t } = useI18n();
   const { colors } = useTheme();
+  const navLabel = label ?? t("a11y.breadcrumbs");
   return (
-    <View accessibilityLabel={label} style={styles.row}>
+    <View accessibilityLabel={navLabel} style={styles.row}>
       {items.map((item, index) => {
         const current = index === items.length - 1;
         return (

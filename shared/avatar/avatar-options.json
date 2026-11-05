@@ -13,6 +13,8 @@
   "skinTones": ["#F6D7C4", "#E8B894", "#D49A6A", "#AD6F48", "#80502F", "#513322"],
   "hairColors": ["#2B2118", "#4A2F1B", "#7A4B23", "#A66A33", "#C9A45C", "#8A8A8A"],
   "hairStyles": ["short", "bob", "curly", "bun", "bald"],
+  "clothes": ["tshirt", "hoodie", "jacket"],
+  "eyes": ["round", "happy", "wink"],
   "facialHair": ["none", "stubble", "beard"],
   "accessories": ["none", "glasses", "roundGlasses", "earrings"],
   "expressions": ["smile", "neutral", "grin"]

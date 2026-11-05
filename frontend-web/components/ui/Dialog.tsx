@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
+import { useI18n } from "@/components/providers/LocaleProvider";
 import { Button } from "./Button";
 
 export function Dialog({
@@ -9,7 +10,7 @@ export function Dialog({
   title,
   children,
   onClose,
-  closeLabel = "Cerrar",
+  closeLabel,
 }: {
   open: boolean;
   title: string;
@@ -19,6 +20,8 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const { t } = useI18n();
+  const resolvedCloseLabel = closeLabel ?? t("common.close");
 
   useEffect(() => {
     const dialog = ref.current;
@@ -56,7 +59,7 @@ export function Dialog({
             {title}
           </h2>
           <Button variant="text" size="sm" onClick={onClose}>
-            {closeLabel}
+            {resolvedCloseLabel}
           </Button>
         </header>
         {children}

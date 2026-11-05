@@ -8,6 +8,8 @@ export interface AvatarConfig {
   skinTone: number;
   hairStyle: number;
   hairColor: number;
+  clothes: number;
+  eyes: number;
   facialHair: number;
   accessory: number;
   expression: number;
@@ -34,9 +36,11 @@ export function defaultAvatarConfig(seed: string): AvatarConfig {
     skinTone: pick(options.skinTones.length, hash, 2),
     hairStyle: pick(options.hairStyles.length, hash, 4),
     hairColor: pick(options.hairColors.length, hash, 6),
-    facialHair: pick(options.facialHair.length, hash, 8),
-    accessory: pick(options.accessories.length, hash, 10),
-    expression: pick(options.expressions.length, hash, 12),
+    clothes: pick(options.clothes.length, hash, 8),
+    eyes: pick(options.eyes.length, hash, 10),
+    facialHair: pick(options.facialHair.length, hash, 12),
+    accessory: pick(options.accessories.length, hash, 14),
+    expression: pick(options.expressions.length, hash, 15),
   };
 }
 
@@ -52,6 +56,8 @@ function normalize(config: AvatarConfig): AvatarConfig {
     skinTone: clampIndex(config.skinTone, options.skinTones.length),
     hairStyle: clampIndex(config.hairStyle, options.hairStyles.length),
     hairColor: clampIndex(config.hairColor, options.hairColors.length),
+    clothes: clampIndex(config.clothes, options.clothes.length),
+    eyes: clampIndex(config.eyes, options.eyes.length),
     facialHair: clampIndex(config.facialHair, options.facialHair.length),
     accessory: clampIndex(config.accessory, options.accessories.length),
     expression: clampIndex(config.expression, options.expressions.length),
@@ -97,14 +103,34 @@ function accessorySvg(style: string, accent: string, skin: string): string {
   return "";
 }
 
+function clothesSvg(style: string, shirt: string, accent: string): string {
+  if (style === "hoodie") {
+    return `<path d="M16 128c2-25 20-40 48-40s46 15 48 40z" fill="${shirt}"/><path d="M42 98c6-8 13-11 22-11s16 3 22 11" fill="none" stroke="${accent}" stroke-width="3"/>`;
+  }
+  if (style === "jacket") {
+    return `<path d="M24 128c2-23 18-37 40-37s38 14 40 37z" fill="${shirt}"/><path d="M64 92v36" stroke="${accent}" stroke-width="2"/><path d="M52 96l12 12 12-12" fill="none" stroke="${accent}" stroke-width="2"/>`;
+  }
+  return `<path d="M24 128c2-23 18-37 40-37s38 14 40 37z" fill="${shirt}"/>`;
+}
+
+function eyesSvg(style: string): string {
+  if (style === "happy") {
+    return `<path d="M49 63c2-3 5-3 7 0M72 63c2-3 5-3 7 0" fill="none" stroke="#3E2723" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  if (style === "wink") {
+    return `<circle cx="54" cy="62" r="2" fill="#3E2723"/><path d="M71 62h8" stroke="#3E2723" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  return `<circle cx="54" cy="62" r="2" fill="#3E2723"/><circle cx="74" cy="62" r="2" fill="#3E2723"/>`;
+}
+
 function expressionSvg(style: string): string {
   if (style === "grin") {
-    return `<path d="M54 70c4 7 16 7 20 0" fill="none" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/><circle cx="54" cy="63" r="2" fill="#3E2723"/><circle cx="74" cy="63" r="2" fill="#3E2723"/>`;
+    return `<path d="M54 70c4 7 16 7 20 0" fill="none" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/>`;
   }
   if (style === "neutral") {
-    return `<path d="M56 72h16" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/><circle cx="54" cy="62" r="2" fill="#3E2723"/><circle cx="74" cy="62" r="2" fill="#3E2723"/>`;
+    return `<path d="M56 72h16" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/>`;
   }
-  return `<path d="M55 68c5 6 13 6 18 0" fill="none" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/><circle cx="54" cy="62" r="2" fill="#3E2723"/><circle cx="74" cy="62" r="2" fill="#3E2723"/>`;
+  return `<path d="M55 68c5 6 13 6 18 0" fill="none" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/>`;
 }
 
 export function renderAvatarSvg(input: AvatarConfig): string {
@@ -113,6 +139,8 @@ export function renderAvatarSvg(input: AvatarConfig): string {
   const skin = options.skinTones[config.skinTone];
   const hair = options.hairColors[config.hairColor];
   const hairStyle = options.hairStyles[config.hairStyle];
+  const clothes = options.clothes[config.clothes];
+  const eyes = options.eyes[config.eyes];
   const facialHair = options.facialHair[config.facialHair];
   const accessory = options.accessories[config.accessory];
   const expression = options.expressions[config.expression];
@@ -120,9 +148,10 @@ export function renderAvatarSvg(input: AvatarConfig): string {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">`,
     `<rect width="128" height="128" rx="64" fill="${palette.background}"/>`,
-    `<path d="M24 128c2-23 18-37 40-37s38 14 40 37z" fill="${palette.shirt}"/>`,
+    clothesSvg(clothes, palette.shirt, palette.accent),
     hairSvg(hairStyle, hair, skin),
     facialHairSvg(facialHair, hair),
+    eyesSvg(eyes),
     expressionSvg(expression),
     `<path d="M58 64h12v8H58z" fill="${skin}" opacity="0.6"/>`,
     accessorySvg(accessory, palette.accent, skin),

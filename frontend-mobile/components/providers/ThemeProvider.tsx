@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useColorScheme } from "react-native";
+import * as SystemUI from "expo-system-ui";
 
 import { colorsByMode, lightColors, type ThemeColors, type ThemeMode } from "../../lib/generated/tokens";
 import {
@@ -49,6 +50,10 @@ export function ThemeProvider({
   }, []);
 
   const resolved = resolveTheme(mode, systemScheme === "dark");
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colorsByMode[resolved].surface).catch(() => undefined);
+  }, [resolved]);
 
   useEffect(() => {
     if (!hydrated) return;

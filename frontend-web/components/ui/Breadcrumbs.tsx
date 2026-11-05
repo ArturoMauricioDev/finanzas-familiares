@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+
+import { useI18n } from "@/components/providers/LocaleProvider";
 
 export interface BreadcrumbItem {
   label: string;
@@ -7,13 +11,15 @@ export interface BreadcrumbItem {
 
 export function Breadcrumbs({
   items,
-  label = "Ruta de navegación",
+  label,
 }: {
   items: BreadcrumbItem[];
   label?: string;
 }) {
+  const { t } = useI18n();
+  const navLabel = label ?? t("a11y.breadcrumbs");
   return (
-    <nav aria-label={label}>
+    <nav aria-label={navLabel}>
       <ol className="flex flex-wrap items-center gap-2 text-body-small text-on-surface-variant">
         {items.map((item, index) => {
           const current = index === items.length - 1;

@@ -449,3 +449,21 @@ Task: "Implementar Card, List, ListItem y Divider en frontend-mobile/components/
 - No se persiste la personalización del avatar en 002; solo se previsualiza.
 - No se importan librerías de gráficos desde rutas actuales.
 - Verificar `quickstart.md` antes de considerar la feature terminada.
+
+---
+
+## Phase 11: Convergence
+
+**Purpose**: Cerrar las brechas detectadas entre `spec.md`, `plan.md`, `tasks.md` y la implementación actual.
+
+- [X] T155 Añadir personalización de ropa y ojos al avatar en `shared/avatar/avatar-options.json`, `shared/avatar/avatar-engine.ts`, catálogos i18n y editores web/móvil (`frontend-web/components/ui/AvatarEditor.tsx`, `frontend-mobile/components/ui/AvatarEditor.tsx`), con pruebas de opciones y vista previa, per FR-050 (partial).
+- [X] T156 Implementar `prefers-reduced-motion` en web (`frontend-web/app/globals.css`) y respetar la preferencia de movimiento reducido en las animaciones móviles, con verificación documentada, per FR-040 (missing).
+- [X] T157 Sustituir los colores literales `rgba(0,0,0,0.4)` de `frontend-mobile/components/ui/Dialog.tsx` y `frontend-mobile/components/ui/Select.tsx` por un token de scrim del tema, per FR-008 (contradicts).
+- [X] T158 Eliminar las cadenas visibles hardcodeadas en los valores por defecto de `Spinner`, `Loading`, `Dialog` y `Breadcrumbs` de web y móvil, usando los catálogos i18n, per FR-030 (partial).
+- [X] T159 Añadir la sección de aviso legal en Ajustes web y móvil usando `legal.title`/`legal.body`, conservando acerca de y versión, per FR-042 (partial).
+- [X] T160 Añadir confirmación de cambios sin guardar y navegación de vuelta correcta en las rutas del editor de avatar web/móvil, per FR-047/FR-051 (partial).
+- [X] T161 Añadir una acción explícita de guardado en el editor de avatar web/móvil que solo muestre el aviso de la spec 003, sin persistir ni navegar, per FR-053 (partial).
+- [X] T162 Sincronizar el fondo del sistema móvil con el tema resuelto usando `expo-system-ui`, per T018/plan: tema móvil (partial).
+- [X] T163 Añadir estados pressed/focus visibles a los componentes interactivos móviles que aún no los exponen (`Chip`, `ListItem`), per FR-014 (partial).
+
+**Nota**: T151, T152 y T154 siguen pendientes como validación manual (Lighthouse, teclado/zoom/movimiento reducido, VoiceOver/TalkBack, breakpoints y paridad visual); no se duplican aquí.

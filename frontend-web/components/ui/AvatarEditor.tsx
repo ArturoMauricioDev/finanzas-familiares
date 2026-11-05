@@ -7,11 +7,11 @@ import { useI18n } from "@/components/providers/LocaleProvider";
 import {
   avatarDataUri,
   defaultAvatarConfig,
-  hashString,
   type AvatarConfig,
 } from "@/lib/avatar-engine.generated";
 import { avatarOptions } from "@/lib/avatar-options.generated";
 import { Button } from "./Button";
+import { InlineBanner } from "./InlineBanner";
 import { Select } from "./Select";
 
 function optionLabel(
@@ -27,13 +27,16 @@ export function AvatarEditor({
   seed,
   initial,
   onApply,
+  onDirtyChange,
 }: {
   seed: string;
   initial?: AvatarConfig;
   onApply?: (dataUri: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useI18n();
   const [config, setConfig] = useState<AvatarConfig>(initial ?? defaultAvatarConfig(seed));
+  const [notice, setNotice] = useState(false);
   const dataUri = useMemo(() => avatarDataUri(config), [config]);
 
   const numberOptions = (count: number) =>
@@ -44,6 +47,14 @@ export function AvatarEditor({
 
   const update = (patch: Partial<AvatarConfig>) => {
     setConfig((current) => ({ ...current, ...patch }));
+    setNotice(false);
+    onDirtyChange?.(true);
+  };
+
+  const randomize = () => {
+    setConfig(defaultAvatarConfig(`${seed}-${Date.now()}`));
+    setNotice(false);
+    onDirtyChange?.(true);
   };
 
   return (
@@ -82,6 +93,24 @@ export function AvatarEditor({
           onChange={(event) => update({ hairColor: Number(event.target.value) })}
         />
         <Select
+          label={t("avatar.clothes")}
+          value={String(config.clothes)}
+          options={avatarOptions.clothes.map((value, index) => ({
+            value: String(index),
+            label: optionLabel(t, value),
+          }))}
+          onChange={(event) => update({ clothes: Number(event.target.value) })}
+        />
+        <Select
+          label={t("avatar.eyes")}
+          value={String(config.eyes)}
+          options={avatarOptions.eyes.map((value, index) => ({
+            value: String(index),
+            label: optionLabel(t, value),
+          }))}
+          onChange={(event) => update({ eyes: Number(event.target.value) })}
+        />
+        <Select
           label={t("avatar.facialHair")}
           value={String(config.facialHair)}
           options={avatarOptions.facialHair.map((value, index) => ({
@@ -109,16 +138,21 @@ export function AvatarEditor({
           onChange={(event) => update({ expression: Number(event.target.value) })}
         />
         <div className="flex flex-wrap gap-2 md:col-span-2">
-          <Button
-            variant="secondary"
-            onClick={() => setConfig(defaultAvatarConfig(`${seed}-${Date.now()}`))}
-          >
+          <Button variant="secondary" onClick={randomize}>
             {t("avatar.randomize")}
           </Button>
+          <Button onClick={() => setNotice(true)}>{t("common.save")}</Button>
           {onApply ? (
-            <Button onClick={() => onApply(dataUri)}>{t("avatar.apply")}</Button>
+            <Button variant="tonal" onClick={() => onApply(dataUri)}>
+              {t("avatar.apply")}
+            </Button>
           ) : null}
         </div>
+        {notice ? (
+          <div className="md:col-span-2">
+            <InlineBanner tone="info">{t("avatar.saveUnavailable")}</InlineBanner>
+          </div>
+        ) : null}
       </div>
     </div>
   );

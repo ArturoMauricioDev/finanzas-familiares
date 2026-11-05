@@ -38,4 +38,14 @@ describe("mobile avatar engine", () => {
     expect(isAvatarDataUri("https://example.com/avatar.png")).toBe(false);
     expect(isAvatarDataUri(undefined)).toBe(false);
   });
+
+  it("includes clothing and eyes in the generated configuration", () => {
+    const config = defaultAvatarConfig("seed");
+    expect(Number.isInteger(config.clothes)).toBe(true);
+    expect(Number.isInteger(config.eyes)).toBe(true);
+
+    const svg = renderAvatarSvg(config);
+    expect(renderAvatarSvg({ ...config, clothes: (config.clothes + 1) % 3 })).not.toBe(svg);
+    expect(renderAvatarSvg({ ...config, eyes: (config.eyes + 1) % 3 })).not.toBe(svg);
+  });
 });

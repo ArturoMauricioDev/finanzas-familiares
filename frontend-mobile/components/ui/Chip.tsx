@@ -23,11 +23,16 @@ export function Chip({
       accessibilityLabel={label}
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.chip,
         {
           borderColor: selected ? colors.secondaryContainer : colors.outlineVariant,
-          backgroundColor: selected ? colors.secondaryContainer : colors.surface,
+          backgroundColor: selected
+            ? colors.secondaryContainer
+            : pressed
+              ? colors.surfaceContainerHigh
+              : colors.surface,
+          opacity: pressed ? 0.9 : 1,
         },
       ]}
     >

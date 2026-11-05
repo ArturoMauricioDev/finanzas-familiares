@@ -75,6 +75,16 @@ export const avatarOptions = {
     "bun",
     "bald"
   ],
+  "clothes": [
+    "tshirt",
+    "hoodie",
+    "jacket"
+  ],
+  "eyes": [
+    "round",
+    "happy",
+    "wink"
+  ],
   "facialHair": [
     "none",
     "stubble",

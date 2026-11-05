@@ -296,12 +296,18 @@ sin imágenes rotas por assets ausentes.
 | `node scripts/check-ui.mjs` | 96 archivos; sin imports de gráficos fuera de `components/charts/` ni colores literales fuera de excepciones documentadas. |
 | Web `pnpm run typecheck` | Sin errores. |
 | Web `pnpm run lint` | Sin avisos ni errores. |
-| Web `pnpm test` | 16 suites, 90 pruebas correctas (incluye `jest-axe`, tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
+| Web `pnpm test` | 16 suites, 92 pruebas correctas (incluye `jest-axe`, tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
 | Web `pnpm run build` | Compilación de producción correcta; Recharts queda fuera de las rutas actuales. |
 | Móvil `pnpm run typecheck` | Sin errores. |
 | Móvil `pnpm run lint` | Sin avisos ni errores. |
-| Móvil `pnpm test` | 17 suites, 79 pruebas correctas (incluye tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
+| Móvil `pnpm test` | 17 suites, 81 pruebas correctas (incluye tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
 | Móvil `npx expo-doctor` | 18/18 comprobaciones correctas. |
+
+**Cierre de convergencia**: el editor de avatar incluye ropa y ojos; Guardar solo muestra el aviso
+de la spec 003 sin persistir; web respeta `prefers-reduced-motion` y móvil desactiva las
+animaciones de diálogos/selectores cuando el sistema lo indica; los fondos de diálogos usan el
+token `scrim`; Ajustes muestra el aviso legal; las cadenas de `Spinner`, `Loading`, `Dialog` y
+`Breadcrumbs` provienen de i18n.
 
 **Pendiente de validación manual**: auditoría Lighthouse de accesibilidad en Login, Miembros y
 Ajustes; recorrido con teclado, zoom de texto al 200 % y movimiento reducido; revisión con

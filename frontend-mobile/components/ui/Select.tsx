@@ -5,6 +5,7 @@ import { useI18n } from "../providers/LocaleProvider";
 import { useTheme } from "../providers/ThemeProvider";
 import { shape, spacing, touchTarget } from "../../lib/generated/tokens";
 import { typeStyle } from "../../lib/ui-styles";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { Button } from "./Button";
 
 export interface SelectOption {
@@ -25,6 +26,7 @@ export function Select({
 }) {
   const { t } = useI18n();
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   const current = options.find((option) => option.value === value)?.label ?? value;
 
@@ -40,8 +42,17 @@ export function Select({
       >
         <Text style={[typeStyle("bodyLarge"), { color: colors.onSurface }]}>{current}</Text>
       </Pressable>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType={reducedMotion ? "none" : "fade"}
+        onRequestClose={() => setOpen(false)}
+      >
         <View style={styles.backdrop}>
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: 0.4 }]}
+          />
           <View style={[styles.panel, { backgroundColor: colors.surface }]}>
             {options.map((option) => {
               const selected = option.value === value;
@@ -88,7 +99,6 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.4)",
     padding: spacing[4],
   },
   panel: {

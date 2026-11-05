@@ -45,4 +45,17 @@ describe("avatar engine", () => {
   it("is deterministic for the same default avatar", () => {
     expect(createDefaultAvatar("seed-value")).toBe(createDefaultAvatar("seed-value"));
   });
+
+  it("includes clothing and eyes in the generated configuration", () => {
+    const config = defaultAvatarConfig("seed-value");
+    expect(Number.isInteger(config.clothes)).toBe(true);
+    expect(Number.isInteger(config.eyes)).toBe(true);
+
+    const svg = renderAvatarSvg(config);
+    const changedClothes = renderAvatarSvg({ ...config, clothes: (config.clothes + 1) % 3 });
+    const changedEyes = renderAvatarSvg({ ...config, eyes: (config.eyes + 1) % 3 });
+
+    expect(changedClothes).not.toBe(svg);
+    expect(changedEyes).not.toBe(svg);
+  });
 });

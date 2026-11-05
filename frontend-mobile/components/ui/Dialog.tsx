@@ -4,6 +4,7 @@ import { Modal, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../providers/ThemeProvider";
 import { shape, spacing } from "../../lib/generated/tokens";
 import { typeStyle } from "../../lib/ui-styles";
+import { useReducedMotion } from "../../lib/use-reduced-motion";
 import { Button } from "./Button";
 
 export function Dialog({
@@ -20,9 +21,19 @@ export function Dialog({
   closeLabel: string;
 }) {
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={open}
+      transparent
+      animationType={reducedMotion ? "none" : "fade"}
+      onRequestClose={onClose}
+    >
       <View style={styles.backdrop}>
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: 0.4 }]}
+        />
         <View
           accessibilityViewIsModal
           style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}
@@ -43,7 +54,6 @@ export function Dialog({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     padding: spacing[4],
   },

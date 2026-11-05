@@ -82,7 +82,7 @@ export default function SettingsScreen() {
           {t("nav.profile")}
         </Text>
         <Text style={[typeStyle("bodyMedium"), { color: theme.colors.onSurfaceVariant }]}>
-          {t("settings.legalBody")}
+          {t("settings.accountBody")}
         </Text>
         <Button
           title={t("profile.editTitle")}
@@ -105,6 +105,15 @@ export default function SettingsScreen() {
         </Text>
         <Text style={[typeStyle("labelMedium"), { color: theme.colors.onSurfaceVariant }]}>
           {t("settings.version", { version: packageInfo.version })}
+        </Text>
+      </Card>
+
+      <Card>
+        <Text style={[typeStyle("titleLarge"), { color: theme.colors.onSurface }]}>
+          {t("legal.title")}
+        </Text>
+        <Text style={[typeStyle("bodyMedium"), { color: theme.colors.onSurfaceVariant }]}>
+          {t("legal.body")}
         </Text>
       </Card>
 

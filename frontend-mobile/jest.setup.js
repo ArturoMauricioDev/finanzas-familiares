@@ -2,6 +2,10 @@ process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = "test-web-client";
 process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = "test-android-client";
 process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = "test-ios-client";
 
+jest.mock("expo-system-ui", () => ({
+  setBackgroundColorAsync: jest.fn(async () => {}),
+}));
+
 jest.mock("lucide-react-native", () => {
   const React = require("react");
   const { View } = require("react-native");
