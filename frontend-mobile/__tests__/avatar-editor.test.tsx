@@ -8,6 +8,7 @@ describe("mobile avatar editor", () => {
 
     expect(screen.getByText("Vista previa únicamente. No se guardará en el perfil.")).toBeTruthy();
     for (const label of [
+      "Color de fondo",
       "Tono de piel",
       "Cabello",
       "Color de cabello",

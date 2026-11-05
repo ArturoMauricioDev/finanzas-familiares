@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Settings } from "lucide-react";
+import { Palette, Pencil, Settings } from "lucide-react";
 import Link from "next/link";
 
 import { useI18n } from "@/components/providers/LocaleProvider";
@@ -43,6 +43,10 @@ export default function ProfilePage() {
           <Link href="/profile/edit" className={actionClass}>
             <Pencil size={18} aria-hidden="true" />
             {t("profile.editTitle")}
+          </Link>
+          <Link href="/profile/avatar" className={actionClass}>
+            <Palette size={18} aria-hidden="true" />
+            {t("profile.editAvatar")}
           </Link>
           <Link href="/settings" className={actionClass}>
             <Settings size={18} aria-hidden="true" />

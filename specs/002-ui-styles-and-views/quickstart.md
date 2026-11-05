@@ -303,7 +303,8 @@ sin imágenes rotas por assets ausentes.
 | Móvil `pnpm test` | 17 suites, 81 pruebas correctas (incluye tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
 | Móvil `npx expo-doctor` | 18/18 comprobaciones correctas. |
 
-**Cierre de convergencia**: el editor de avatar incluye ropa y ojos; Guardar solo muestra el aviso
+**Cierre de convergencia**: el editor de avatar incluye ropa, ojos y color de fondo, y es accesible
+desde Perfil y Ajustes; las pantallas móviles respetan las áreas seguras; Guardar solo muestra el aviso
 de la spec 003 sin persistir; web respeta `prefers-reduced-motion` y móvil desactiva las
 animaciones de diálogos/selectores cuando el sistema lo indica; los fondos de diálogos usan el
 token `scrim`; Ajustes muestra el aviso legal; las cadenas de `Spinner`, `Loading`, `Dialog` y

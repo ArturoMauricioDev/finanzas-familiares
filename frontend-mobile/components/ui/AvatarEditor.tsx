@@ -121,6 +121,13 @@ export function AvatarEditor({
       </Text>
 
       <ChoiceRow
+        label={t("avatar.background")}
+        count={avatarOptions.palettes.length}
+        value={config.palette}
+        labels={avatarOptions.palettes.map((palette) => labelFor(t, palette.id))}
+        onChange={(palette) => update({ palette })}
+      />
+      <ChoiceRow
         label={t("avatar.skin")}
         count={avatarOptions.skinTones.length}
         value={config.skinTone}

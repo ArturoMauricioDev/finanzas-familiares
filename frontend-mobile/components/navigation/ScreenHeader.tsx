@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useI18n } from "../providers/LocaleProvider";
 import { useTheme } from "../providers/ThemeProvider";
@@ -18,8 +19,9 @@ export function ScreenHeader({
 }) {
   const { t } = useI18n();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + spacing[3] }]}>
       {onBack ? (
         <Pressable
           accessibilityRole="button"
@@ -45,7 +47,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
     paddingHorizontal: spacing[4],
-    paddingTop: 48,
     paddingBottom: spacing[2],
   },
   back: {

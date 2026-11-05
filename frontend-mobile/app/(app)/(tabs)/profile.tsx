@@ -48,6 +48,11 @@ export default function ProfileScreen() {
           onPress={() => router.push("/profile/edit")}
         />
         <Button
+          title={t("profile.editAvatar")}
+          variant="secondary"
+          onPress={() => router.push("/profile/avatar")}
+        />
+        <Button
           title={t("nav.settings")}
           variant="secondary"
           onPress={() => router.push("/settings")}

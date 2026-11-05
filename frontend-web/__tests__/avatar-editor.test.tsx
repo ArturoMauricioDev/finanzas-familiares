@@ -8,6 +8,7 @@ describe("web avatar editor", () => {
 
     expect(screen.getByAltText("Vista previa del avatar")).toBeInTheDocument();
     for (const label of [
+      "Color de fondo",
       "Tono de piel",
       "Cabello",
       "Color de cabello",

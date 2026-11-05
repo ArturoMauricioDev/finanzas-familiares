@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../providers/ThemeProvider";
 import { spacing } from "../../lib/generated/tokens";
@@ -18,11 +19,16 @@ export function Page({
   onBack?: () => void;
 }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <ScrollView
       contentContainerStyle={[
         styles.page,
-        { backgroundColor: colors.surface },
+        {
+          backgroundColor: colors.surface,
+          paddingTop: onBack ? 0 : insets.top + spacing[5],
+          paddingBottom: spacing[12] + insets.bottom,
+        },
         onBack ? styles.pageWithHeader : null,
       ]}
       keyboardShouldPersistTaps="handled"
@@ -47,8 +53,6 @@ export function Page({
 const styles = StyleSheet.create({
   page: {
     padding: spacing[5],
-    paddingTop: 56,
-    paddingBottom: spacing[12],
     minHeight: "100%",
     gap: spacing[4],
   },

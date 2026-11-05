@@ -467,3 +467,15 @@ Task: "Implementar Card, List, ListItem y Divider en frontend-mobile/components/
 - [X] T163 Añadir estados pressed/focus visibles a los componentes interactivos móviles que aún no los exponen (`Chip`, `ListItem`), per FR-014 (partial).
 
 **Nota**: T151, T152 y T154 siguen pendientes como validación manual (Lighthouse, teclado/zoom/movimiento reducido, VoiceOver/TalkBack, breakpoints y paridad visual); no se duplican aquí.
+
+---
+
+## Phase 12: Convergence
+
+**Purpose**: Cerrar las brechas restantes detectadas tras completar la Fase 11.
+
+- [X] T164 Añadir un control editable de color de fondo (`palette`) al editor de avatar web/móvil, con etiqueta i18n y pruebas de vista previa, per FR-050 (partial).
+- [X] T165 Añadir un enlace directo al editor de avatar desde las pantallas de Perfil web y móvil, per FR-043/T114/T138 (partial).
+- [X] T166 Aplicar `useSafeAreaInsets` en `Page` y `ScreenHeader` móviles para respetar áreas seguras (notch, barra de estado y borde inferior), per FR-023 (partial).
+
+**Nota**: T151, T152 y T154 continúan como validación manual pendiente.

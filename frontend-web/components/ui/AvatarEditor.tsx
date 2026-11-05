@@ -72,6 +72,15 @@ export function AvatarEditor({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Select
+          label={t("avatar.background")}
+          value={String(config.palette)}
+          options={avatarOptions.palettes.map((palette, index) => ({
+            value: String(index),
+            label: optionLabel(t, palette.id),
+          }))}
+          onChange={(event) => update({ palette: Number(event.target.value) })}
+        />
+        <Select
           label={t("avatar.skin")}
           value={String(config.skinTone)}
           options={numberOptions(avatarOptions.skinTones.length)}
