@@ -56,7 +56,7 @@ beforeEach(async () => {
 
 describe("mobile useAuthGuard", () => {
   it("redirects to login when there is no session", async () => {
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login"));
   });
@@ -66,7 +66,7 @@ describe("mobile useAuthGuard", () => {
       buildSession({ needs_profile_setup: true, needs_family_setup: true }),
     );
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/profile/setup"));
   });
@@ -75,7 +75,7 @@ describe("mobile useAuthGuard", () => {
     await session.saveSession(buildSession({ needs_family_setup: true }));
     await session.savePendingInviteToken("pending-token");
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/invite"));
   });
@@ -83,7 +83,7 @@ describe("mobile useAuthGuard", () => {
   it("redirects users without a family to group selection when no invite is pending", async () => {
     await session.saveSession(buildSession({ needs_family_setup: true }));
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));
   });
@@ -91,7 +91,7 @@ describe("mobile useAuthGuard", () => {
   it("honors the requireFamily option", async () => {
     await session.saveSession(buildSession({ needs_family_setup: true }));
 
-    render(<Probe requireFamily />);
+    await render(<Probe requireFamily />);
 
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));
   });
@@ -109,7 +109,7 @@ describe("mobile useAuthGuard", () => {
       }),
     );
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
     expect(await screen.findByText("user-1")).toBeTruthy();
@@ -124,7 +124,7 @@ describe("mobile useAuthGuard", () => {
       }),
     );
 
-    render(<Probe />);
+    await render(<Probe />);
 
     expect(await screen.findByText("user-1")).toBeTruthy();
     expect((await session.getSession())?.needs_family_setup).toBe(false);
@@ -140,7 +140,7 @@ describe("mobile useAuthGuard", () => {
     );
     await session.savePendingInviteToken("stale-token");
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(async () => {
       expect(await session.getPendingInviteToken()).toBeNull();
@@ -150,7 +150,7 @@ describe("mobile useAuthGuard", () => {
   it("registers a handler that sends terminal 401 responses to login", async () => {
     await session.saveSession(buildSession());
 
-    render(<Probe />);
+    await render(<Probe />);
 
     await waitFor(() => expect(mockSetUnauthorizedHandler).toHaveBeenCalled());
     const handler = mockSetUnauthorizedHandler.mock.calls[0][0] as () => void;

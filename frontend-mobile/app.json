@@ -10,12 +10,22 @@
         "expo-localization",
         {
           "supportedLocales": {
-            "ios": ["es", "en"],
-            "android": ["es", "en"]
+            "ios": [
+              "es",
+              "en"
+            ],
+            "android": [
+              "es",
+              "en"
+            ]
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      "expo-splash-screen",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",

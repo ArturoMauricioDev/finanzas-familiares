@@ -1,6 +1,9 @@
 {
   "extends": "expo",
   "ignorePatterns": ["node_modules/", ".expo/", "dist/", "coverage/"],
+  "rules": {
+    "react-hooks/set-state-in-effect": "warn"
+  },
   "overrides": [
     {
       "files": ["**/*.{ts,tsx}"],

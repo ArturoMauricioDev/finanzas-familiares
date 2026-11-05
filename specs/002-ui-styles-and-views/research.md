@@ -199,17 +199,17 @@
 
 - **Decision**: Web: `recharts@3.10.x` dentro de `components/charts/ChartContainer.tsx`, un client
   component que carga el gráfico con `next/dynamic` y `ssr:false`; ninguna ruta actual lo importa. Móvil:
-  `victory-native@41.16.1` con `@shopify/react-native-skia@1.5.0`,
-  `react-native-reanimated@~3.16.1` y `react-native-gesture-handler@~2.20.2`, encapsulado en
-  `components/charts/ChartContainer.tsx`; ninguna ruta actual lo importa.
+  `victory-native@42.0.1` con `@shopify/react-native-skia@2.14.0`,
+  `react-native-reanimated@4.7.1`, `react-native-worklets@0.13.0` y
+  `react-native-gesture-handler@3.3.0`, encapsulado en `components/charts/ChartContainer.tsx`;
+  ninguna ruta actual lo importa.
 - **Rationale**: Cumple FR-058/FR-059/FR-060 y SC-011. Las versiones móviles coinciden con las
-  nativas incluidas en Expo SDK 52; `babel-preset-expo` ya incluye el plugin de Reanimated.
-  Victory Native 43 se descarta porque exige React 19 y RN 0.79+, incompatible con
-  Expo 52/RN 0.76.3/React 18.3.1.
-- **Alternatives considered**: Victory Native 43 + actualización de Expo (fuera de alcance y
-  arriesgado); Victory Native clásico 36 (solo SVG, sin Skia; se mantiene como fallback si el
-  build nativo de 41 falla); gráficos propios con SVG (más trabajo y sin la base acordada).
-- **Fallback**: si `expo-doctor` o un development build rechazan la combinación 41.16.1, se
+  nativas incluidas en Expo SDK 58; `babel-preset-expo` ya incluye el plugin de Reanimated/Worklets.
+  Victory Native 43 se descarta porque exige Skia `>=2.15.1`, fuera de la versión que fija SDK 58.
+- **Alternatives considered**: Victory Native 43 + Skia 2.15 (rompe la matriz de SDK 58); Victory
+  Native clásico 36 (solo SVG, sin Skia; se mantiene como fallback si el build nativo de 42 falla);
+  gráficos propios con SVG (más trabajo y sin la base acordada).
+- **Fallback**: si `expo-doctor` o un development build rechazan la combinación 42.0.1, se
   conserva el contrato `ChartContainer` con un adaptador interno y se fija
   `victory-native@36.9.2` (compatible con `react-native-svg`) como implementación de la base,
   documentando el cambio. La decisión final se
@@ -231,14 +231,14 @@
 
 ### 17. Estrategia de pruebas y puertas de calidad
 
-- **Decision**: Web con Jest + Testing Library + `jest-axe`; móvil con Jest + React Native Testing
-  Library 12.7.2. Helpers `renderWithProviders` con locale/tema controlados. Pruebas de paridad
-  de claves i18n, derivación de tokens (`--check`), imports de gráficos y literales visuales.
-  Mantener las pruebas de flujo de la spec 001 actualizadas.
-- **Rationale**: Cumple FR-066 y SC-001/SC-002/SC-011. La 14.x de RNTL exige RN 0.78+ y no es
-  compatible con Expo 52, por lo que no se actualiza.
+- **Decision**: Web con Jest + Testing Library + `jest-axe`; móvil con Jest 30 + React Native
+  Testing Library 14.1.0. Helpers `renderWithProviders` con locale/tema controlados. Pruebas de
+  paridad de claves i18n, derivación de tokens (`--check`), imports de gráficos y literales
+  visuales. Mantener las pruebas de flujo de la spec 001 actualizadas.
+- **Rationale**: Cumple FR-066 y SC-001/SC-002/SC-011. RNTL 14 es la línea compatible con Expo
+  SDK 58 / RN 0.88 / React 19 y usa una API asíncrona (`await render`, `await fireEvent`).
 - **Alternatives considered**: Playwright/Detox (fuera de alcance y más coste); solo pruebas
-  manuales (no reproducibles); actualizar RNTL y Expo (fuera de alcance).
+  manuales (no reproducibles); mantener RNTL 12 (incompatible con el stack actualizado).
 
 ### 18. Marca y metadatos
 
@@ -265,20 +265,21 @@
 | `recharts` | 3.10.x | Carga diferida, cliente |
 | `react-is` | 19.x | Peer de Recharts |
 | `jest-axe` | 11.x | Accesibilidad web |
-| `expo-localization` | ~16.0.1 | Versión de Expo SDK 52 |
+| `expo-localization` | ~58.0.5 | Versión de Expo SDK 58 |
 | `i18n-js` | 4.5.x | Catálogos móviles |
-| `expo-font` | ~13.0.4 | Carga de Inter |
+| `expo-font` | ~58.0.11 | Carga de Inter |
 | `@expo-google-fonts/inter` | 0.4.x | Fuente Inter |
-| `expo-splash-screen` | ~0.29.24 | Retención hasta hidratar |
-| `expo-status-bar` | ~2.0.1 | Barra de estado por tema |
-| `expo-system-ui` | ~4.0.9 | `userInterfaceStyle` en Android |
-| `react-native-svg` | 15.8.0 | Lucide, avatar y Victory fallback |
-| `victory-native` | 41.16.1 | Compatible con Expo 52; 43 no |
-| `@shopify/react-native-skia` | 1.5.0 | Versión de Expo SDK 52 |
-| `react-native-reanimated` | ~3.16.1 | Versión de Expo SDK 52 |
-| `react-native-gesture-handler` | ~2.20.2 | Versión de Expo SDK 52 |
-| `react-native-safe-area-context` | 4.12.0 | Versión de Expo SDK 52 |
-| `@testing-library/react-native` | 12.7.2 | Se mantiene; 14.x exige RN 0.78+ |
+| `expo-splash-screen` | ~58.0.13 | Retención hasta hidratar |
+| `expo-status-bar` | ~58.0.4 | Barra de estado por tema |
+| `expo-system-ui` | ~58.0.7 | `userInterfaceStyle` en Android |
+| `react-native-svg` | 15.16.0 | Lucide, avatar y Victory fallback |
+| `victory-native` | 42.0.1 | Compatible con Expo SDK 58; 43 exige Skia >=2.15 |
+| `@shopify/react-native-skia` | 2.14.0 | Versión de Expo SDK 58 |
+| `react-native-reanimated` | 4.7.1 | Versión de Expo SDK 58 |
+| `react-native-worklets` | 0.13.0 | Peer de Reanimated 4 |
+| `react-native-gesture-handler` | 3.3.0 | Versión de Expo SDK 58 |
+| `react-native-safe-area-context` | 5.11.1 | Versión de Expo SDK 58 |
+| `@testing-library/react-native` | 14.1.0 | API asíncrona para React 19 |
 
 ## Resolved Clarifications
 

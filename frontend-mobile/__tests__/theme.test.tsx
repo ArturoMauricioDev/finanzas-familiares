@@ -31,7 +31,7 @@ describe("mobile theme provider", () => {
   it("applies a stored theme on load", async () => {
     await setThemePreference("dark");
 
-    render(
+    await render(
       <ThemeProvider>
         <Probe />
       </ThemeProvider>,
@@ -42,14 +42,14 @@ describe("mobile theme provider", () => {
   });
 
   it("changes the theme on demand and persists it", async () => {
-    render(
+    await render(
       <ThemeProvider>
         <Probe />
       </ThemeProvider>,
     );
 
     await waitFor(() => expect(screen.getByTestId("mode").props.children).toBe("system"));
-    fireEvent.press(screen.getByText("Oscuro"));
+    await fireEvent.press(screen.getByText("Oscuro"));
 
     await waitFor(() => expect(screen.getByTestId("mode").props.children).toBe("dark"));
     await waitFor(async () =>
@@ -60,14 +60,14 @@ describe("mobile theme provider", () => {
   it("returns to the system preference", async () => {
     await setThemePreference("dark");
 
-    render(
+    await render(
       <ThemeProvider>
         <Probe />
       </ThemeProvider>,
     );
 
     await waitFor(() => expect(screen.getByTestId("mode").props.children).toBe("dark"));
-    fireEvent.press(screen.getByText("Sistema"));
+    await fireEvent.press(screen.getByText("Sistema"));
 
     await waitFor(() => expect(screen.getByTestId("mode").props.children).toBe("system"));
     await waitFor(async () =>

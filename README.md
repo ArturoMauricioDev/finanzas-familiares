@@ -7,7 +7,7 @@ grupo familiar y gestión de integrantes mediante invitaciones.
 
 - `backend/`: API FastAPI, SQLAlchemy, PostgreSQL y migraciones Alembic.
 - `frontend-web/`: aplicación Next.js 15.
-- `frontend-mobile/`: aplicación Expo 52 con Expo Router.
+- `frontend-mobile/`: aplicación Expo SDK 58 con Expo Router.
 - `specs/001-autenticacion-y-grupos/`: especificación, plan, contratos y tareas.
 - `specs/002-ui-styles-and-views/`: especificación, plan, contratos y quickstart de UI, estilos,
   navegación y vistas web/móvil.

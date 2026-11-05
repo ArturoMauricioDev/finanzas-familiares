@@ -32,7 +32,7 @@ describe("mobile locale provider", () => {
   it("uses a stored Spanish preference", async () => {
     await setLocalePreference("es");
 
-    render(
+    await render(
       <LocaleProvider>
         <Probe />
       </LocaleProvider>,
@@ -45,14 +45,14 @@ describe("mobile locale provider", () => {
   it("changes language and persists it", async () => {
     await setLocalePreference("es");
 
-    render(
+    await render(
       <LocaleProvider>
         <Probe />
       </LocaleProvider>,
     );
 
     await waitFor(() => expect(screen.getByTestId("home").props.children).toBe("Inicio"));
-    fireEvent.press(screen.getByText("English"));
+    await fireEvent.press(screen.getByText("English"));
 
     await waitFor(() => expect(screen.getByTestId("home").props.children).toBe("Home"));
     expect(screen.getByTestId("error").props.children).toBe("This invitation expired.");

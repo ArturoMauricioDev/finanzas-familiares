@@ -138,7 +138,7 @@ describe("mobile onboarding flows", () => {
     });
     mockSession.applyTokenResponse.mockResolvedValue(nextSession);
 
-    render(<LoginScreen />);
+    await render(<LoginScreen />);
 
     await waitFor(() => expect(mockAuth.signInWithGoogle).toHaveBeenCalledWith("mobile-token"));
     expect(mockRouter.replace).toHaveBeenCalledWith("/profile/setup");
@@ -162,7 +162,7 @@ describe("mobile onboarding flows", () => {
     mockSession.applyTokenResponse.mockResolvedValue(nextSession);
     mockSession.getPendingInviteToken.mockResolvedValue("invite-token");
 
-    render(<LoginScreen />);
+    await render(<LoginScreen />);
 
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/invite"));
   });
@@ -177,9 +177,9 @@ describe("mobile onboarding flows", () => {
       role: null,
     });
 
-    render(<ProfileSetupScreen />);
-    fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
-    fireEvent.press(screen.getByText("Guardar y continuar"));
+    await render(<ProfileSetupScreen />);
+    await fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
+    await fireEvent.press(screen.getByText("Guardar y continuar"));
 
     await waitFor(() =>
       expect(mockApi.updateProfile).toHaveBeenCalledWith(
@@ -206,20 +206,20 @@ describe("mobile onboarding flows", () => {
       role: null,
     });
 
-    render(<ProfileSetupScreen />);
-    fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
-    fireEvent.press(screen.getByText("Guardar y continuar"));
+    await render(<ProfileSetupScreen />);
+    await fireEvent.changeText(screen.getByPlaceholderText("Ej. Ana Pérez"), "Ana");
+    await fireEvent.press(screen.getByText("Guardar y continuar"));
 
     await waitFor(() => expect(mockApi.updateProfile).toHaveBeenCalled());
     expect(mockRouter.replace).toHaveBeenCalledWith("/invite");
   });
 
-  it("offers both group selection options", () => {
+  it("offers both group selection options", async () => {
     useSession(buildSession({ needs_family_setup: true }));
 
-    render(<FamilySelectScreen />);
-    fireEvent.press(screen.getByText("Crear nuevo grupo familiar"));
-    fireEvent.press(screen.getByRole("button", { name: "Unirme mediante enlace" }));
+    await render(<FamilySelectScreen />);
+    await fireEvent.press(screen.getByText("Crear nuevo grupo familiar"));
+    await fireEvent.press(screen.getByRole("button", { name: "Unirme mediante enlace" }));
 
     expect(mockRouter.push).toHaveBeenCalledWith("/family/create");
     expect(mockRouter.push).toHaveBeenCalledWith("/invite");
@@ -233,10 +233,10 @@ describe("mobile onboarding flows", () => {
       tokens: { access_token: "new-access", refresh_token: "new-refresh", token_type: "bearer" },
     });
 
-    render(<FamilyCreateScreen />);
-    fireEvent.changeText(screen.getByPlaceholderText("Ej. Familia Pérez"), "Familia Pérez");
-    fireEvent.changeText(screen.getByPlaceholderText("MXN"), "MXN");
-    fireEvent.press(screen.getByText("Crear grupo"));
+    await render(<FamilyCreateScreen />);
+    await fireEvent.changeText(screen.getByPlaceholderText("Ej. Familia Pérez"), "Familia Pérez");
+    await fireEvent.changeText(screen.getByPlaceholderText("MXN"), "MXN");
+    await fireEvent.press(screen.getByText("Crear grupo"));
 
     await waitFor(() =>
       expect(mockApi.createFamily).toHaveBeenCalledWith({
@@ -259,11 +259,11 @@ describe("mobile onboarding flows", () => {
       tokens: { access_token: "join-access", refresh_token: "join-refresh", token_type: "bearer" },
     });
 
-    render(<InviteScreen />);
+    await render(<InviteScreen />);
     expect(screen.getByPlaceholderText("Token del enlace").props.value).toBe("invite-token");
     expect(mockSession.savePendingInviteToken).toHaveBeenCalledWith("invite-token");
-    fireEvent.changeText(screen.getByPlaceholderText("Ej. hija, hijo, madre"), "hija");
-    fireEvent.press(screen.getByText("Unirme al grupo"));
+    await fireEvent.changeText(screen.getByPlaceholderText("Ej. hija, hijo, madre"), "hija");
+    await fireEvent.press(screen.getByText("Unirme al grupo"));
 
     await waitFor(() =>
       expect(mockApi.joinInvitation).toHaveBeenCalledWith({
@@ -280,7 +280,7 @@ describe("mobile onboarding flows", () => {
     useSession(buildSession({ needs_family_setup: true }));
     mockSession.getPendingInviteToken.mockResolvedValue("saved-token");
 
-    render(<InviteScreen />);
+    await render(<InviteScreen />);
 
     await waitFor(() =>
       expect(screen.getByPlaceholderText("Token del enlace").props.value).toBe("saved-token"),
@@ -319,18 +319,18 @@ describe("mobile onboarding flows", () => {
     });
     mockApi.promoteMember.mockResolvedValue({ success: true });
     mockApi.removeMember.mockResolvedValue({ success: true });
-    render(<FamilyMembersScreen />);
+    await render(<FamilyMembersScreen />);
 
     await screen.findByText("Familia Pérez");
-    fireEvent.press(screen.getByText("Generar invitación"));
+    await fireEvent.press(screen.getByText("Generar invitación"));
     await waitFor(() => expect(mockApi.createInvitation).toHaveBeenCalled());
     expect(screen.getByText("http://localhost:3000/invite?token=invite-token")).toBeTruthy();
 
-    fireEvent.press(screen.getByText("Promover"));
+    await fireEvent.press(screen.getByText("Promover"));
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
 
-    fireEvent.press(screen.getByText("Expulsar"));
-    fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
+    await fireEvent.press(screen.getByText("Expulsar"));
+    await fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
   });
 
@@ -350,7 +350,7 @@ describe("mobile onboarding flows", () => {
       }),
     );
 
-    render(<FamilyMembersScreen />);
+    await render(<FamilyMembersScreen />);
 
     await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));

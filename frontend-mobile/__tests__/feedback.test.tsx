@@ -11,8 +11,8 @@ import {
 } from "../components/ui";
 
 describe("mobile feedback states", () => {
-  it("announces errors and success through banners", () => {
-    render(
+  it("announces errors and success through banners", async () => {
+    await render(
       <>
         <ErrorMessage message="No pudimos cargar el grupo." />
         <SuccessMessage message="Invitación generada." />
@@ -26,8 +26,8 @@ describe("mobile feedback states", () => {
     expect(screen.getByText("Datos de demostración")).toBeTruthy();
   });
 
-  it("renders loading and empty states", () => {
-    render(
+  it("renders loading and empty states", async () => {
+    await render(
       <>
         <Loading message="Cargando miembros" />
         <EmptyState title="Sin integrantes" description="Invita a tu familia." />
@@ -38,11 +38,11 @@ describe("mobile feedback states", () => {
     expect(screen.getByText("Sin integrantes")).toBeTruthy();
   });
 
-  it("confirms destructive actions through a modal dialog", () => {
+  it("confirms destructive actions through a modal dialog", async () => {
     const onClose = jest.fn();
     const onConfirm = jest.fn();
 
-    render(
+    await render(
       <Dialog open title="Dar de baja" onClose={onClose} closeLabel="Cancelar">
         <Text>¿Dar de baja a este miembro?</Text>
         <Text accessibilityRole="button" onPress={onConfirm}>
@@ -52,9 +52,9 @@ describe("mobile feedback states", () => {
     );
 
     expect(screen.getByText("¿Dar de baja a este miembro?")).toBeTruthy();
-    fireEvent.press(screen.getByRole("button", { name: "Cancelar" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Cancelar" }));
     expect(onClose).toHaveBeenCalled();
-    fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
     expect(onConfirm).toHaveBeenCalled();
   });
 });

@@ -3,28 +3,28 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import { Button, Card, EmptyState, ErrorMessage, Field, Loading } from "../components/ui";
 
 describe("mobile MD3 components", () => {
-  it("renders and presses a button with loading and disabled states", () => {
+  it("renders and presses a button with loading and disabled states", async () => {
     const onPress = jest.fn();
-    const { rerender } = render(<Button title="Continuar" onPress={onPress} />);
+    const { rerender } = await render(<Button title="Continuar" onPress={onPress} />);
 
-    fireEvent.press(screen.getByRole("button", { name: "Continuar" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Continuar" }));
     expect(onPress).toHaveBeenCalledTimes(1);
 
-    rerender(<Button title="Continuar" loading disabled />);
+    await rerender(<Button title="Continuar" loading disabled />);
     const button = screen.getByRole("button", { name: "Continuar" });
     expect(button.props.accessibilityState).toMatchObject({ disabled: true, busy: true });
   });
 
-  it("labels text fields and announces errors", () => {
-    render(<Field label="Nombre" error="El nombre es obligatorio" />);
+  it("labels text fields and announces errors", async () => {
+    await render(<Field label="Nombre" error="El nombre es obligatorio" />);
 
     expect(screen.getByLabelText("Nombre")).toBeTruthy();
     expect(screen.getByRole("alert")).toBeTruthy();
     expect(screen.getByText("El nombre es obligatorio")).toBeTruthy();
   });
 
-  it("renders feedback regions and empty states", () => {
-    render(
+  it("renders feedback regions and empty states", async () => {
+    await render(
       <>
         <ErrorMessage message="No pudimos cargar el grupo." />
         <Loading message="Cargando miembros" />

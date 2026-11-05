@@ -33,21 +33,23 @@ su persistencia queda para la spec 003.
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x. Web: Next.js 15.0.3 con React 19.0.0 RC y React DOM 19.0.0
-RC. Móvil: Expo 52.0.11, React Native 0.76.3 y React 18.3.1.
+**Language/Version**: TypeScript 5.x en web y TypeScript 6.x en móvil. Web: Next.js 15.0.3 con
+React 19.0.0 RC y React DOM 19.0.0 RC. Móvil: Expo SDK 58 (`expo 58.0.23`), React Native 0.88.1,
+React 19.3.0 y `expo-router` 58.
 
 **Primary Dependencies**:
 
 - Web: `next-intl` 4.14.x, `tailwindcss` 4.3.x, `@tailwindcss/postcss` 4.3.x, `lucide-react`
   1.68.x, `recharts` 3.10.x, `react-is` 19.x, `jest-axe` 11.x.
-- Móvil: `expo-localization` ~16.0.1, `i18n-js` 4.5.x, `expo-font` ~13.0.4,
-  `@expo-google-fonts/inter` 0.4.x, `expo-splash-screen` ~0.29.24, `expo-status-bar` ~2.0.1,
-  `expo-system-ui` ~4.0.9,
-  `lucide-react-native` 1.68.x, `react-native-svg` 15.8.0, `victory-native` 41.16.1,
-  `@shopify/react-native-skia` 1.5.0, `react-native-reanimated` ~3.16.1,
-  `react-native-gesture-handler` ~2.20.2 y `react-native-safe-area-context` 4.12.0.
-- Pruebas: Jest 29, Testing Library web 16.x, React Native Testing Library 12.7.2 (la 14.x exige
-  RN 0.78+ y no aplica a Expo 52), `jest-axe` y `@types/jest-axe`.
+- Móvil: `expo-localization` ~58.0.5, `i18n-js` 4.5.x, `expo-font` ~58.0.11,
+  `@expo-google-fonts/inter` 0.4.x, `expo-splash-screen` ~58.0.13, `expo-status-bar` ~58.0.4,
+  `expo-system-ui` ~58.0.7,
+  `lucide-react-native` 1.68.x, `react-native-svg` 15.16.0, `victory-native` 42.0.1,
+  `@shopify/react-native-skia` 2.14.0, `react-native-reanimated` 4.7.1,
+  `react-native-worklets` 0.13.0, `react-native-gesture-handler` 3.3.0 y
+  `react-native-safe-area-context` 5.11.1.
+- Pruebas: Jest 29/30, Testing Library web 16.x, React Native Testing Library 14.1.0 (con
+  `render`/`fireEvent` asíncronos), `jest-axe` y `@types/jest-axe`.
 
 **Storage**: Sin cambios de backend ni PostgreSQL. En web, preferencias en `localStorage` y cookies
 `kitho_theme`/`kitho_locale` para render inicial; en móvil, `expo-secure-store` para preferencias y
@@ -59,7 +61,7 @@ literales visuales; pruebas de paridad de claves i18n.
 
 **Target Platform**: Web: últimas 2 versiones de Chrome, Firefox, Safari y Edge, con viewports
 compacto `<600px`, medio `600–839px` y expandido `>=840px`. Móvil: iOS 15+ y Android 10+ mediante
-Expo 52.
+Expo SDK 58.
 
 **Project Type**: Aplicación web + aplicación móvil + API existente (multi-proyecto). Esta feature
 solo toca los dos frontends y artefactos compartidos de presentación.
@@ -74,8 +76,8 @@ Recharts y Victory Native fuera del bundle inicial de las rutas actuales.
 - No se permite modificar backend, API ni base de datos.
 - `foto_avatar` tiene `max_length=2048`: el SVG de avatar por defecto debe ser compacto y validarse
   antes de enviarse.
-- Victory Native 43 exige React 19 y RN 0.79+, incompatible con Expo 52/RN 0.76.3/React 18.3.1;
-  se fija la línea 41.16.1 con las versiones nativas que Expo 52 incluye.
+- Victory Native 43 exige Skia `>=2.15.1`, fuera de la versión que fija Expo SDK 58 (Skia 2.14.0);
+  se fija la línea 42.0.1, compatible con Skia 2.14.0 y Reanimated 4.7.1.
 - No se usan shadcn/ui ni kits de UI externos.
 - WCAG 2.1 AA, objetivos táctiles de 48x48 dp, foco visible y `prefers-reduced-motion`.
 - La marca canónica es **Kitho**; los títulos de ficha son **Kitho: Tareas y Finanzas Familiares**
@@ -134,7 +136,7 @@ edición de perfil y editor de avatar). Aproximadamente 30 componentes base comp
 | Avatar por defecto | Configuración determinista derivada de `user.id`/`email`; se envía por `foto_avatar` con validación de longitud `<=2048` | Cumple FR-049 y el límite del esquema existente |
 | Editor de avatar | Estado local, vista previa en tiempo real y aviso explícito de que el guardado llega en 003; no persiste ni sube archivos | Cumple FR-052/FR-053 y el alcance de la spec 002 |
 | Gráficos web | Recharts 3 cargado solo mediante `components/charts/ChartContainer.tsx` (client component) con `next/dynamic` y `ssr:false`; ninguna ruta actual lo importa | Cumple FR-058/FR-059/FR-060 y SC-011 |
-| Gráficos móvil | Victory Native 41.16.1 + Skia 1.5.0 + Reanimated 3.16.1 + Gesture Handler 2.20.2, encapsulado en `components/charts/ChartContainer.tsx`; ninguna ruta actual lo importa | Cumple FR-058/FR-059/FR-060 con versiones compatibles con Expo 52; Victory Native 43 queda descartado |
+| Gráficos móvil | Victory Native 42.0.1 + Skia 2.14.0 + Reanimated 4.7.1 + Gesture Handler 3.3.0, encapsulado en `components/charts/ChartContainer.tsx`; ninguna ruta actual lo importa | Cumple FR-058/FR-059/FR-060 con versiones compatibles con Expo SDK 58; Victory Native 43 queda descartado por requerir Skia >=2.15.1 |
 | Calidad | Scripts de verificación de tokens, imports de gráficos y literales visuales; `jest-axe` en web; pruebas de paridad de catálogos | Cumple FR-066 y SC-001/SC-002/SC-011 |
 | Marca | `lib/branding.ts` en cada frontend con nombre y títulos de tienda; wordmark provisional sin assets definitivos | Cumple FR-034/FR-061/FR-062/FR-063 y la sección de marca de la constitución |
 
@@ -263,7 +265,7 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
 ## Phase 0 / Phase 1 Outputs
 
 - `research.md`: decisiones resueltas sobre Tailwind 4, `next-intl` sin rutas de locale, tema sin
-  flash, i18n móvil, Expo Router, Victory Native compatible con Expo 52, generación compartida,
+  flash, i18n móvil, Expo Router, Victory Native compatible con Expo SDK 58, generación compartida,
   errores i18n, accesibilidad y pruebas.
 - `data-model.md`: modelo de tokens, preferencias, catálogos, descriptores de error, configuración
   de avatar, rutas/navegación y contratos de componentes. Confirma que el modelo de datos del
@@ -390,7 +392,7 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
 
 | Riesgo | Impacto | Mitigación |
 |--------|---------|------------|
-| Victory Native 41.16.1 no compila con Expo 52 en un development build | Medio | Versiones fijadas a las nativas de Expo 52; ninguna ruta actual lo importa. Si `expo-doctor`/build falla, se mantiene el contrato `ChartContainer` y se usa `victory-native@36.9.2` (solo SVG) como fallback documentado |
+| Victory Native 42.0.1 no compila con Expo SDK 58 en un development build | Medio | Versiones fijadas a las nativas de Expo 58; ninguna ruta actual lo importa. Si `expo-doctor`/build falla, se mantiene el contrato `ChartContainer` y se usa `victory-native@36.9.2` (solo SVG) como fallback documentado |
 | Recharts 3 con React 19 RC | Bajo | Carga diferida con `next/dynamic` y `ssr:false`; validar build antes de conectar pantallas futuras |
 | Tailwind 4 cambia utilidades o detección de contenido | Bajo | Usar configuración PostCSS oficial, breakpoints MD3 explícitos y pruebas de build; no depender de plugins de terceros |
 | SVG de avatar supera 2048 caracteres | Medio | Generador compacto, paleta limitada y prueba que valida la longitud del data URI por configuración por defecto |
@@ -399,7 +401,7 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
 | Cambio de tema con parpadeo en web | Medio | Cookie + script inline antes del paint; `suppressHydrationWarning` y prueba de recarga con tema oscuro |
 | Hidratación de fechas/locale entre servidor y cliente | Medio | Formatear fechas dinámicas en cliente tras montar o fijar `timeZone`/`now` estables; evitar tiempos relativos en SSR |
 | Errores ya visibles no cambian de idioma | Medio | `ApiError` con clave/fallback y traducción en render, no en la capa API |
-| Dependencias de test incompatibles con RN 0.76 | Bajo | Mantener `@testing-library/react-native` 12.7.2; no subir a 14.x hasta actualizar Expo/RN |
+| Dependencias de test incompatibles con RN 0.88 | Bajo | Usar `@testing-library/react-native` 14.1.0 y adaptar las pruebas a su API asíncrona (`await render`/`fireEvent`) |
 | Imports accidentales de gráficos | Bajo | ESLint `no-restricted-imports` + `scripts/check-ui.mjs` + SC-011 |
 
 ## Post-Design Constitution Check

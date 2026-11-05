@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import { AvatarEditor } from "../components/ui/AvatarEditor";
 
 describe("mobile avatar editor", () => {
-  it("renders the preview, the save notice and every control", () => {
-    render(<AvatarEditor seed="user-1" />);
+  it("renders the preview, the save notice and every control", async () => {
+    await render(<AvatarEditor seed="user-1" />);
 
     expect(screen.getByText("Vista previa únicamente. No se guardará en el perfil.")).toBeTruthy();
     for (const label of [
@@ -22,8 +22,8 @@ describe("mobile avatar editor", () => {
     }
   });
 
-  it("randomizes the preview immediately", () => {
-    render(<AvatarEditor seed="user-1" />);
+  it("randomizes the preview immediately", async () => {
+    await render(<AvatarEditor seed="user-1" />);
     const selectedLabels = () =>
       screen
         .getAllByRole("button")
@@ -31,26 +31,26 @@ describe("mobile avatar editor", () => {
         .map((element) => element.props.accessibilityLabel);
     const before = selectedLabels();
 
-    fireEvent.press(screen.getByText("Sorpréndeme"));
+    await fireEvent.press(screen.getByText("Sorpréndeme"));
 
     expect(selectedLabels()).not.toEqual(before);
   });
 
-  it("hands the preview data URI to the apply callback", () => {
+  it("hands the preview data URI to the apply callback", async () => {
     const onApply = jest.fn();
-    render(<AvatarEditor seed="user-1" onApply={onApply} />);
+    await render(<AvatarEditor seed="user-1" onApply={onApply} />);
 
-    fireEvent.press(screen.getByText("Usar este avatar"));
+    await fireEvent.press(screen.getByText("Usar este avatar"));
 
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply.mock.calls[0][0]).toMatch(/^data:image\/svg\+xml,/);
   });
 
-  it("shows the spec 003 notice when saving without persisting", () => {
+  it("shows the spec 003 notice when saving without persisting", async () => {
     const onApply = jest.fn();
-    render(<AvatarEditor seed="user-1" onApply={onApply} />);
+    await render(<AvatarEditor seed="user-1" onApply={onApply} />);
 
-    fireEvent.press(screen.getByText("Guardar"));
+    await fireEvent.press(screen.getByText("Guardar"));
 
     expect(screen.getByText(/se guardará en una próxima versión/i)).toBeTruthy();
     expect(onApply).not.toHaveBeenCalled();

@@ -28,21 +28,26 @@ pnpm install
 
 ```bash
 cd frontend-mobile
-pnpm add i18n-js @expo-google-fonts/inter lucide-react-native victory-native@41.16.1
+pnpm add i18n-js @expo-google-fonts/inter lucide-react-native victory-native@42.0.1
 npx expo install expo-localization expo-font expo-splash-screen expo-status-bar \
   expo-system-ui react-native-svg react-native-safe-area-context react-native-reanimated \
-  react-native-gesture-handler @shopify/react-native-skia
+  react-native-gesture-handler react-native-worklets @shopify/react-native-skia
 pnpm install
 ```
 
 **Notas**:
 
-- `victory-native` se fija en `41.16.1`; la 43 exige React 19/RN 0.79+ y no es compatible con Expo
-  52.
-- `@testing-library/react-native` se mantiene en `12.7.2`; la 14.x exige RN 0.78+.
-- Expo 52 incluye el plugin de Reanimated en `babel-preset-expo`; no se necesita `babel.config.js`.
-- Si `expo-doctor` rechaza la combinación de Victory Native 41, usar
-  `victory-native@36.9.2` como fallback y mantener el contrato `ChartContainer`.
+- El proyecto usa **Expo SDK 58** (`expo 58.0.23`, RN `0.88.1`, React `19.3.0`, TypeScript 6).
+  Ejecuta `npx expo install --fix` tras actualizar para alinear todos los módulos nativos.
+- `victory-native` se fija en `42.0.1`, compatible con Skia `2.14.0` y Reanimated `4.7.1` que
+  incluye Expo 58. La 43 exige Skia `>=2.15.1`, fuera de la versión que fija SDK 58.
+- `react-native-worklets` es peer obligatorio de Reanimated 4; instálalo con `npx expo install`.
+- `@testing-library/react-native` usa la línea `14.1.0`; `render`, `fireEvent` y `rerender` son
+  asíncronos y deben esperarse con `await`.
+- Expo 58 incluye el plugin de Reanimated/Worklets en `babel-preset-expo`; no se necesita
+  `babel.config.js`.
+- Si `expo-doctor` rechaza la combinación de Victory Native, mantener la línea 42.x y el contrato
+  `ChartContainer`; ninguna ruta actual importa la librería.
 
 ## Generate Shared Artifacts
 
@@ -269,9 +274,10 @@ sin imágenes rotas por assets ausentes.
 | Textos sin traducir | Verificar paridad de claves y que el componente use `t()` |
 | Error no traducido | Revisar `shared/errors/error-keys.json` y regenerar |
 | Avatar demasiado largo | Simplificar opciones o validar `<=2048`; el editor no persiste en 002 |
-| `expo-doctor` falla por Victory/Skia | Usar el fallback `victory-native@36.9.2` o dejar el contenedor sin importar en rutas actuales |
+| `expo-doctor` falla por Victory/Skia | Ejecutar `npx expo install --fix`; mantener `victory-native@42.0.1` compatible con Skia 2.14.0 |
 | Web build incluye Recharts | Revisar que solo `components/charts/ChartContainer` importe `recharts` y que use `next/dynamic` |
-| Pruebas móviles fallan por RNTL | Mantener `@testing-library/react-native@12.7.2` con Expo 52 |
+| Pruebas móviles fallan por RNTL | Usar `@testing-library/react-native@14.1.0` y `await render(...)` / `await fireEvent...(...)` |
+| Lint móvil marca `react-hooks/set-state-in-effect` | La regla se dejó como `warn` para los efectos de carga/sincronización de sesión |
 
 ## Definition of Done
 
@@ -299,9 +305,9 @@ sin imágenes rotas por assets ausentes.
 | Web `pnpm test` | 16 suites, 92 pruebas correctas (incluye `jest-axe`, tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
 | Web `pnpm run build` | Compilación de producción correcta; Recharts queda fuera de las rutas actuales. |
 | Móvil `pnpm run typecheck` | Sin errores. |
-| Móvil `pnpm run lint` | Sin avisos ni errores. |
+| Móvil `pnpm run lint` | Sin errores (5 avisos de `react-hooks/set-state-in-effect`). |
 | Móvil `pnpm test` | 17 suites, 81 pruebas correctas (incluye tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
-| Móvil `npx expo-doctor` | 18/18 comprobaciones correctas. |
+| Móvil `npx expo-doctor` | 20/20 comprobaciones correctas con Expo SDK 58. |
 
 **Cierre de convergencia**: el editor de avatar incluye ropa, ojos y color de fondo, y es accesible
 desde Perfil y Ajustes; las pantallas móviles respetan las áreas seguras; Guardar solo muestra el aviso
