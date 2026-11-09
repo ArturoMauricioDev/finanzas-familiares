@@ -66,7 +66,8 @@ export function TextField({
 export function Field({
   label,
   hint,
+  error,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
-  return <TextField label={label} hint={hint} {...props} />;
+}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string; error?: string }) {
+  return <TextField label={label} hint={hint} error={error} {...props} />;
 }

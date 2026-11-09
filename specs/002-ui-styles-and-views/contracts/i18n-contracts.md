@@ -25,9 +25,9 @@ plataforma, pero no en significado.
 | `common` | Acciones, estados, navegación, errores genéricos |
 | `auth` | Login, Google, sesión |
 | `profile` | Perfil, edición, datos del usuario |
-| `family` | Selección, creación, moneda, límites |
-| `invite` | Invitación, token, parentesco |
-| `members` | Lista, roles, promoción, expulsión, invitación |
+| `family` | Selección, creación, moneda, límites, eliminar/abandonar |
+| `invite` | Código, vigencia, unión, parentesco |
+| `members` | Lista, roles, promoción, expulsión, invitación, acciones de familia |
 | `settings` | Tema, idioma, logout, acerca de, versión, legal |
 | `avatar` | Editor, opciones, aviso de guardado |
 | `errors` | Claves de error mapeadas y de estado |
@@ -73,7 +73,13 @@ plataforma, pero no en significado.
     "Family has reached maximum member limit": "errors.family.memberLimit",
     "A user account with this email already exists": "errors.auth.emailExists",
     "Family could not be created due to a conflict": "errors.family.createConflict",
-    "Invitation could not be completed due to a conflict": "errors.invite.joinConflict"
+    "Invitation could not be completed due to a conflict": "errors.invite.joinConflict",
+    "Only the sole member can delete the family": "errors.family.deleteRequiresSoleMember",
+    "Family has more than one member": "errors.family.mustLeaveInstead",
+    "Family is already deleted": "errors.family.alreadyDeleted",
+    "Admin reassignment failed": "errors.family.adminReassignmentFailed",
+    "Unsupported currency": "errors.currency.unsupported",
+    "Currency is required": "errors.currency.required"
   },
   "statuses": {
     "0": "errors.network",
@@ -87,7 +93,9 @@ plataforma, pero no en significado.
 }
 ```
 
-El generador copia el mapa a `lib/error-keys.generated.ts` en ambos frontends.
+El generador copia el mapa a `lib/error-keys.generated.ts` en ambos frontends. Los textos exactos
+de los detalles de spec 001 pueden ajustarse al implementar el backend; las claves de UI se mantienen
+estables para no romper traducciones.
 
 ### Resolution Order
 
@@ -132,11 +140,14 @@ Esto garantiza que un cambio de idioma actualice errores ya visibles.
 ## Formatting
 
 - Moneda: `Intl.NumberFormat(locale, { style: "currency", currency: family.moneda_local })`.
+- Nombres de moneda: `Intl.DisplayNames(locale, { type: "currency" })` para las 5 sugerencias y la
+  búsqueda **Otros**; el código ISO 4217 es la fuente, el nombre solo es presentación.
 - Números: `Intl.NumberFormat(locale)`.
 - Fechas: `Intl.DateTimeFormat(locale, options)`.
 - El locale de formato es el idioma activo (`es`/`en`), no el locale del dispositivo.
 - `expo-localization` aporta la región/configuración regional en móvil; no cambia el idioma
-  inicial.
+  inicial. La geolocalización es opcional y solo preselecciona la moneda; si falla, se usa el
+  locale y luego `USD`.
 - Los montos futuros respetan `DECIMAL` con 2 decimales; esta feature solo formatea valores
   existentes.
 
@@ -160,3 +171,6 @@ nunca como nombre del producto.
 - [ ] La preferencia persiste tras recarga, logout y `401`.
 - [ ] No hay textos hardcodeados salvo "Kitho" y valores técnicos.
 - [ ] Fechas, números y moneda usan `Intl` y la moneda del grupo.
+- [ ] El código de invitación se muestra sin URL y sus errores inválido/usado/expirado tienen clave.
+- [ ] Las 5 sugerencias, la local detectada y **Otros** usan `Intl.DisplayNames`.
+- [ ] Eliminar/Abandonar familia tienen claves, confirmación y errores mapeados.

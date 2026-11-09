@@ -3,6 +3,7 @@ import { useIdTokenAuthRequest } from "expo-auth-session/providers/google";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
+import { Platform } from "react-native";
 
 import { useI18n } from "../../../components/providers/LocaleProvider";
 import {
@@ -20,9 +21,10 @@ import {
   signInWithGoogle,
 } from "../../../lib/auth";
 import { errorText } from "../../../lib/errors";
+import { requestGoogleIdToken } from "../../../lib/google-signin";
 import {
   applyTokenResponse,
-  getPendingInviteToken,
+  getPendingInviteCode,
   getSession,
   type SessionState,
 } from "../../../lib/session";
@@ -42,13 +44,31 @@ export default function LoginScreen() {
         return;
       }
       if (session.needs_family_setup) {
-        const pendingInvite = await getPendingInviteToken();
+        const pendingInvite = await getPendingInviteCode();
         router.replace(pendingInvite ? "/invite" : "/family/select");
         return;
       }
       router.replace("/family/members");
     },
     [router],
+  );
+
+  const exchangeIdToken = useCallback(
+    async (idToken: string) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await signInWithGoogle(idToken);
+        const session = await applyTokenResponse(data);
+        await redirectFromSession(session);
+      } catch (err) {
+        setError(errorText(err, t, t("auth.signInFailed")));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [redirectFromSession, t],
   );
 
   const redirectUri = AuthSession.makeRedirectUri({
@@ -62,6 +82,28 @@ export default function LoginScreen() {
     iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
     redirectUri,
   });
+
+  const handleGooglePress = useCallback(async () => {
+    if (Platform.OS === "web") {
+      await promptAsync();
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const idToken = await requestGoogleIdToken();
+      if (!idToken) {
+        setLoading(false);
+        return;
+      }
+      await exchangeIdToken(idToken);
+    } catch (err) {
+      setError(errorText(err, t, t("auth.googleFailed")));
+      setLoading(false);
+    }
+  }, [exchangeIdToken, promptAsync, t]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -87,23 +129,8 @@ export default function LoginScreen() {
       return;
     }
 
-    const exchangeToken = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await signInWithGoogle(idToken);
-        const session = await applyTokenResponse(data);
-        await redirectFromSession(session);
-      } catch (err) {
-        setError(errorText(err, t, t("auth.signInFailed")));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    exchangeToken();
-  }, [response, redirectFromSession, t]);
+    void exchangeIdToken(idToken);
+  }, [response, exchangeIdToken, t]);
 
   if (!GOOGLE_WEB_CLIENT_ID) {
     return (
@@ -120,8 +147,8 @@ export default function LoginScreen() {
         <ErrorMessage message={error} />
         {loading ? <Loading message={t("common.validating")} /> : null}
         <GoogleSignInButton
-          onPress={() => promptAsync()}
-          disabled={!request || loading}
+          onPress={() => void handleGooglePress()}
+          disabled={loading || (Platform.OS === "web" && !request)}
           loading={loading}
         />
       </Card>

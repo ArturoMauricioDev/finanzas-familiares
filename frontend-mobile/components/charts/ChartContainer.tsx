@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -7,7 +6,7 @@ import { useTheme } from "../providers/ThemeProvider";
 import { spacing } from "../../lib/generated/tokens";
 import { typeStyle } from "../../lib/ui-styles";
 
-export type ChartType = "line" | "bar" | "pie" | "area";
+export type ChartType = "line" | "bar" | "area";
 
 export interface ChartSeries {
   key: string;
@@ -24,7 +23,10 @@ export interface ChartContainerProps {
   height?: number;
 }
 
+type VictoryModule = typeof import("victory-native");
+
 export function ChartContainer({
+  type,
   data,
   series,
   title,
@@ -33,7 +35,7 @@ export function ChartContainer({
 }: ChartContainerProps) {
   const { t } = useI18n();
   const { colors } = useTheme();
-  const [victory, setVictory] = useState(null);
+  const [victory, setVictory] = useState<VictoryModule | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -48,10 +50,15 @@ export function ChartContainer({
   }, []);
 
   if (!data.length) {
-    return <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>{t("charts.empty")}</Text>;
+    return (
+      <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
+        {t("charts.empty")}
+      </Text>
+    );
   }
 
   const palette = [colors.primary, colors.secondary, colors.tertiary, colors.error];
+  const yKeys = series.map((entry) => entry.key);
 
   return (
     <View accessible accessibilityLabel={`${title}. ${summary}`} style={styles.root}>
@@ -59,16 +66,50 @@ export function ChartContainer({
       <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>{summary}</Text>
       <View style={{ height }}>
         {victory ? (
-          <victory.CartesianChart data={data}>
-            {series.map((entry, index) => (
-              <victory.Line
-                key={entry.key}
-                yKey={entry.key}
-                xKey="label"
-                color={entry.color ?? palette[index % palette.length]}
-                strokeWidth={2}
-              />
-            ))}
+          <victory.CartesianChart
+            data={data as Record<string, number>[]}
+            xKey="label"
+            yKeys={yKeys}
+            axisOptions={{
+              lineColor: { grid: colors.outlineVariant, frame: colors.outline },
+              labelColor: colors.onSurfaceVariant,
+            }}
+          >
+            {({ points, chartBounds }) => (
+              <>
+                {series.map((entry, index) => {
+                  const color = entry.color ?? palette[index % palette.length];
+                  if (type === "bar") {
+                    return (
+                      <victory.Bar
+                        key={entry.key}
+                        points={points[entry.key]}
+                        chartBounds={chartBounds}
+                        color={color}
+                      />
+                    );
+                  }
+                  if (type === "area") {
+                    return (
+                      <victory.Area
+                        key={entry.key}
+                        points={points[entry.key]}
+                        y0={chartBounds.bottom}
+                        color={color}
+                      />
+                    );
+                  }
+                  return (
+                    <victory.Line
+                      key={entry.key}
+                      points={points[entry.key]}
+                      color={color}
+                      strokeWidth={2}
+                    />
+                  );
+                })}
+              </>
+            )}
           </victory.CartesianChart>
         ) : (
           <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>

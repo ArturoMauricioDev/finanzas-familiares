@@ -1,5 +1,6 @@
 import type {
   FamilyCreateResponse,
+  FamilyLifecycleResponse,
   JoinInvitationResponse,
   TokenResponse,
   UserAuthInfo,
@@ -44,20 +45,24 @@ export function clearSession(): void {
   window.localStorage.removeItem(SESSION_KEY);
 }
 
-export function savePendingInviteToken(token: string): void {
-  if (typeof window === "undefined" || !token) return;
-  window.localStorage.setItem(PENDING_INVITE_KEY, token);
+export function savePendingInviteCode(code: string): void {
+  if (typeof window === "undefined" || !code) return;
+  window.localStorage.setItem(PENDING_INVITE_KEY, code);
 }
 
-export function getPendingInviteToken(): string | null {
+export function getPendingInviteCode(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(PENDING_INVITE_KEY);
 }
 
-export function clearPendingInviteToken(): void {
+export function clearPendingInviteCode(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(PENDING_INVITE_KEY);
 }
+
+export const savePendingInviteToken = savePendingInviteCode;
+export const getPendingInviteToken = getPendingInviteCode;
+export const clearPendingInviteToken = clearPendingInviteCode;
 
 export function getAccessToken(): string | null {
   return getSession()?.access_token ?? null;
@@ -133,5 +138,24 @@ export function applyInvitationJoined(data: JoinInvitationResponse): SessionStat
     needs_family_setup: false,
   };
   saveSession(next);
+  return next;
+}
+
+export function applyFamilyLeft(data?: FamilyLifecycleResponse): SessionState | null {
+  const current = getSession();
+  if (!current) return null;
+  const next: SessionState = {
+    ...current,
+    access_token: data?.tokens?.access_token ?? current.access_token,
+    refresh_token: data?.tokens?.refresh_token ?? current.refresh_token,
+    user: {
+      ...current.user,
+      family_id: null,
+      role: null,
+    },
+    needs_family_setup: true,
+  };
+  saveSession(next);
+  clearPendingInviteCode();
   return next;
 }

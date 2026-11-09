@@ -46,6 +46,18 @@
 - **Ajustes**: idioma, tema, cerrar sesión, acerca de/versión/legal y editar perfil.
 - **Inicio**: por ahora redirige a Miembros hasta que exista un dashboard financiero.
 
+### Session 2026-11-06
+
+- Q: ¿Cómo debe verse el botón de Google? → A: Estilo oficial de Google (fondo blanco u outline, logo G multicolor y texto traducido "Continuar con Google") con forma, estados MD3, nombre accesible y foco visible.
+- Q: ¿Cómo se presentan la unión y la invitación? → A: La opción se llama **Unirme mediante código**; el formulario de unión acepta un código y la pantalla de invitación muestra únicamente el código, sin URL ni enlace.
+- Q: ¿Cómo se elige la moneda local? → A: Selector de una sola moneda con 5 accesos rápidos por región (Latinoamérica, España, Estados Unidos y Europa); la primera opción se preselecciona por geolocalización y **Otros** abre una búsqueda del catálogo ISO 4217. Si la geolocalización falla, se usa el locale y luego USD.
+- Q: ¿Qué acciones de familia se muestran en Miembros? → A: **Eliminar familia** solo con exactamente 1 integrante; con más integrantes se muestra **Abandonar familia**. Ambas piden confirmación y aplican las reglas funcionales de la spec 001.
+- Q: ¿Cuántos usos y qué vigencia tiene el código de invitación? → A: Cada código es de **un solo uso** y **expira a los 7 días**; la UI debe informarlo y rechazar códigos usados o expirados.
+
+### Session 2026-11-09
+
+- Q: ¿Con qué librería se realiza la autenticación con Google en la app móvil? → A: **`react-native-nitro-google-signin`**; la web mantiene Google Identity Services y el botón oficial de Google.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Sistema visual coherente y accesible (Priority: P1)
@@ -112,6 +124,10 @@ Como usuario, quiero iniciar sesión, completar mi perfil, crear o unirme a un g
 2. **Given** un usuario autenticado sin perfil, **When** configura su nombre y avatar por defecto, **Then** puede continuar y la pantalla muestra estados de carga y error claros.
 3. **Given** un usuario sin grupo, **When** elige crear o unirse a un grupo, **Then** las pantallas de selección, creación e invitación mantienen su funcionalidad con el nuevo diseño.
 4. **Given** un administrador en Miembros, **When** consulta y gestiona integrantes, **Then** la lista, acciones, confirmaciones y estados vacíos se muestran con componentes MD3 accesibles.
+5. **Given** un usuario sin grupo, **When** elige unirse a una familia, **Then** ve la opción **Unirme mediante código** y un campo para introducir el código, sin ninguna opción de enlace.
+6. **Given** un administrador que genera una invitación, **When** la pantalla de invitación se muestra, **Then** solo aparece el código con acciones de copiar/compartir y no se muestra ni genera una URL.
+7. **Given** un usuario que crea una familia, **When** selecciona la moneda local, **Then** ve 5 monedas sugeridas para su región con la primera preseleccionada por geolocalización, y puede elegir **Otros** para buscar cualquier moneda.
+8. **Given** la sección Miembros, **When** la familia tiene exactamente 1 integrante, **Then** se muestra **Eliminar familia**; con más integrantes se muestra **Abandonar familia** y ambas acciones solicitan confirmación.
 
 ---
 
@@ -176,6 +192,12 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - **Avatar sin persistencia**: el editor no debe hacer creer al usuario que sus cambios se guardaron en esta versión.
 - **Movimiento reducido**: si el sistema solicita reducir movimiento, las animaciones MD3 deben desactivarse o acortarse.
 - **Datos vacíos**: listas sin miembros, sin invitación activa o sin grupo deben mostrar estados vacíos claros, no pantallas en blanco.
+- **Geolocalización denegada o no disponible**: el selector de moneda debe usar el locale del dispositivo y, si no hay coincidencia, USD, sin bloquear la creación de la familia.
+- **Moneda fuera de las 5 sugeridas**: **Otros** debe permitir buscar por código o nombre en todo el catálogo ISO 4217.
+- **Código de invitación inválido, usado o expirado**: la pantalla de unión debe mostrar un error inline traducido y mantener el campo editable.
+- **Invitación sin enlace**: la pantalla de invitación no debe mostrar ni generar URLs; solo el código.
+- **Acción de familia según integrantes**: con exactamente 1 integrante se muestra **Eliminar familia**; con más de 1 solo **Abandonar familia**.
+- **Resultado de eliminar familia**: el usuario debe ser redirigido al inicio del flujo principal conservando su historial como perfil individual.
 - **Fallback de fuente**: si Inter no carga, la app debe usar la fuente del sistema sin cambiar la jerarquía visual.
 
 ## Requirements *(mandatory)*
@@ -250,9 +272,30 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - **FR-043**: Se DEBE añadir la vista dedicada de edición de avatar accesible desde Perfil y Ajustes.
 - **FR-044**: La vista Inicio DEBE existir como ruta de entrada y redirigir a Miembros.
 - **FR-045**: Cada pantalla DEBE cubrir sus estados de carga, error, éxito y vacío cuando aplique.
-- **FR-046**: El botón de inicio de sesión con Google DEBE ser una variante MD3 con el icono oficial de Google y nombre accesible.
+- **FR-046**: El botón de inicio de sesión con Google DEBE usar el estilo oficial de Google (fondo blanco u outline, logo G multicolor y texto traducido "Continuar con Google"), manteniendo forma y estados MD3, nombre accesible y foco visible.
 - **FR-047**: Las acciones destructivas (expulsar miembro, cerrar sesión, abandonar flujo) DEBEN solicitar confirmación.
 - **FR-048**: La pantalla de miembros DEBE mostrar el límite máximo de 10 integrantes y el estado de rol de cada miembro de forma visualmente clara.
+
+#### Moneda local
+
+- **FR-072**: La creación de familia DEBE ofrecer un selector de moneda única con 5 monedas para la región detectada (Latinoamérica, España, Estados Unidos o Europa): la primera es la moneda local del país detectado y las otras 4 son las más usadas de la región.
+- **FR-073**: Si la moneda local no forma parte de las 4 más usadas de la región, DEBE aparecer igualmente como primera opción y completar la lista con las siguientes más usadas. Si la geolocalización no está disponible, se usará el locale del dispositivo y luego USD.
+- **FR-074**: El selector DEBE incluir **Otros** con búsqueda por código o nombre en el catálogo ISO 4217.
+- **FR-075**: La moneda elegida DEBE ser la única moneda local de la familia y formatearse con `Intl` según el idioma activo.
+
+#### Invitación y unión por código
+
+- **FR-076**: La opción de unión DEBE rotularse **Unirme mediante código** y solicitar el código en un campo de texto; NO debe existir una opción de unión por enlace.
+- **FR-077**: La pantalla de invitación DEBE mostrar únicamente el código, con acciones de copiar/compartir, sin mostrar ni generar una URL.
+- **FR-078**: Los errores de código inválido, usado o expirado DEBEN mostrarse inline, traducidos y asociados al campo.
+- **FR-083**: La pantalla de invitación DEBE indicar que el código es de un solo uso y que caduca a los 7 días.
+
+#### Acciones de familia en Miembros
+
+- **FR-079**: La sección Miembros DEBE mostrar **Eliminar familia** únicamente cuando la familia tenga exactamente 1 integrante.
+- **FR-080**: Con más de 1 integrante, la sección Miembros DEBE mostrar **Abandonar familia** y NO **Eliminar familia**, para todos los integrantes incluido el Administrador.
+- **FR-081**: Eliminar y abandonar familia DEBEN solicitar confirmación, mostrar estado de carga y comunicar el resultado; tras eliminar, el usuario es redirigido al inicio del flujo principal y conserva su historial como perfil individual.
+- **FR-082**: Estas acciones DEBEN consumir las reglas y endpoints definidos en la spec 001; el frontend no debe duplicar la lógica de autorización.
 
 #### Avatar
 
@@ -285,11 +328,11 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 
 #### Alcance técnico y calidad
 
-- **FR-064**: La spec 002 NO debe modificar el backend; reutiliza los endpoints de la spec 001.
+- **FR-064**: La spec 002 NO debe modificar el backend; reutiliza los endpoints de la spec 001, incluidos los del ciclo de vida de familia.
 - **FR-065**: Se DEBE eliminar el uso de estilos inline actuales en web y centralizar los estilos móviles en tokens y componentes.
 - **FR-066**: La implementación DEBE pasar `lint`, `typecheck` y las pruebas de web y móvil existentes, además de las nuevas pruebas de componentes y accesibilidad.
 - **FR-067**: La app DEBE soportar las últimas 2 versiones de Chrome, Firefox, Safari y Edge; iOS 15+ y Android 10+.
-- **FR-068**: Las dependencias nuevas (Tailwind, next-intl, expo-localization/i18n-js, Recharts, Victory Native, Lucide) DEBEN registrarse en el plan técnico y justificarse contra la constitución.
+- **FR-068**: Las dependencias nuevas (Tailwind, next-intl, expo-localization/i18n-js, Recharts, Victory Native, Lucide y `react-native-nitro-google-signin` para la autenticación con Google en móvil) DEBEN registrarse en el plan técnico y justificarse contra la constitución.
 
 #### Identidad de marca
 
@@ -313,6 +356,9 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - **Locale Preference**: preferencia local del usuario entre español e inglés.
 - **Avatar Configuration**: configuración de avatar base, fondo, cabello, ropa, ojos y accesorios; en 002 solo se previsualiza, se persiste en 003.
 - **Navigation Model**: secciones, rutas, orden, visibilidad por plataforma y comportamiento adaptativo.
+- **Currency Option**: moneda del catálogo ISO 4217 con código, nombre traducido, región sugerida e indicador de preselección por geolocalización.
+- **Invitation Code View**: representación visual de la invitación que expone únicamente el código, sin URL.
+- **Family Action**: acción de **Eliminar familia** o **Abandonar familia** visible según el número de integrantes.
 
 ## Success Criteria *(mandatory)*
 
@@ -334,6 +380,11 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
   solo aparece como descriptor de categoría en la ficha de España/Latam.
 - **SC-014**: Los metadatos de tienda coinciden exactamente con **Kitho: Tareas y Finanzas
   Familiares** (España/Latam) y **Kitho Family** (EE.UU./Global) en el 100% de las plataformas.
+- **SC-015**: El 100% de las apariciones del botón de Google respetan el estilo oficial de Google y superan WCAG 2.1 AA.
+- **SC-016**: El 100% de las pantallas de invitación muestran solo el código y no exponen ninguna URL de invitación.
+- **SC-017**: El 100% de los selectores de moneda muestran 5 sugerencias regionales con la primera preseleccionada por geolocalización y una búsqueda **Otros** sobre ISO 4217.
+- **SC-018**: El 100% de las secciones Miembros muestran **Eliminar familia** con exactamente 1 integrante y **Abandonar familia** con más de 1, con confirmación y redirección correcta.
+- **SC-019**: El 100% de las pantallas de invitación indican que el código es de un solo uso y caduca a los 7 días, y rechazan códigos usados o expirados.
 
 ## Assumptions
 
@@ -349,12 +400,18 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
   **Kitho Family**.
 - El avatar por defecto puede representarse como un descriptor de texto generado por la app y almacenarse en el campo `foto_avatar` existente.
 - La personalización y subida de avatar se completarán en la spec 003.
-- La spec 002 no requiere cambios de backend; cualquier necesidad nueva se documentará para 003.
+- La spec 002 no requiere cambios de backend; consume los endpoints de la spec 001, incluidos los del ciclo de vida de familia (soft delete, abandono y reasignación de administrador).
+- La geolocalización puede ser denegada o no estar disponible; en ese caso el selector de moneda usa el locale y luego USD.
+- Las 5 monedas sugeridas por región son valores por defecto de producto y pueden ajustarse sin cambios de backend. Listas iniciales: Latinoamérica `MXN, BRL, ARS, COP, CLP`; España/Europa `EUR, GBP, CHF, SEK, PLN`; Estados Unidos `USD, CAD, MXN, EUR, GBP`. La moneda local detectada se coloca siempre primero.
+- La unión a una familia se realiza exclusivamente por código; no se ofrecen invitaciones por enlace.
+- Cada código de invitación es de un solo uso y expira a los 7 días; la UI comunica ambas condiciones al administrador.
+- Tras eliminar la familia, el inicio del flujo principal es la pantalla de selección/creación/unión de grupo.
 - Las futuras pantallas financieras usarán Recharts y Victory Native, pero no forman parte de esta iteración.
 - Los usuarios tienen conexión a internet estable durante los flujos de autenticación y gestión de grupo.
 - El español es el idioma inicial y el inglés se ofrece como alternativa completa.
 - Las preferencias de tema e idioma se guardan en el dispositivo, no en el backend.
-- Se pueden añadir Tailwind CSS, next-intl, expo-localization/i18n-js, Recharts, Victory Native y Lucide como dependencias justificadas en el plan técnico.
+- Se pueden añadir Tailwind CSS, next-intl, expo-localization/i18n-js, Recharts, Victory Native, Lucide y `react-native-nitro-google-signin` como dependencias justificadas en el plan técnico.
+- La autenticación con Google en la app móvil se realiza con **`react-native-nitro-google-signin`**; la web mantiene Google Identity Services.
 - Las pantallas de Ajustes se añaden como ruta nueva; en web aparece en la navegación y en móvil se accede desde Perfil.
 - La ruta Inicio no tendrá contenido propio hasta que exista un dashboard; por ahora redirige a Miembros.
 
@@ -367,5 +424,7 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - Integraciones bancarias, captura de notificaciones o pasarelas de pago, conforme a la constitución.
 - Diseño o entrega final de logo, icono de app y splash.
 - Trámites legales de registro, renovación o defensa de la marca Kitho.
-- Cambios en la API o base de datos del backend.
+- Cambios de API o base de datos propios de esta feature; las extensiones del ciclo de vida de familia pertenecen a la spec 001.
+- Invitaciones por enlace.
+- Multi-moneda, conversión de divisas o cambio de moneda después de crear la familia.
 - Notificaciones push y correos transaccionales.

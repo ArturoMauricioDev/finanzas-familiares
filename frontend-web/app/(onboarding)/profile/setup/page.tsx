@@ -12,7 +12,7 @@ import {
   isAvatarDataUri,
 } from "@/lib/avatar-engine.generated";
 import { errorText } from "@/lib/errors";
-import { getPendingInviteToken, updateSession } from "@/lib/session";
+import { getPendingInviteCode, updateSession } from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function ProfileSetupPage() {
@@ -40,7 +40,7 @@ export default function ProfileSetupPage() {
     if (!ready || !session) return;
     if (!session.needs_profile_setup) {
       const destination = session.needs_family_setup
-        ? getPendingInviteToken()
+        ? getPendingInviteCode()
           ? "/invite"
           : "/family/select"
         : "/family/members";
@@ -75,7 +75,7 @@ export default function ProfileSetupPage() {
       });
 
       const destination = session.needs_family_setup
-        ? getPendingInviteToken()
+        ? getPendingInviteCode()
           ? "/invite"
           : "/family/select"
         : "/family/members";

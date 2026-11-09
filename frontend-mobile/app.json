@@ -4,6 +4,10 @@
     "slug": "kitho",
     "version": "1.0.0",
     "scheme": "finanzasfamiliares",
+    "locales": {
+      "es": "./locales/es.json",
+      "en": "./locales/en.json"
+    },
     "plugins": [
       "expo-router",
       [
@@ -25,17 +29,25 @@
       "expo-secure-store",
       "expo-splash-screen",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Kitho usa tu ubicación solo para sugerir la moneda local de tu familia."
+        }
+      ],
+      "react-native-nitro-google-signin"
     ],
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "android": {
-      "package": "com.finanzasfamiliares.app"
+      "package": "com.finanzasfamiliares.app",
+      "googleServicesFile": "./google-services.json"
     },
     "ios": {
       "bundleIdentifier": "com.finanzasfamiliares.app",
-      "supportsTablet": true
-    },
-    "description": "Tareas y finanzas familiares con una experiencia clara y accesible."
+      "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist"
+    }
   }
 }

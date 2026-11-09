@@ -45,6 +45,10 @@ jest.mock("@/lib/session", () => ({
   getPendingInviteToken: jest.fn(() => null),
   savePendingInviteToken: jest.fn(),
   clearPendingInviteToken: jest.fn(),
+  getPendingInviteCode: jest.fn(() => null),
+  savePendingInviteCode: jest.fn(),
+  clearPendingInviteCode: jest.fn(),
+  applyFamilyLeft: jest.fn(),
 }));
 
 jest.mock("@/lib/api", () => {
@@ -59,6 +63,9 @@ jest.mock("@/lib/api", () => {
       getFamily: jest.fn(),
       createInvitation: jest.fn(),
       joinInvitation: jest.fn(),
+      joinFamilyByCode: jest.fn(),
+      leaveFamily: jest.fn(),
+      deleteFamily: jest.fn(),
       promoteMember: jest.fn(),
       removeMember: jest.fn(),
     },
@@ -108,7 +115,8 @@ const family = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockSearchParams.delete("token");
-  mockSession.getPendingInviteToken.mockReturnValue(null);
+  mockSession.getPendingInviteCode.mockReturnValue(null);
+  mockSession.getPendingInviteCode.mockReturnValue(null);
   window.confirm = jest.fn(() => true);
 });
 
@@ -144,7 +152,7 @@ describe("web onboarding flows", () => {
       needs_family_setup: true,
     });
     mockSession.applyTokenResponse.mockReturnValue(nextSession);
-    mockSession.getPendingInviteToken.mockReturnValue("invite-token");
+    mockSession.getPendingInviteCode.mockReturnValue("invite-token");
 
     render(<LoginPage />);
     fireEvent.click(screen.getByText("Google login"));
@@ -184,7 +192,7 @@ describe("web onboarding flows", () => {
 
   it("sends users with a pending invite to the invite flow after profile setup", async () => {
     useSession(buildSession({ needs_profile_setup: true, needs_family_setup: true }));
-    mockSession.getPendingInviteToken.mockReturnValue("invite-token");
+    mockSession.getPendingInviteCode.mockReturnValue("invite-token");
     mockApi.updateProfile.mockResolvedValue({
       id: "user-1",
       nombre_visualizacion: "Ana",
@@ -212,7 +220,7 @@ describe("web onboarding flows", () => {
       "href",
       "/family/create",
     );
-    expect(screen.getByRole("link", { name: "Unirme mediante enlace" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Unirme mediante código" })).toHaveAttribute(
       "href",
       "/invite",
     );
@@ -231,25 +239,25 @@ describe("web onboarding flows", () => {
       target: { value: "Familia Pérez" },
     });
     fireEvent.change(screen.getByLabelText(/Moneda local/), {
-      target: { value: "MXN" },
+      target: { value: "EUR" },
     });
     fireEvent.click(screen.getByText("Crear grupo"));
 
     await waitFor(() =>
       expect(mockApi.createFamily).toHaveBeenCalledWith({
         nombre: "Familia Pérez",
-        moneda_local: "MXN",
+        moneda_local: "EUR",
       }),
     );
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
-    expect(mockSession.clearPendingInviteToken).toHaveBeenCalled();
+    expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
   });
 
-  it("joins a family from an invitation link", async () => {
-    mockSearchParams.set("token", "invite-token");
+  it("joins a family with an invitation code", async () => {
+    mockSession.getPendingInviteCode.mockReturnValue("ABCD1234");
     useSession(buildSession({ needs_family_setup: true }));
-    mockApi.joinInvitation.mockResolvedValue({
+    mockApi.joinFamilyByCode.mockResolvedValue({
       family_id: "family-1",
       role: "member",
       estado: "activo",
@@ -257,22 +265,41 @@ describe("web onboarding flows", () => {
     });
 
     render(<InvitePage />);
-    expect(screen.getByLabelText("Token de invitación")).toHaveValue("invite-token");
-    expect(mockSession.savePendingInviteToken).toHaveBeenCalledWith("invite-token");
+    expect(screen.getByLabelText("Código de invitación")).toHaveValue("ABCD1234");
+    fireEvent.change(screen.getByLabelText("Código de invitación"), {
+      target: { value: "abcd-1234" },
+    });
+    expect(mockSession.savePendingInviteCode).toHaveBeenCalledWith("ABCD1234");
     fireEvent.change(screen.getByLabelText("Parentesco (opcional)"), {
       target: { value: "hija" },
     });
     fireEvent.click(screen.getByText("Unirme al grupo"));
 
     await waitFor(() =>
-      expect(mockApi.joinInvitation).toHaveBeenCalledWith({
-        token: "invite-token",
+      expect(mockApi.joinFamilyByCode).toHaveBeenCalledWith({
+        codigo: "ABCD1234",
         parentesco: "hija",
       }),
     );
     expect(mockSession.applyInvitationJoined).toHaveBeenCalled();
-    expect(mockSession.clearPendingInviteToken).toHaveBeenCalled();
+    expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
+  });
+
+  it("shows an inline translated error for an expired invitation code", async () => {
+    mockSession.getPendingInviteCode.mockReturnValue("ABCD1234");
+    useSession(buildSession({ needs_family_setup: true }));
+    mockApi.joinFamilyByCode.mockRejectedValue(
+      new ApiError(400, "errors.details.invitationCodeExpired"),
+    );
+
+    render(<InvitePage />);
+    fireEvent.click(screen.getByText("Unirme al grupo"));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Código de invitación")).toHaveAttribute("aria-invalid", "true"),
+    );
+    expect(screen.getByText("Este código de invitación ha caducado.")).toBeInTheDocument();
   });
 
   it("lets an admin invite, promote and expel members", async () => {
@@ -301,8 +328,8 @@ describe("web onboarding flows", () => {
     });
     mockApi.createInvitation.mockResolvedValue({
       invitation_id: "invitation-1",
-      token: "invite-token",
-      link: "http://localhost:3000/invite?token=invite-token",
+      codigo: "ABCD1234",
+      usado: false,
       expira_en: "2026-11-02T00:00:00Z",
     });
     mockApi.promoteMember.mockResolvedValue({ success: true });
@@ -313,7 +340,8 @@ describe("web onboarding flows", () => {
     await screen.findByText("Familia Pérez");
     fireEvent.click(screen.getByText("Generar invitación"));
     await waitFor(() => expect(mockApi.createInvitation).toHaveBeenCalled());
-    expect(screen.getByText("http://localhost:3000/invite?token=invite-token")).toBeInTheDocument();
+    expect(screen.getByText("ABCD-1234")).toBeInTheDocument();
+    expect(screen.queryByText(/invite\?token=/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Promover"));
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));

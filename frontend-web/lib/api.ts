@@ -9,6 +9,7 @@ import {
 import type {
   FamilyCreateResponse,
   FamilyDetail,
+  FamilyLifecycleResponse,
   Invitation,
   JoinInvitationResponse,
   TokenResponse,
@@ -165,17 +166,39 @@ export const api = {
     return request<FamilyDetail>("/families/me");
   },
 
-  createInvitation(expiraEnHoras = 72): Promise<Invitation> {
+  createInvitation(expiraEnHoras = 168): Promise<Invitation> {
     return request<Invitation>("/families/me/invitations", {
       method: "POST",
       body: JSON.stringify({ expira_en_horas: expiraEnHoras }),
     });
   },
 
-  joinInvitation(payload: { token: string; parentesco?: string }): Promise<JoinInvitationResponse> {
+  joinFamilyByCode(payload: {
+    codigo: string;
+    parentesco?: string;
+  }): Promise<JoinInvitationResponse> {
     return request<JoinInvitationResponse>("/invitations/join", {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+
+  joinInvitation(payload: { token: string; parentesco?: string }): Promise<JoinInvitationResponse> {
+    return api.joinFamilyByCode({
+      codigo: payload.token,
+      parentesco: payload.parentesco,
+    });
+  },
+
+  leaveFamily(): Promise<FamilyLifecycleResponse> {
+    return request<FamilyLifecycleResponse>("/families/me/leave", {
+      method: "POST",
+    });
+  },
+
+  deleteFamily(): Promise<FamilyLifecycleResponse> {
+    return request<FamilyLifecycleResponse>("/families/me", {
+      method: "DELETE",
     });
   },
 

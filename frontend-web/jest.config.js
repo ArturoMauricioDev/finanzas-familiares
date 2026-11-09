@@ -11,4 +11,17 @@ const customJestConfig = {
   },
 };
 
-module.exports = createJestConfig(customJestConfig);
+const nextJestConfig = createJestConfig(customJestConfig);
+
+module.exports = async () => {
+  const config = await nextJestConfig();
+
+  return {
+    ...config,
+    transformIgnorePatterns: [
+      "/node_modules/(?!.pnpm)(?!(geist|next-intl|use-intl|@formatjs|intl-messageformat|icu-minify|@schummar)/)",
+      "/node_modules/.pnpm/(?!(geist|next-intl|use-intl|@formatjs|intl-messageformat|icu-minify|@schummar))",
+      "^.+\\.module\\.(css|sass|scss)$",
+    ],
+  };
+};

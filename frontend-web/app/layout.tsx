@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { AppProviders } from "@/components/providers/AppProviders";
 import { brand, darkColors, lightColors } from "@/lib/generated/tokens";
-import { defaultLocale } from "@/lib/i18n/messages.generated";
+import { defaultLocale, messages } from "@/lib/i18n/messages.generated";
 import {
   LOCALE_COOKIE_KEY,
   THEME_COOKIE_KEY,
@@ -22,13 +22,6 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: { default: brand.webTitle, template: `%s · ${brand.name}` },
-  description:
-    "Kitho reúne las tareas y las finanzas de tu familia en un solo lugar, con una experiencia clara y accesible.",
-  applicationName: brand.name,
-};
-
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: lightColors.surface },
@@ -37,6 +30,18 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const localeCookie = readCookieFromString(cookieStore.toString(), LOCALE_COOKIE_KEY);
+  const locale = localeCookie ? normalizeLocale(localeCookie) : defaultLocale;
+
+  return {
+    title: { default: messages[locale].app.webTitle, template: `%s · ${brand.name}` },
+    description: messages[locale].app.description,
+    applicationName: brand.name,
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();

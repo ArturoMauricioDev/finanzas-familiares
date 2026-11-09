@@ -7,12 +7,12 @@ import { useI18n } from "@/components/providers/LocaleProvider";
 import { Card, ErrorMessage, GoogleSignInButton, Loading, Page } from "@/components/ui";
 import { signInWithGoogle } from "@/lib/auth";
 import { errorText } from "@/lib/errors";
-import { applyTokenResponse, getPendingInviteToken, getSession } from "@/lib/session";
+import { applyTokenResponse, getPendingInviteCode, getSession } from "@/lib/session";
 
 function nextPath(current: { needs_profile_setup: boolean; needs_family_setup: boolean }): string {
   if (current.needs_profile_setup) return "/profile/setup";
   if (current.needs_family_setup) {
-    return getPendingInviteToken() ? "/invite" : "/family/select";
+    return getPendingInviteCode() ? "/invite" : "/family/select";
   }
   return "/family/members";
 }

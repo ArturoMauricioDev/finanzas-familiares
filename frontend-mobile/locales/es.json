@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSLocationWhenInUseUsageDescription": "Kitho usa tu ubicación solo para sugerir la moneda local de tu familia."
+  }
+}

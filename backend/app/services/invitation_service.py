@@ -5,15 +5,32 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token
-from app.models.family import Family
+from app.models.family import Family, FamilyStatusEnum
 from app.models.invitation import Invitation
 from app.models.membership import Membership, RoleEnum, StatusEnum
+
+INVITATION_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+INVITATION_CODE_LENGTH = 8
+INVITATION_EXPIRY_DAYS = 7
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _generate_invitation_code(db: Session) -> str:
+    for _ in range(10):
+        code = "".join(
+            secrets.choice(INVITATION_CODE_ALPHABET) for _ in range(INVITATION_CODE_LENGTH)
+        )
+        exists = db.query(Invitation).filter(Invitation.codigo == code).first()
+        if not exists:
+            return code
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Could not generate invitation code",
+    )
 
 
 def _ensure_utc(value: datetime) -> datetime:
@@ -41,12 +58,20 @@ def create_invitation(db: Session, user_id, request):
             detail="Only admins can create invitations",
         )
 
-    token = secrets.token_urlsafe(32)
-    expira_en = _utcnow() + timedelta(hours=request.expira_en_horas)
+    family = db.query(Family).filter(Family.id == membership.family_id).first()
+    if not family or family.estado != FamilyStatusEnum.activo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Family not found",
+        )
+
+    codigo = _generate_invitation_code(db)
+    expira_en = _utcnow() + timedelta(days=INVITATION_EXPIRY_DAYS)
 
     invitation = Invitation(
         family_id=membership.family_id,
-        token=token,
+        codigo=codigo,
+        token=None,
         generado_por=user_id,
         expira_en=expira_en,
         usado=False,
@@ -59,9 +84,9 @@ def create_invitation(db: Session, user_id, request):
 
     return InvitationResponse(
         invitation_id=str(invitation.id),
-        token=token,
-        link=f"{settings.INVITATION_LINK_BASE}?token={token}",
+        codigo=codigo,
         expira_en=invitation.expira_en,
+        usado=False,
     )
 
 
@@ -72,29 +97,32 @@ def join_invitation(db: Session, user_id, request):
             detail="User already belongs to a family",
         )
 
-    invitation = (
-        db.query(Invitation).filter(Invitation.token == request.token).with_for_update().first()
-    )
+    code = (request.codigo or request.token or "").strip().upper()
+    invitation = db.query(Invitation).filter(Invitation.codigo == code).with_for_update().first()
+    if not invitation and request.token:
+        invitation = (
+            db.query(Invitation).filter(Invitation.token == request.token).with_for_update().first()
+        )
     if not invitation:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid invitation token",
+            detail="Invalid invitation code",
         )
 
     if invitation.usado:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invitation already used",
+            detail="Invitation code already used",
         )
 
     if _ensure_utc(invitation.expira_en) < _utcnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invitation expired",
+            detail="Invitation code expired",
         )
 
     family = db.query(Family).filter(Family.id == invitation.family_id).with_for_update().first()
-    if not family:
+    if not family or family.estado != FamilyStatusEnum.activo:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invitation family not found",
@@ -124,6 +152,7 @@ def join_invitation(db: Session, user_id, request):
         )
         db.add(membership)
         invitation.usado = True
+        invitation.fecha_uso = _utcnow()
         db.commit()
         db.refresh(membership)
     except IntegrityError:

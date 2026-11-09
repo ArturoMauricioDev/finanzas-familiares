@@ -17,6 +17,7 @@ de los componentes MD3. La implementación es nativa por plataforma, pero el con
 - `disabled`, `loading`, `error` y `focus` son estados obligatorios cuando aplican.
 - Las animaciones respetan `prefers-reduced-motion`/movimiento reducido.
 - Los textos visibles provienen de i18n; "Kitho" es la única excepción de marca.
+- Las invitaciones se muestran solo como código; no se renderizan enlaces ni QR de invitación.
 
 ## Form Components
 
@@ -76,6 +77,31 @@ para hint/error; `aria-invalid` cuando hay error; el error se anuncia con `role=
 **Accessibility**: web usa `<select>` nativo estilizado; móvil usa un modal/lista accesible con
 `accessibilityRole="button"` y opciones con rol de radio o menú. Siempre expone etiqueta.
 
+### CurrencySelect
+
+Selector único de moneda para el alta de familia. Se apoya en `Select`/`SearchField` y en
+`shared/currencies/regions.json`.
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| `label` | string | required | Etiqueta traducida |
+| `value` | string | required | Código ISO 4217 seleccionado |
+| `suggestions` | `CurrencyOption[]` | required | Exactamente 5; la local va primero |
+| `localCode` | string | none | Moneda detectada; se marca visualmente |
+| `onChange` | function | required | Cambio de selección |
+| `onSearch` | function | none | Búsqueda en **Otros** |
+| `searchQuery` | string | `""` | Texto de búsqueda |
+| `loading` | boolean | false | Detectando región/sugerencias |
+| `error` | string | none | Error de detección o validación |
+| `disabled` | boolean | false | Estado |
+
+**Behavior**: al abrir, intenta geolocalización opcional; si se deniega, usa el locale y luego
+`USD`. **Otros** permite buscar cualquier ISO 4217 con `Intl.DisplayNames`; no acepta texto libre
+inválido. No mostrar más de una moneda seleccionada.
+
+**Accessibility**: etiqueta asociada, opción local anunciada como "detectada", búsqueda con
+`role="searchbox"` y lista con opciones seleccionables; el error se anuncia con `role="alert"`.
+
 ### Checkbox / Radio / Switch
 
 | Prop | Type | Default | Notes |
@@ -101,7 +127,8 @@ táctil 48.
 estado `busy` al cargar. En web se usa el botón oficial de Google Identity Services
 (`GoogleLogin` con `locale`, `shape="pill"`, `size="large"`, `text="continue_with"`) dentro de un
 contenedor MD3; no se recolorea ni se sustituye el icono oficial. En móvil se usa un `Pressable`
-MD3 con el icono oficial como SVG inline. Ninguna plataforma depende de assets externos ni muestra
+MD3 con el icono oficial como SVG inline y la autenticación nativa delegada en
+**`react-native-nitro-google-signin`**. Ninguna plataforma depende de assets externos ni muestra
 una imagen rota.
 
 ### SearchField
@@ -116,6 +143,44 @@ una imagen rota.
 **Accessibility**: `role="searchbox"`, botón de limpiar con nombre accesible.
 
 ## Content Components
+
+### InviteCode
+
+Muestra el código de invitación generado. No renderiza URLs ni deep links.
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| `code` | string | required | Código normalizado |
+| `expiresAt` | ISO date | required | Caducidad a 7 días |
+| `daysRemaining` | number | required | Texto de vigencia |
+| `status` | `"active" \| "used" \| "expired"` | `active` | Estado |
+| `onCopy` | function | required | Copiar código |
+| `onShare` | function | none | Compartir solo texto |
+| `loading` | boolean | false | Generando/copiando |
+| `error` | string | none | Error de generación/copia |
+
+**Accessibility**: el código se agrupa para lectura pero se copia completo; el botón de copiar tiene
+nombre accesible y anuncia "copiado" con `role="status"`; la caducidad se asocia con
+`aria-describedby`/`accessibilityHint`. En estado `used`/`expired` se oculta la acción de copiar.
+
+### FamilyActions
+
+Acciones de ciclo de vida en Miembros. La UI no decide autorización ni soft delete.
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| `memberCount` | number | required | Determina la acción visible |
+| `onDelete` | function | none | Visible solo si `memberCount === 1` |
+| `onLeave` | function | none | Visible solo si `memberCount > 1` |
+| `loadingAction` | `"delete" \| "leave" \| null` | null | Deshabilita doble envío |
+| `error` | string | none | Error mapeado |
+
+**Behavior**: con 1 integrante se muestra **Eliminar familia** (soft delete); con más de 1 se
+muestra **Abandonar familia** y nunca Eliminar. Ambas abren `ConfirmDialog`; al completar se
+redirige a `/family/select`.
+
+**Accessibility**: botón destructivo con nombre completo ("Eliminar familia"/"Abandonar familia"),
+confirmación con `ConfirmDialog` accesible y foco devuelto al botón si se cancela.
 
 ### Card
 
@@ -293,9 +358,9 @@ renderiza navegación en `(auth)`/`(onboarding)`.
 |--------|----------------------|--------|
 | Login | Wordmark, `GoogleSignInButton`, InlineBanner | Loading, config error, auth error |
 | Profile setup | TextField, `Avatar`/preview, default avatar, submit | Loading, validation, error, success redirect |
-| Family select/create | Card, form, `Select` for currency, primary/secondary actions | Loading, validation, conflict, error |
-| Invite | Invitation summary, parentesco field, join/back actions | Loading, expired/invalid empty/error, success |
-| Members | List/ListItem with role and limit, invite card, actions | Loading, empty, error, destructive confirm |
+| Family select/create | Card, form, `CurrencySelect`, primary/secondary actions | Loading (detectando región), validation, conflict, error de moneda |
+| Invite | Invitation summary with `InviteCode`, join-by-code field, join/back actions | Loading, invalid/used/expired empty/error, success |
+| Members | List/ListItem with role and limit, invite card with `InviteCode`, `FamilyActions` | Loading, empty, error, destructive confirm |
 | Home | Redirect only, Spinner + text while resolving | Loading, redirect |
 | Profile | Avatar, name/email, edit profile, edit avatar, settings link | Loading, error |
 | Settings | Theme radio, language `Select`, edit profile, avatar, about/version/legal (versión desde `package.json`/`app.json`), logout | Loading, error, destructive confirm |

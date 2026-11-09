@@ -1,5 +1,6 @@
 import uuid
 
+from app.models.family import Family, FamilyStatusEnum
 from app.models.membership import Membership, RoleEnum, StatusEnum
 from tests.conftest import auth_headers, create_user
 
@@ -218,3 +219,76 @@ def test_admin_can_remove_another_admin_when_one_remains(client, db):
     )
     assert removed.estado == StatusEnum.inactivo
     assert remaining.estado == StatusEnum.activo
+
+
+def test_single_member_can_delete_family_with_soft_delete(client, db):
+    admin = create_user(db)
+    response = _create_family(client, admin)
+    family_id = uuid.UUID(response.json()["family"]["id"])
+
+    delete = client.delete("/api/v1/families/me", headers=auth_headers(admin))
+    assert delete.status_code == 200
+    assert delete.json()["success"] is True
+
+    db.expire_all()
+    family = db.query(Family).filter(Family.id == family_id).one()
+    membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == admin.id, Membership.family_id == family_id)
+        .one()
+    )
+    assert family.estado == FamilyStatusEnum.eliminado
+    assert family.fecha_eliminacion is not None
+    assert membership.estado == StatusEnum.inactivo
+
+    detail = client.get("/api/v1/families/me", headers=auth_headers(admin))
+    assert detail.status_code == 403
+
+
+def test_delete_family_with_more_than_one_member_is_rejected(client, db):
+    admin = create_user(db, email="admin@example.com")
+    response = _create_family(client, admin)
+    family_id = uuid.UUID(response.json()["family"]["id"])
+    _add_member(db, family_id, "second@example.com")
+
+    delete = client.delete("/api/v1/families/me", headers=auth_headers(admin))
+    assert delete.status_code == 400
+    assert "one member" in delete.json()["detail"]
+
+    family = db.query(Family).filter(Family.id == family_id).one()
+    assert family.estado == FamilyStatusEnum.activo
+
+
+def test_leave_family_reassigns_oldest_member_as_admin(client, db):
+    admin = create_user(db, email="admin@example.com")
+    response = _create_family(client, admin)
+    family_id = uuid.UUID(response.json()["family"]["id"])
+    _add_member(db, family_id, "oldest@example.com")
+    _add_member(db, family_id, "newest@example.com")
+
+    leave = client.post("/api/v1/families/me/leave", headers=auth_headers(admin))
+    assert leave.status_code == 200
+    assert leave.json()["success"] is True
+
+    db.expire_all()
+    oldest = (
+        db.query(Membership)
+        .filter(
+            Membership.family_id == family_id,
+            Membership.estado == StatusEnum.activo,
+        )
+        .order_by(Membership.fecha_union.asc())
+        .first()
+    )
+    assert oldest is not None
+    assert oldest.role == RoleEnum.admin
+    assert oldest.user_id != admin.id
+
+
+def test_leave_family_with_one_member_is_rejected(client, db):
+    admin = create_user(db)
+    _create_family(client, admin)
+
+    leave = client.post("/api/v1/families/me/leave", headers=auth_headers(admin))
+    assert leave.status_code == 400
+    assert "one member" in leave.json()["detail"]

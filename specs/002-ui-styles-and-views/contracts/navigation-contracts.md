@@ -26,7 +26,8 @@ conservar la funcionalidad de la spec 001 y añadir las vistas de la spec 002.
 
 **Nota**: los route groups de Next.js y Expo Router no añaden segmentos a la URL, por lo que las
 rutas existentes de la spec 001 se conservan. En `(tabs)/_layout.tsx`, los nombres de ruta son
-`index`, `family/members` y `profile` (sin el grupo `(tabs)`).
+`index`, `family/members` y `profile` (sin el grupo `(tabs)`). `/invite` es la pantalla de unión
+mediante código; no existe una ruta de invitación por enlace.
 
 ## Redirect Matrix
 
@@ -35,7 +36,7 @@ rutas existentes de la spec 001 se conservan. En `(tabs)/_layout.tsx`, los nombr
 | No hay sesión | `/auth/login` |
 | Sesión sin perfil | `/profile/setup` |
 | Sesión con perfil y sin grupo, sin invitación pendiente | `/family/select` |
-| Sesión con perfil y sin grupo, con invitación pendiente | `/invite` |
+| Sesión con perfil y sin grupo, con código de invitación pendiente | `/invite` |
 | Sesión con perfil y grupo, ruta `/` | `/family/members` |
 | Sesión con perfil y grupo en `/family/select`, `/family/create` o `/invite` | `/family/members` |
 | Sesión sin perfil en cualquier ruta protegida | `/profile/setup` |
@@ -43,7 +44,9 @@ rutas existentes de la spec 001 se conservan. En `(tabs)/_layout.tsx`, los nombr
 | `401` en una petición autenticada | Limpiar sesión y `/auth/login` |
 | `403` por inconsistencia de grupo | Refrescar sesión; si sigue sin grupo, `/family/select`; si no, mostrar error |
 | Logout confirmado | Limpiar sesión y `/auth/login`; conservar tema e idioma |
-| Invitación inválida/expirada | Mostrar error, limpiar token pendiente y quedarse en `/invite` |
+| Código de invitación inválido/usado/expirado | Mostrar error, limpiar código pendiente y quedarse en `/invite` |
+| Eliminar familia (1 integrante) confirmado | `/family/select`; el usuario conserva perfil individual |
+| Abandonar familia (>1 integrante) confirmado | `/family/select`; si no quedan admins, el backend reasigna al miembro más antiguo |
 | Guardar avatar en 002 | Aviso inline; no navegar ni persistir |
 
 ## Navigation Visibility
@@ -89,7 +92,7 @@ rutas existentes de la spec 001 se conservan. En `(tabs)/_layout.tsx`, los nombr
   vuelta del navegador debe funcionar.
 - Móvil: el header de Ajustes, edición de perfil y avatar muestra un botón de vuelta; si no hay
   historial, navega a Perfil.
-- En `/invite`, volver cuando se descarta el token pendiente pide confirmación; si el token se
+- En `/invite`, volver cuando se descarta el código pendiente pide confirmación; si el código se
   conserva, no.
 - El diálogo de confirmación de logout no navega hasta confirmar.
 - El editor de avatar no persiste; si hay cambios locales, volver muestra confirmación antes de
@@ -100,8 +103,8 @@ rutas existentes de la spec 001 se conservan. En `(tabs)/_layout.tsx`, los nombr
 - La sesión se conserva con las claves existentes de la spec 001.
 - Tema e idioma se conservan en `kitho_theme` y `kitho_locale`.
 - Cerrar sesión o recibir `401` no borra las preferencias.
-- El token de invitación pendiente se conserva con la clave existente y se limpia al unirse o al
-  detectar que la invitación ya no aplica.
+- El código de invitación pendiente se conserva con la clave existente y se limpia al unirse o al
+  detectar que ya no aplica. No se guardan ni generan URLs de invitación.
 
 ## Accessibility Contract
 
@@ -122,3 +125,5 @@ rutas existentes de la spec 001 se conservan. En `(tabs)/_layout.tsx`, los nombr
 - [ ] En web compacta y móvil, Ajustes solo se alcanza desde Perfil.
 - [ ] El tema y el idioma persisten tras logout y `401`.
 - [ ] El foco y `aria-current`/estado seleccionado son correctos.
+- [ ] `/invite` acepta solo código y no existe ruta/enlace de invitación.
+- [ ] Eliminar/Abandonar redirige a `/family/select` y no deja al usuario en un grupo eliminado.

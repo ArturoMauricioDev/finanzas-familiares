@@ -1,23 +1,30 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class CreateInvitationRequest(BaseModel):
-    expira_en_horas: int = Field(default=72, ge=1, le=720)
+    expira_en_horas: int = Field(default=168, ge=1, le=720)
 
 
 class InvitationResponse(BaseModel):
     invitation_id: str
-    token: str
-    link: str
+    codigo: str
     expira_en: datetime
+    usado: bool
 
 
 class JoinInvitationRequest(BaseModel):
-    token: str = Field(min_length=1)
+    codigo: Optional[str] = Field(default=None, min_length=1, max_length=32)
+    token: Optional[str] = Field(default=None, min_length=1)
     parentesco: Optional[str] = Field(default=None, max_length=80)
+
+    @model_validator(mode="after")
+    def require_code_or_token(self) -> "JoinInvitationRequest":
+        if not self.codigo and not self.token:
+            raise ValueError("codigo es obligatorio")
+        return self
 
 
 class TokensResponse(BaseModel):

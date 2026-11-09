@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { FamilyActions } from "@/components/family/FamilyActions";
+import { InviteCode } from "@/components/family/InviteCode";
 import { useI18n } from "@/components/providers/LocaleProvider";
 import {
   Avatar,
   Button,
   Card,
   ConfirmDialog,
+  EmptyState,
   ErrorMessage,
   Loading,
   Page,
@@ -16,8 +19,13 @@ import {
 } from "@/components/ui";
 import { api, ApiError, refreshSession } from "@/lib/api";
 import { errorText } from "@/lib/errors";
-import { clearSession } from "@/lib/session";
-import type { FamilyDetail, Invitation } from "@/lib/types";
+import {
+  invitationCode,
+  invitationDaysRemaining,
+  invitationStatus,
+} from "@/lib/invitation";
+import { applyFamilyLeft, clearSession } from "@/lib/session";
+import type { FamilyDetail, Invitation, Member } from "@/lib/types";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function FamilyMembersPage() {
@@ -29,7 +37,10 @@ export default function FamilyMembersPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loadingAction, setLoadingAction] = useState<"delete" | "leave" | null>(null);
 
   const handleError = useCallback(
     async (err: unknown) => {
@@ -77,6 +88,7 @@ export default function FamilyMembersPage() {
   }, [ready, session, loadFamily]);
 
   const generateInvitation = async () => {
+    setGenerating(true);
     setError(null);
     setMessage(null);
     try {
@@ -85,16 +97,70 @@ export default function FamilyMembersPage() {
       setMessage(t("family.invitationGenerated"));
     } catch (err) {
       await handleError(err);
+    } finally {
+      setGenerating(false);
     }
   };
 
-  const copyLink = async () => {
+  const copyCode = async () => {
     if (!invitation) return;
     try {
-      await navigator.clipboard.writeText(invitation.link);
-      setMessage(t("common.copied"));
+      await navigator.clipboard.writeText(invitationCode(invitation));
+      setMessage(t("common.copiedCode"));
     } catch {
-      setMessage(t("common.copyFailed"));
+      setMessage(t("common.copyCodeFailed"));
+    }
+  };
+
+  const shareCode = async () => {
+    if (!invitation) return;
+    const text = t("family.inviteShareMessage", {
+      code: invitationCode(invitation),
+    });
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ text });
+      } else {
+        await copyCode();
+      }
+    } catch {
+      setMessage(t("common.copyCodeFailed"));
+    }
+  };
+
+  const leaveFamily = async () => {
+    setLoadingAction("leave");
+    setActionError(null);
+    try {
+      const data = await api.leaveFamily();
+      applyFamilyLeft(data);
+      router.replace("/family/select");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await handleError(err);
+      } else {
+        setActionError(errorText(err, t, t("family.leaveFamilyFailed")));
+      }
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const deleteFamily = async () => {
+    setLoadingAction("delete");
+    setActionError(null);
+    try {
+      const data = await api.deleteFamily();
+      applyFamilyLeft(data);
+      router.replace("/family/select");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await handleError(err);
+      } else {
+        setActionError(errorText(err, t, t("family.deleteFamilyFailed")));
+      }
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -126,9 +192,13 @@ export default function FamilyMembersPage() {
   if (!ready || !session) return <Loading />;
 
   const currentMember = family?.members.find((member) => member.user_id === session.user.id);
-  const isAdmin = currentMember?.role === "admin";
-  const roleLabel = (role: string) =>
-    role === "admin" ? t("family.adminRole") : t("family.memberRole");
+  const isAdmin = (currentMember?.rol_permiso ?? currentMember?.role) === "admin";
+  const roleLabel = (member: Member) => {
+    const role = member.rol_permiso ?? member.role;
+    return role === "admin" ? t("family.adminRole") : t("family.memberRole");
+  };
+  const familyRoleLabel = (member: Member) =>
+    member.rol_familiar ?? member.parentesco ?? t("family.memberRole");
 
   return (
     <Page
@@ -149,51 +219,70 @@ export default function FamilyMembersPage() {
 
       {family ? (
         <Card variant="outlined" className="space-y-2">
-          <h2 className="text-title-large text-on-surface">{t("family.membersHeading")}</h2>
-          <ul className="divide-y divide-outline-variant">
-            {family.members.map((member) => (
-              <li
-                key={member.user_id}
-                className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <Avatar
-                    name={member.nombre_visualizacion}
-                    seed={member.user_id}
-                    src={member.foto_avatar}
-                    size="md"
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate text-body-large font-semibold text-on-surface">
-                      {member.nombre_visualizacion || t("common.noName")}
-                    </p>
-                    <p className="text-body-small text-on-surface-variant">
-                      {roleLabel(member.role)}
-                      {member.parentesco ? ` · ${member.parentesco}` : ""}
-                      {member.user_id === session.user.id ? ` · ${t("common.you")}` : ""}
-                    </p>
+          <div className="space-y-1">
+            <h2 className="text-title-large text-on-surface">{t("family.membersHeading")}</h2>
+            <p className="text-body-small text-on-surface-variant">{t("family.memberLimit")}</p>
+          </div>
+          {family.members.length === 0 ? (
+            <EmptyState
+              title={t("family.membersHeading")}
+              description={t("family.membersEmpty")}
+            />
+          ) : (
+            <ul className="divide-y divide-outline-variant">
+              {family.members.map((member) => (
+                <li
+                  key={member.user_id}
+                  className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar
+                      name={member.nombre_visualizacion}
+                      seed={member.user_id}
+                      src={member.foto_avatar}
+                      size="md"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-body-large font-semibold text-on-surface">
+                        {member.nombre_visualizacion || t("common.noName")}
+                      </p>
+                      <p className="text-body-small text-on-surface-variant">
+                        {t("family.roleFamilyLabel")}: {familyRoleLabel(member)} ·{" "}
+                        {t("family.rolePermissionLabel")}: {roleLabel(member)}
+                        {member.user_id === session.user.id ? ` · ${t("common.you")}` : ""}
+                      </p>
+                      <p className="text-body-small text-on-surface-variant">
+                        {member.estado === "activo"
+                          ? t("family.memberStatusActive")
+                          : member.estado}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {isAdmin && member.user_id !== session.user.id ? (
-                  <div className="flex flex-wrap gap-2">
-                    {member.role !== "admin" ? (
-                      <Button size="sm" variant="tonal" onClick={() => void promote(member.user_id)}>
-                        {t("family.promote")}
+                  {isAdmin && member.user_id !== session.user.id ? (
+                    <div className="flex flex-wrap gap-2">
+                      {(member.rol_permiso ?? member.role) !== "admin" ? (
+                        <Button
+                          size="sm"
+                          variant="tonal"
+                          onClick={() => void promote(member.user_id)}
+                        >
+                          {t("family.promote")}
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => setPendingRemoval(member.user_id)}
+                      >
+                        {t("family.remove")}
                       </Button>
-                    ) : null}
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => setPendingRemoval(member.user_id)}
-                    >
-                      {t("family.remove")}
-                    </Button>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       ) : null}
 
@@ -201,16 +290,38 @@ export default function FamilyMembersPage() {
         <Card variant="elevated" className="space-y-4">
           <h2 className="text-title-large text-on-surface">{t("family.inviteHeading")}</h2>
           <p className="text-body-medium text-on-surface-variant">{t("family.inviteBody")}</p>
-          <Button onClick={() => void generateInvitation()}>{t("family.generateInvitation")}</Button>
+          <Button loading={generating} onClick={() => void generateInvitation()}>
+            {t("family.generateInvitation")}
+          </Button>
 
           {invitation ? (
-            <div className="space-y-3 rounded-sm bg-surface-container-high p-4">
-              <p className="break-all text-body-medium text-on-surface">{invitation.link}</p>
-              <Button variant="secondary" size="sm" onClick={() => void copyLink()}>
-                {t("common.copyLink")}
-              </Button>
-            </div>
-          ) : null}
+            <InviteCode
+              code={invitationCode(invitation)}
+              expiresAt={invitation.expira_en}
+              daysRemaining={invitationDaysRemaining(invitation.expira_en)}
+              status={invitationStatus(invitation)}
+              loading={generating}
+              onCopy={copyCode}
+              onShare={shareCode}
+            />
+          ) : (
+            <p className="text-body-medium text-on-surface-variant">
+              {t("family.invitationEmpty")}
+            </p>
+          )}
+        </Card>
+      ) : null}
+
+      {family ? (
+        <Card variant="outlined" className="space-y-3">
+          <h2 className="text-title-large text-on-surface">{t("family.familyActionsHeading")}</h2>
+          <FamilyActions
+            memberCount={family.member_count}
+            loadingAction={loadingAction}
+            error={actionError}
+            onDelete={deleteFamily}
+            onLeave={leaveFamily}
+          />
         </Card>
       ) : null}
 

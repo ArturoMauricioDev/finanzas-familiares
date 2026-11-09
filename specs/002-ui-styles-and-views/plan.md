@@ -1,6 +1,6 @@
 # Implementation Plan: UI, Estilos y Vistas Web y Móvil (Kitho)
 
-**Branch**: `002-ui-styles-and-views` | **Date**: 2026-11-04 | **Spec**: [spec.md](./spec.md)
+**Branch**: `002-ui-styles-and-views` | **Date**: 2026-11-06 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/002-ui-styles-and-views/spec.md`
 
@@ -20,16 +20,20 @@ La entrega incluye:
 3. **Tema e idioma**: preferencia Sistema/Claro/Oscuro persistida y aplicada sin parpadeo; español
    por defecto e inglés, con `next-intl` en web y `expo-localization`/`i18n-js` en móvil.
 4. **Pantallas y estados**: refactor de login, perfil, grupo, invitación y miembros; nuevas vistas
-   Inicio, Perfil, Ajustes, edición de perfil y editor de avatar con vista previa.
+   Inicio, Perfil, Ajustes, edición de perfil y editor de avatar con vista previa; unión por
+   **código** de un solo uso, invitación que muestra solo el código, selector de moneda por
+   geolocalización y acciones de **Eliminar/Abandonar familia**.
 5. **Calidad**: WCAG 2.1 AA, foco visible, navegación por teclado, regiones live, movimiento
    reducido, objetivos táctiles de 48 dp, sin scroll horizontal desde 320 px, y pruebas de flujo,
    componentes, accesibilidad, tokens e i18n.
 6. **Base de gráficos**: Recharts en web y Victory Native en móvil encapsulados en contenedores
    diferidos, sin incluirse en el bundle inicial de ninguna ruta actual.
 
-No se modifican backend, API ni base de datos. El avatar por defecto se genera como SVG compacto y
-se envía por el campo existente `foto_avatar`; la personalización del editor solo se previsualiza y
-su persistencia queda para la spec 003.
+La spec 002 no modifica backend, API ni base de datos por sí misma: consume las extensiones
+funcionales definidas en la spec 001 (código de invitación de un solo uso con caducidad de 7 días,
+soft delete/abandono de familia y reasignación automática de administrador). El avatar por defecto
+se genera como SVG compacto y se envía por el campo existente `foto_avatar`; la personalización del
+editor solo se previsualiza y su persistencia queda para la spec 003.
 
 ## Technical Context
 
@@ -46,8 +50,9 @@ React 19.3.0 y `expo-router` 58.
   `expo-system-ui` ~58.0.7,
   `lucide-react-native` 1.68.x, `react-native-svg` 15.16.0, `victory-native` 42.0.1,
   `@shopify/react-native-skia` 2.14.0, `react-native-reanimated` 4.7.1,
-  `react-native-worklets` 0.13.0, `react-native-gesture-handler` 3.3.0 y
-  `react-native-safe-area-context` 5.11.1.
+  `react-native-worklets` 0.13.0, `react-native-gesture-handler` 3.3.0,
+  `react-native-safe-area-context` 5.11.1, `react-native-nitro-google-signin` 2.3.x y
+  `react-native-nitro-modules` >=0.36.0 (motor de Nitro para la autenticación nativa de Google).
 - Pruebas: Jest 29/30, Testing Library web 16.x, React Native Testing Library 14.1.0 (con
   `render`/`fireEvent` asíncronos), `jest-axe` y `@types/jest-axe`.
 
@@ -73,19 +78,27 @@ Recharts y Victory Native fuera del bundle inicial de las rutas actuales.
 **Constraints**:
 
 - Stack obligatorio sin cambios: Next.js/TypeScript y React Native/Expo/TypeScript.
-- No se permite modificar backend, API ni base de datos.
+- La spec 002 no modifica backend, API ni base de datos; consume las extensiones de la spec 001
+  para código de invitación, soft delete, abandono y reasignación de administrador.
+- La geolocalización es opcional; si se deniega o no está disponible, el selector de moneda usa el
+  locale del dispositivo y luego USD.
+- No se ofrecen invitaciones por enlace ni multi-moneda.
 - `foto_avatar` tiene `max_length=2048`: el SVG de avatar por defecto debe ser compacto y validarse
   antes de enviarse.
 - Victory Native 43 exige Skia `>=2.15.1`, fuera de la versión que fija Expo SDK 58 (Skia 2.14.0);
   se fija la línea 42.0.1, compatible con Skia 2.14.0 y Reanimated 4.7.1.
+- La autenticación nativa con Google en móvil se realiza con `react-native-nitro-google-signin`
+  (depende de `react-native-nitro-modules`, exige la New Architecture de React Native y un
+  development build; no se ejecuta en Expo Go).
 - No se usan shadcn/ui ni kits de UI externos.
 - WCAG 2.1 AA, objetivos táctiles de 48x48 dp, foco visible y `prefers-reduced-motion`.
 - La marca canónica es **Kitho**; los títulos de ficha son **Kitho: Tareas y Finanzas Familiares**
   (España/Latam) y **Kitho Family** (EE.UU./Global).
 
-**Scale/Scope**: 71 requisitos funcionales, 14 criterios de éxito, 7 historias de usuario, 6
+**Scale/Scope**: 83 requisitos funcionales, 19 criterios de éxito, 7 historias de usuario, 6
 pantallas existentes refactorizadas y 5 vistas nuevas por plataforma (Inicio, Perfil, Ajustes,
-edición de perfil y editor de avatar). Aproximadamente 30 componentes base compartidos por nombre.
+edición de perfil y editor de avatar). Aproximadamente 33 componentes base compartidos por nombre,
+incluidos selector de moneda, código de invitación y acciones de familia.
 
 ## Constitution Check
 
@@ -94,11 +107,14 @@ edición de perfil y editor de avatar). Aproximadamente 30 componentes base comp
 **Revisión previa al diseño (Principios I–VI y marca):**
 
 - [x] **I. Naturaleza y Alcance**: la feature se limita a UI, navegación, tema, idioma y vistas
-  descritas en `spec.md`; no incorpora funciones financieras ni cambios de dominio.
+  descritas en `spec.md`; no incorpora funciones financieras ni redefine reglas de dominio. Las
+  extensiones de backend para el ciclo de vida de familia pertenecen a la spec 001 y aquí solo se
+  consumen.
 - [x] **II. Stack Tecnológico**: se mantienen Next.js, React Native/Expo, FastAPI, PostgreSQL,
   SQLAlchemy y Docker. Las nuevas dependencias son de presentación y compatibles con el stack.
-- [x] **III. Reglas de Dominio**: no se alteran roles, moneda, precisión `DECIMAL`, ciclos
-  presupuestarios ni inmutabilidad; el formateo usa la moneda del grupo.
+- [x] **III. Reglas de Dominio**: la UI refleja las reglas de roles y moneda de la spec 001, pero no
+  las redefine; no se alteran precisión `DECIMAL`, ciclos presupuestarios ni inmutabilidad. El
+  formateo usa la moneda única del grupo.
 - [x] **IV. No-Objetivos**: sin Open Banking, scraping, captura de SMS/correo, pasarelas de pago ni
   exportación PDF.
 - [x] **V. Estructura y Errores**: se conserva la separación `backend/`, `frontend-web/` y
@@ -132,6 +148,10 @@ edición de perfil y editor de avatar). Aproximadamente 30 componentes base comp
 | i18n móvil | `expo-localization` para región/formato e `i18n-js` para catálogos; español por defecto y preferencia en SecureStore | Cumple FR-028/FR-029/FR-031/FR-032 |
 | Errores | `ApiError` transporta `status`, `messageKey` y `fallbackDetail`; la UI traduce en render con `t()` y usa el detalle del backend como fallback | Cumple FR-033 y permite que un cambio de idioma actualice errores ya visibles |
 | Formato | Utilidades `formatCurrency`/`formatDate`/`formatNumber` con `Intl` y la moneda del grupo | Cumple FR-032 y respeta la moneda única del grupo |
+| Botón Google | Web: botón oficial de Google Identity Services (`GoogleLogin`) con forma y estados MD3. Móvil: `Pressable` MD3 con logo G oficial inline y autenticación nativa vía `react-native-nitro-google-signin`; texto traducido y sin recolorear el logo | Cumple FR-046/SC-015 y las guías de marca de Google; el login nativo usa `google-services.json` |
+| Invitación por código | Código único de un solo uso y caducidad de 7 días; la pantalla de invitación muestra solo el código y la unión se hace introduciéndolo | Cumple FR-006/FR-076/FR-077/FR-083; elimina enlaces y reduce exposición |
+| Moneda local | Selector único con 5 sugerencias regionales, moneda local detectada primero, geolocalización con fallback a locale/USD y opción **Otros** sobre ISO 4217 | Cumple FR-072–FR-075 y SC-017; evita listas incompletas o dependencia de red |
+| Acciones de familia | **Eliminar familia** solo con 1 integrante; **Abandonar familia** con más de 1; confirmación, estado de carga y redirección al flujo principal | Cumple FR-079–FR-082; la autorización y el soft delete los valida la spec 001 |
 | Avatar | Motor SVG puro compartido (`shared/avatar/avatar-engine.ts`) que genera un SVG compacto y un data URI; web usa `<img>`/SVG y móvil `SvgXml` de `react-native-svg` | Cumple FR-049/FR-050/FR-051 sin assets externos ni cambios de backend |
 | Avatar por defecto | Configuración determinista derivada de `user.id`/`email`; se envía por `foto_avatar` con validación de longitud `<=2048` | Cumple FR-049 y el límite del esquema existente |
 | Editor de avatar | Estado local, vista previa en tiempo real y aviso explícito de que el guardado llega en 003; no persiste ni sube archivos | Cumple FR-052/FR-053 y el alcance de la spec 002 |
@@ -168,6 +188,8 @@ shared/
 ├── avatar/
 │   ├── avatar-engine.ts           # Generador SVG puro y configuración por defecto
 │   └── avatar-options.json        # Catálogo de bases, fondos, cabello, ropa, ojos, accesorios
+├── currencies/
+│   └── regions.json               # 5 sugerencias por región y moneda local por país
 └── errors/
     └── error-keys.json            # Detalle/status del backend -> clave i18n
 
@@ -199,6 +221,7 @@ frontend-web/
 │   ├── layout/                    # AppShell, TopAppBar, Sidebar, Rail, BottomTabs
 │   ├── providers/                 # ThemeProvider, LocaleProvider, AppProviders
 │   ├── avatar/                    # Avatar, AvatarEditor
+│   ├── family/                    # CurrencySelect, InviteCode, FamilyActions
 │   └── charts/                    # ChartContainer (Recharts, carga diferida)
 ├── lib/
 │   ├── design-tokens.generated.ts
@@ -208,6 +231,8 @@ frontend-web/
 │   ├── errors.ts
 │   ├── error-keys.generated.ts
 │   ├── format.ts
+│   ├── currency.ts                # ISO 4217, sugerencias y fallback
+│   ├── geolocation.ts             # País detectado y permiso opcional
 │   └── i18n/
 ├── messages/
 │   ├── es.json
@@ -241,6 +266,7 @@ frontend-mobile/
 │   ├── layout/                    # Screen, ScreenHeader, BottomTabs
 │   ├── providers/                 # ThemeProvider, LocaleProvider, AppProviders
 │   ├── avatar/                    # Avatar, AvatarEditor
+│   ├── family/                    # CurrencySelect, InviteCode, FamilyActions
 │   └── charts/                    # ChartContainer (Victory Native)
 ├── lib/
 │   ├── design-tokens.generated.ts
@@ -250,29 +276,34 @@ frontend-mobile/
 │   ├── errors.ts
 │   ├── error-keys.generated.ts
 │   ├── format.ts
+│   ├── currency.ts                # ISO 4217, sugerencias y fallback
+│   ├── geolocation.ts             # País detectado y permiso opcional
 │   └── i18n/
 └── __tests__/
 
-backend/                           # SIN CAMBIOS en esta feature
+backend/                           # Extensiones de spec 001 (código, soft delete, abandono)
 docker-compose.yml                 # SIN CAMBIOS
 ```
 
 **Structure Decision**: se conserva la estructura multi-proyecto de la spec 001. Se añaden dos
 espacios compartidos de presentación en la raíz (`design-tokens/` y `shared/`) y un generador en
 `scripts/`; los frontends consumen copias generadas y versionadas para que Next.js y Metro no
-dependan de imports fuera de su raíz. El backend y Docker Compose no se modifican.
+dependan de imports fuera de su raíz. La spec 002 no añade cambios de backend propios: consume las
+extensiones de la spec 001 y no modifica Docker Compose.
 
 ## Phase 0 / Phase 1 Outputs
 
 - `research.md`: decisiones resueltas sobre Tailwind 4, `next-intl` sin rutas de locale, tema sin
   flash, i18n móvil, Expo Router, Victory Native compatible con Expo SDK 58, generación compartida,
-  errores i18n, accesibilidad y pruebas.
+  errores i18n, botón oficial de Google, invitación por código de un solo uso, selector de moneda por
+  geolocalización, acciones de familia, accesibilidad y pruebas.
 - `data-model.md`: modelo de tokens, preferencias, catálogos, descriptores de error, configuración
-  de avatar, rutas/navegación y contratos de componentes. Confirma que el modelo de datos del
-  backend no cambia.
+  de avatar, rutas/navegación y contratos de componentes; incluye `CurrencyOption`,
+  `InvitationCodeView`, `FamilyAction` y las dependencias de datos de la spec 001. Confirma que la
+  spec 002 no añade cambios de backend propios.
 - `contracts/token-contract.md`: esquema de `tokens.json`, salidas generadas y reglas de deriva.
 - `contracts/ui-contracts.md`: API de componentes compartidos, variantes, estados y requisitos de
-  accesibilidad por plataforma.
+  accesibilidad por plataforma, incluidos `CurrencySelect`, `InviteCode` y `FamilyActions`.
 - `contracts/navigation-contracts.md`: mapa de rutas, guards, visibilidad por breakpoint y
   comportamiento de vuelta.
 - `contracts/i18n-contracts.md`: espacios de nombres, claves de error, persistencia, paridad y
@@ -289,8 +320,8 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
    catálogo de avatar y mapa de errores en ambos frontends.
 3. Instalar dependencias justificadas y ajustar configuración de Tailwind/PostCSS, Next.js, Expo,
    TypeScript, ESLint y Jest.
-4. Implementar `ThemeProvider`, `LocaleProvider`, preferencias, formato, branding y utilidades de
-   error en web y móvil.
+4. Implementar `ThemeProvider`, `LocaleProvider`, preferencias, formato, branding, utilidades de
+   error, `currency.ts`/`geolocation.ts` y `shared/currencies/regions.json` en web y móvil.
 5. Crear helpers de prueba `renderWithProviders` y mocks de `matchMedia`, `useColorScheme`,
    SecureStore, `expo-localization` y Google OAuth.
 
@@ -298,10 +329,12 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
 
 1. Web: reemplazar `components/ui.tsx` por `components/ui/` con botones, campos, selects,
    checkbox/radio/switch, búsqueda, tarjetas, listas, avatar, chips, badges, divisores, wordmark,
-   diálogos, menús, banners, spinner, estado vacío, tabs y navegación.
+   diálogos, menús, banners, spinner, estado vacío, tabs y navegación. Añadir en `components/family/`
+   `CurrencySelect`, `InviteCode` y `FamilyActions` con estados de carga/error/confirmación.
 2. Móvil: reemplazar `components/ui.tsx` por `components/ui/` con los mismos nombres y variantes
    usando `StyleSheet` y tokens, incluyendo header de pantalla, tabs inferiores y estados de
-   foco/pressed/disabled/error.
+   foco/pressed/disabled/error. Replicar `CurrencySelect`, `InviteCode` y `FamilyActions` con el
+   mismo contrato.
 3. Añadir pruebas de variantes, estados y accesibilidad; `jest-axe` en web y aserciones de rol/
    etiqueta en móvil.
 
@@ -311,9 +344,13 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
    (`--font-inter`, `display: "swap"`, fallback del sistema), `lang`, `data-theme`, script de tema,
    providers cliente y `generateMetadata` con título Kitho y descripción desde el catálogo i18n.
 2. Reorganizar rutas en `(auth)`, `(onboarding)` y `(app)` conservando las URLs existentes;
-   login con `GoogleSignInButton` usando el botón oficial de Google Identity Services.
+   login con `GoogleSignInButton` usando el botón oficial de Google Identity Services, sin
+   recolorear el logo y con texto traducido.
 3. Implementar `AppShell` responsive (topbar, sidebar, rail, bottom tabs) y `SessionProvider`.
-4. Refactorizar login, setup de perfil, selección/creación de grupo, invitación y miembros.
+4. Refactorizar login, setup de perfil, selección/creación de grupo, invitación y miembros. La
+   creación/selección usa `CurrencySelect`; `/invite` permite unirse introduciendo el código; la
+   invitación generada muestra solo el código de un solo uso con caducidad; Miembros muestra
+   `FamilyActions` según el número de integrantes.
 5. Añadir Inicio, Perfil, edición de perfil, Ajustes (idioma, tema, logout, acerca de/versión/
    legal, editar perfil) y editor de avatar.
 
@@ -324,19 +361,22 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
 2. Refactorizar `_layout.tsx` con `GestureHandlerRootView`, `SafeAreaProvider`, providers, fuentes
    Inter, splash y Stack raíz.
 3. Reorganizar rutas en `(auth)`, `(onboarding)` y `(app)/(tabs)` conservando URLs; login con
-   `GoogleSignInButton` como Pressable MD3 con icono oficial inline.
+   `GoogleSignInButton` como Pressable MD3 con icono oficial inline y texto traducido, y
+   autenticación nativa de Google mediante `react-native-nitro-google-signin`.
 4. Implementar tabs inferiores, `SessionProvider`, header de pantalla y navegación a Ajustes/Perfil.
 5. Refactorizar las pantallas existentes y añadir Inicio, Perfil, edición de perfil, Ajustes
-   (idioma, tema, logout, acerca de/versión/legal, editar perfil) y editor de avatar.
+   (idioma, tema, logout, acerca de/versión/legal, editar perfil) y editor de avatar. La creación de
+   grupo usa `CurrencySelect`; la invitación muestra y acepta códigos; Miembros muestra
+   `FamilyActions` con confirmación y redirección.
 
 ### Fase E — Errores, estados y accesibilidad
 
 1. Cambiar `ApiError` a descriptor con clave/fallback, convertir `ConfigurationError` a clave
    i18n y adaptar todas las pantallas para traducir en render.
 2. Sustituir `window.confirm`/`Alert.alert` por diálogos MD3 accesibles con confirmación
-   destructiva, foco atrapado, Escape y retorno de foco.
-3. Implementar spinners con texto, banners inline, estados vacíos y `aria-live`/
-   `accessibilityLiveRegion`.
+   destructiva, foco atrapado, Escape y retorno de foco; aplicarlo a Eliminar/Abandonar familia.
+3. Implementar spinners con texto, banners inline, estados vacíos, errores de código
+   inválido/usado/expirado, fallback de geolocalización y `aria-live`/`accessibilityLiveRegion`.
 4. Verificar foco, teclado, contraste, zoom 200%, 320 px, movimiento reducido y objetivos táctiles
    de 48 dp.
 
@@ -366,9 +406,10 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
 | FR-061–FR-063 | `BrandIdentity`, `Wordmark` y `lib/branding.ts` |
 | FR-064–FR-068 | Restricciones, Constitution Check y Quality Gates |
 | FR-069–FR-071 | `BrandIdentity`, Constitution Check y validación de marca |
-| SC-001–SC-014 | Quality Gates, quickstart y pruebas de tokens/i18n/accesibilidad/build |
-
-4. Ejecutar la comprobación de deriva de tokens, paridad i18n y calidad visual.
+| FR-072–FR-075 | `CurrencyOption`, `CurrencySelect`, `shared/currencies/regions.json` y Fases C/D |
+| FR-076–FR-078, FR-083 | `InvitationCodeView`, `InviteCode`, `/invite` y Fases C/D |
+| FR-079–FR-082 | `FamilyAction`, `FamilyActions`, `ConfirmDialog` y sección Miembros |
+| SC-001–SC-019 | Quality Gates, quickstart y pruebas de tokens/i18n/accesibilidad/build/código/moneda/familia |
 
 ## Testing and Quality Gates
 
@@ -383,6 +424,13 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
   colores literales fuera de archivos generados/permitidos.
 - **i18n**: prueba de paridad de claves entre `es`/`en` y entre catálogos web/móvil; prueba de
   fallback de errores no mapeados.
+- **Invitaciones**: pruebas de código de un solo uso, caducidad de 7 días, errores
+  inválido/usado/expirado y ausencia de enlaces de invitación.
+- **Moneda**: pruebas de 5 sugerencias regionales, moneda local detectada primero, geolocalización
+  denegada, fallback a locale/USD y búsqueda **Otros** sobre ISO 4217.
+- **Familia**: pruebas de visibilidad de Eliminar/Abandonar según integrantes, confirmación
+  destructiva, soft delete, redirección y reasignación de administrador.
+- **Google**: prueba de estilo oficial, texto traducido, nombre accesible y estados disabled/loading.
 - **Build**: `pnpm run typecheck`, `pnpm run lint`, `pnpm run build` en web; `pnpm run typecheck`,
   `pnpm run lint` y `npx expo-doctor` en móvil.
 - **Manual**: escenarios de `quickstart.md` en web y móvil, incluyendo cambio de tema/idioma en
@@ -403,17 +451,23 @@ dependan de imports fuera de su raíz. El backend y Docker Compose no se modific
 | Errores ya visibles no cambian de idioma | Medio | `ApiError` con clave/fallback y traducción en render, no en la capa API |
 | Dependencias de test incompatibles con RN 0.88 | Bajo | Usar `@testing-library/react-native` 14.1.0 y adaptar las pruebas a su API asíncrona (`await render`/`fireEvent`) |
 | Imports accidentales de gráficos | Bajo | ESLint `no-restricted-imports` + `scripts/check-ui.mjs` + SC-011 |
+| Geolocalización denegada o no disponible | Medio | No bloquear el alta: detectar país opcionalmente, preseleccionar por locale y usar USD como fallback; el usuario puede elegir de las 5 sugerencias o **Otros** |
+| Listas regionales de moneda desactualizadas | Bajo | `shared/currencies/regions.json` versionado y generado a ambos frontends; el buscador **Otros** cubre todo ISO 4217 |
+| Fuerza bruta o reutilización de códigos de invitación | Medio | Código de un solo uso con caducidad de 7 días y validación/autorización en backend spec 001; la UI no decide validez |
+| Acciones de familia ejecutadas sin permisos | Alto | Eliminar/Abandonar consumen endpoints de spec 001; el backend valida integrantes y soft delete; la UI solo muestra acciones posibles y confirma |
+| `react-native-nitro-google-signin` no funciona en Expo Go o exige New Architecture | Medio | La librería requiere `react-native-nitro-modules` y un development build nativo; validar con `npx expo-doctor` y build nativo; el login real no se prueba en Expo Go |
 
 ## Post-Design Constitution Check
 
 *Re-evaluación posterior al diseño (Phase 1):*
 
 - [x] **I**: el diseño se limita a las vistas y requisitos de `spec.md`; no añade funciones
-  financieras ni cambios de dominio.
+  financieras ni cambios de dominio. Las extensiones de backend del ciclo de familia están en la
+  spec 001 y aquí solo se consumen.
 - [x] **II**: stack, contenedorización y estructura multi-proyecto se mantienen; las dependencias
   nuevas son de presentación y están justificadas.
-- [x] **III**: no se tocan reglas de roles, moneda, precisión ni ciclos; el formato usa la moneda
-  del grupo.
+- [x] **III**: la UI refleja las reglas de roles, moneda, soft delete y abandono de la spec 001;
+  no las redefine ni toca precisión o ciclos. El formato usa la moneda única del grupo.
 - [x] **IV**: no se introducen integraciones prohibidas.
 - [x] **V**: la autoridad de validación sigue en FastAPI; la UI solo traduce errores y presenta
   estados.

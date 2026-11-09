@@ -1,7 +1,7 @@
 # Research: UI, Estilos y Vistas Web y Móvil (Kitho)
 
 **Feature**: 002-ui-styles-and-views  
-**Date**: 2026-11-04
+**Date**: 2026-11-06
 
 ## Decisions
 
@@ -253,6 +253,68 @@
 - **Alternatives considered**: Cambiar el scheme a `kitho` en 002 (rompe redirects y credenciales
   existentes); traducir el nombre (prohibido); usar assets de logo inexistentes (rompería FR-063).
 
+### 19. Botón oficial de Google
+
+- **Decision**: En web se usa el botón oficial de Google Identity Services (`GoogleLogin` con
+  `locale`, `shape="pill"`, `size="large"`, `text="continue_with"`) dentro de un contenedor MD3;
+  en móvil, un `Pressable` MD3 con el logo G oficial multicolor como SVG inline y texto traducido,
+  cuyo `onPress` delega la autenticación nativa en **`react-native-nitro-google-signin`** (v2.3.x),
+  apoyado en `react-native-nitro-modules` y `google-services.json`.
+  No se recolorea ni se recorta el logo; el único cambio permitido es el tamaño/forma del
+  contenedor. En pruebas se usa un mock accesible con el mismo nombre y estados.
+- **Rationale**: Cumple FR-046/SC-015 y las guías de marca de Google. Evita dependencias de
+  imágenes externas y mantiene el nombre accesible "Continuar con Google". La librería Nitro
+  ofrece el flujo nativo moderno de Google Sign-In sobre la New Architecture de React Native,
+  alineado con Expo SDK 58 y RN `>=0.76`.
+- **Alternatives considered**: `@react-native-google-signin/google-signin` (elección previa,
+  descartada por la decisión del usuario de migrar a la variante Nitro); botón MD3 recoloreado
+  (rompe la marca); imagen remota del logo (puede fallar y añade dependencia de red); texto sin
+  logo (no es el botón oficial).
+
+### 20. Invitación por código de un solo uso
+
+- **Decision**: La spec 001 genera un código alfanumérico único con caducidad de 7 días y lo marca
+  como usado al aceptar la invitación. La UI de invitación muestra **solo el código** (agrupado
+  para lectura), con acción de copiar y compartir texto sin URL. La pantalla `/invite` acepta el
+  código introducido manualmente, normaliza mayúsculas/espacios y muestra errores
+  inválido/usado/expirado. No se generan deep links de invitación; la clave existente
+  `finanzas_familiares_pending_invite` conserva el código, no un token de URL.
+- **Rationale**: Cumple FR-006/FR-076/FR-077/FR-083 y la decisión explícita del usuario de eliminar
+  enlaces. El código de un solo uso con caducidad reduce la reutilización y la exposición.
+- **Alternatives considered**: Enlace con token en la URL (rechazado por el usuario); código
+  reutilizable (riesgo de acceso indebido); código sin caducidad (riesgo permanente).
+
+### 21. Selector de moneda regional y geolocalización
+
+- **Decision**: `shared/currencies/regions.json` define 5 sugerencias por región:
+  LatAm `MXN, BRL, ARS, COP, CLP`; España/Europa `EUR, GBP, CHF, SEK, PLN`;
+  EE.UU. `USD, CAD, MXN, EUR, GBP`. La moneda local detectada se coloca primero. La región se
+  obtiene de la geolocalización opcional (API del navegador en web, `expo-location` en móvil), con
+  fallback al locale/región del dispositivo y luego `USD`. La opción **Otros** busca sobre todo
+  ISO 4217 con `Intl.DisplayNames` en el idioma activo. La selección es única y se guarda en el
+  campo existente `moneda_local` del grupo; no se persiste como preferencia local.
+- **Rationale**: Cumple FR-072–FR-075 y SC-017; permite elegir rápido sin exigir permisos ni
+  conectividad y cubre cualquier moneda ISO válida.
+- **Alternatives considered**: Mostrar todo el catálogo ISO desde el inicio (mala experiencia);
+  lista fija por país (se desactualiza); entrada de texto libre (permite códigos inválidos);
+  multi-moneda (fuera de alcance).
+
+### 22. Acciones de familia: eliminar, abandonar y reasignación
+
+- **Decision**: `FamilyActions` consulta el número de integrantes y muestra:
+  - exactamente 1 integrante: **Eliminar familia** (soft delete);
+  - más de 1 integrante: **Abandonar familia**;
+  - nunca se muestra eliminar para administradores con más de un integrante.
+  La UI no decide el soft delete, la autorización ni la reasignación: consume los endpoints de la
+  spec 001. Si al abandonar no quedan administradores, el backend asigna `Administrador` a la
+  membresía con `created_at` más antiguo. La UI confirma la acción con `ConfirmDialog`, muestra
+  carga/error y redirige al inicio del flujo principal (`/family/select`) al completar.
+- **Rationale**: Cumple FR-079–FR-082 y mantiene la autoridad de dominio en FastAPI. La
+  reasignación automática evita familias sin administrador.
+- **Alternatives considered**: Hard delete (rechazado por el usuario); eliminar solo admins
+  (rechazado); reasignar en cliente (no es autoridad y puede desincronizarse); permitir eliminar
+  con varios integrantes (borraría historial compartido).
+
 ## Version Matrix
 
 | Paquete | Versión fijada | Nota |
@@ -266,6 +328,7 @@
 | `react-is` | 19.x | Peer de Recharts |
 | `jest-axe` | 11.x | Accesibilidad web |
 | `expo-localization` | ~58.0.5 | Versión de Expo SDK 58 |
+| `expo-location` | ~58.0.x | Geolocalización opcional para preseleccionar moneda; solo se solicita al abrir el selector |
 | `i18n-js` | 4.5.x | Catálogos móviles |
 | `expo-font` | ~58.0.11 | Carga de Inter |
 | `@expo-google-fonts/inter` | 0.4.x | Fuente Inter |
@@ -284,5 +347,6 @@
 ## Resolved Clarifications
 
 All aspects from `spec.md` are clear; no `NEEDS CLARIFICATION` remain. Las decisiones de
-compatibilidad de Victory Native y del formato de avatar quedan resueltas con las versiones y
-límites anteriores.
+compatibilidad de Victory Native, formato de avatar, botón de Google, invitación por código de un
+solo uso, selector de moneda y acciones de familia quedan resueltas con las versiones, reglas y
+fallbacks anteriores.

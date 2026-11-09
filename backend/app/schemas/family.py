@@ -32,6 +32,7 @@ class FamilyResponse(BaseModel):
     moneda_local: str
     creado_por: str
     fecha_creacion: datetime
+    estado: str = "activo"
 
 
 class TokensResponse(BaseModel):
@@ -56,11 +57,20 @@ class MemberInfo(BaseModel):
     nombre_visualizacion: Optional[str] = None
     foto_avatar: Optional[str] = None
     role: str
+    rol_familiar: Optional[str] = None
+    rol_permiso: str
     parentesco: Optional[str] = None
     estado: str
+    created_at: Optional[datetime] = None
 
 
 class FamilyDetailResponse(BaseModel):
     family: FamilyResponse
     members: List[MemberInfo]
     member_count: int
+
+
+class FamilyLifecycleResponse(BaseModel):
+    success: bool
+    family_id: Optional[str] = None
+    tokens: Optional[TokensResponse] = None

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { clearUnauthorizedHandler, refreshSession, setUnauthorizedHandler } from "../lib/api";
 import {
   clearStalePendingInvite,
-  getPendingInviteToken,
+  getPendingInviteCode,
   getSession,
   reconcileFamilyFlag,
   sessionNeedsRefresh,
@@ -55,7 +55,7 @@ export function useAuthGuard(requireFamily = false) {
         return;
       }
 
-      const familySetupPath = (await getPendingInviteToken()) ? "/invite" : "/family/select";
+      const familySetupPath = (await getPendingInviteCode()) ? "/invite" : "/family/select";
 
       if (
         !current.needs_profile_setup &&

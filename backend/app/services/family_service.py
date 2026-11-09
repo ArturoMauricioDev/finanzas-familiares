@@ -1,11 +1,17 @@
+from datetime import datetime, timezone
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, create_refresh_token
-from app.models.family import Family
+from app.models.family import Family, FamilyStatusEnum
 from app.models.membership import Membership, RoleEnum, StatusEnum
 from app.models.user import User
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _active_membership(db: Session, user_id):
@@ -78,6 +84,7 @@ def create_family(db: Session, user_id, request):
             moneda_local=family.moneda_local,
             creado_por=str(family.creado_por),
             fecha_creacion=family.fecha_creacion,
+            estado=family.estado.value,
         ),
         membership=MembershipInfo(role="admin", estado="activo"),
         tokens=TokensResponse(access_token=access_token, refresh_token=refresh_token),
@@ -92,7 +99,11 @@ def get_family_detail(db: Session, user_id):
             detail="User does not belong to a family",
         )
 
-    family = db.query(Family).filter(Family.id == membership.family_id).first()
+    family = (
+        db.query(Family)
+        .filter(Family.id == membership.family_id, Family.estado == FamilyStatusEnum.activo)
+        .first()
+    )
     if not family:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -117,8 +128,11 @@ def get_family_detail(db: Session, user_id):
             nombre_visualizacion=user.nombre_visualizacion,
             foto_avatar=user.foto_avatar,
             role=member.role.value,
+            rol_familiar=member.parentesco,
+            rol_permiso=member.role.value,
             parentesco=member.parentesco,
             estado=member.estado.value,
+            created_at=member.fecha_union,
         )
         for member, user in rows
     ]
@@ -130,6 +144,7 @@ def get_family_detail(db: Session, user_id):
             moneda_local=family.moneda_local,
             creado_por=str(family.creado_por),
             fecha_creacion=family.fecha_creacion,
+            estado=family.estado.value,
         ),
         members=members,
         member_count=len(members),
@@ -243,3 +258,147 @@ def remove_member(db: Session, admin_id, user_id):
     target.estado = StatusEnum.inactivo
     db.commit()
     return {"success": True}
+
+
+def _active_members_ordered(db: Session, family_id):
+    return (
+        db.query(Membership)
+        .filter(
+            Membership.family_id == family_id,
+            Membership.estado == StatusEnum.activo,
+        )
+        .order_by(Membership.fecha_union.asc())
+        .all()
+    )
+
+
+def _reassign_admin_if_needed(db: Session, family_id) -> None:
+    db.flush()
+    remaining_admins = (
+        db.query(Membership)
+        .filter(
+            Membership.family_id == family_id,
+            Membership.estado == StatusEnum.activo,
+            Membership.role == RoleEnum.admin,
+        )
+        .count()
+    )
+    if remaining_admins > 0:
+        return
+    oldest = _active_members_ordered(db, family_id)
+    if oldest:
+        oldest[0].role = RoleEnum.admin
+        db.flush()
+
+
+def _lifecycle_tokens(user_id):
+    from app.schemas.family import TokensResponse
+
+    token_data = {"user_id": str(user_id), "family_id": None, "role": None}
+    return TokensResponse(
+        access_token=create_access_token(token_data),
+        refresh_token=create_refresh_token(token_data),
+    )
+
+
+def leave_family(db: Session, user_id):
+    membership = _active_membership(db, user_id)
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to a family",
+        )
+
+    family = _lock_family(db, membership.family_id)
+    if family.estado != FamilyStatusEnum.activo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Family not found",
+        )
+
+    locked = (
+        db.query(Membership)
+        .filter(
+            Membership.user_id == user_id,
+            Membership.family_id == family.id,
+            Membership.estado == StatusEnum.activo,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not locked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to a family",
+        )
+
+    members = _active_members_ordered(db, family.id)
+    if len(members) <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Family can only be deleted when it has one member",
+        )
+
+    locked.estado = StatusEnum.inactivo
+    _reassign_admin_if_needed(db, family.id)
+    db.commit()
+
+    from app.schemas.family import FamilyLifecycleResponse
+
+    return FamilyLifecycleResponse(
+        success=True,
+        family_id=None,
+        tokens=_lifecycle_tokens(user_id),
+    )
+
+
+def delete_family(db: Session, user_id):
+    membership = _active_membership(db, user_id)
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to a family",
+        )
+
+    family = _lock_family(db, membership.family_id)
+    if family.estado != FamilyStatusEnum.activo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Family not found",
+        )
+
+    locked = (
+        db.query(Membership)
+        .filter(
+            Membership.user_id == user_id,
+            Membership.family_id == family.id,
+            Membership.estado == StatusEnum.activo,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not locked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not belong to a family",
+        )
+
+    members = _active_members_ordered(db, family.id)
+    if len(members) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Family can only be deleted when it has one member",
+        )
+
+    family.estado = FamilyStatusEnum.eliminado
+    family.fecha_eliminacion = _utcnow()
+    locked.estado = StatusEnum.inactivo
+    db.commit()
+
+    from app.schemas.family import FamilyLifecycleResponse
+
+    return FamilyLifecycleResponse(
+        success=True,
+        family_id=None,
+        tokens=_lifecycle_tokens(user_id),
+    )

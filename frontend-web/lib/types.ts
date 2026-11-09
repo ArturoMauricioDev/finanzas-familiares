@@ -30,15 +30,19 @@ export interface Family {
   moneda_local: string;
   creado_por: string;
   fecha_creacion: string;
+  estado?: "activo" | "eliminado";
 }
 
 export interface Member {
   user_id: string;
   nombre_visualizacion: string | null;
   foto_avatar: string | null;
-  role: string;
+  role?: string;
+  rol_familiar?: string;
+  rol_permiso?: string;
   parentesco: string | null;
   estado: string;
+  created_at?: string;
 }
 
 export interface FamilyDetail {
@@ -61,9 +65,11 @@ export interface FamilyCreateResponse {
 
 export interface Invitation {
   invitation_id: string;
-  token: string;
-  link: string;
+  codigo: string;
   expira_en: string;
+  usado: boolean;
+  estado?: "activa" | "usada" | "expirada";
+  token?: string;
 }
 
 export interface JoinInvitationResponse {
@@ -71,4 +77,10 @@ export interface JoinInvitationResponse {
   role: string;
   estado: string;
   tokens: Tokens;
+}
+
+export interface FamilyLifecycleResponse {
+  success: boolean;
+  family_id?: string | null;
+  tokens?: Tokens;
 }

@@ -5,8 +5,20 @@ import type { ReactNode } from "react";
 
 import type { Locale } from "@/lib/i18n/messages.generated";
 import type { ThemePreference } from "@/lib/preferences";
-import { LocaleProvider } from "./LocaleProvider";
+import { LocaleProvider, useI18n } from "./LocaleProvider";
 import { ThemeProvider } from "./ThemeProvider";
+
+function GoogleAuthProvider({ children }: { children: ReactNode }) {
+  const { locale } = useI18n();
+  return (
+    <GoogleOAuthProvider
+      clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ""}
+      locale={locale}
+    >
+      {children}
+    </GoogleOAuthProvider>
+  );
+}
 
 export function AppProviders({
   children,
@@ -18,10 +30,10 @@ export function AppProviders({
   initialLocale: Locale;
 }) {
   return (
-    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ""}>
-      <ThemeProvider initialMode={initialTheme}>
-        <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
-      </ThemeProvider>
-    </GoogleOAuthProvider>
+    <ThemeProvider initialMode={initialTheme}>
+      <LocaleProvider initialLocale={initialLocale}>
+        <GoogleAuthProvider>{children}</GoogleAuthProvider>
+      </LocaleProvider>
+    </ThemeProvider>
   );
 }

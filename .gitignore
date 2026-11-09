@@ -33,6 +33,10 @@ backend/.env
 frontend-web/.env.local
 frontend-mobile/.env
 frontend-mobile/.env.local
+frontend-mobile/google-services.json
+frontend-mobile/GoogleService-Info.plist
+frontend-mobile/android/
+frontend-mobile/ios/
 
 # Next.js
 frontend-web/.next/

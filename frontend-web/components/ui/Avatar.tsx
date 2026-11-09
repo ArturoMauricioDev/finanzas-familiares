@@ -12,6 +12,13 @@ const sizePixels = {
   xl: 96,
 } as const;
 
+const sizeClasses = {
+  sm: "h-8 w-8",
+  md: "h-10 w-10",
+  lg: "h-14 w-14",
+  xl: "h-24 w-24",
+} as const;
+
 export function Avatar({
   name,
   src,
@@ -38,8 +45,11 @@ export function Avatar({
       width={pixels}
       height={pixels}
       unoptimized
-      className={["shrink-0 rounded-full bg-surface-container object-cover", className ?? ""].join(" ")}
-      style={{ width: pixels, height: pixels }}
+      className={[
+        "shrink-0 rounded-full bg-surface-container object-cover",
+        sizeClasses[size],
+        className ?? "",
+      ].join(" ")}
     />
   );
 }

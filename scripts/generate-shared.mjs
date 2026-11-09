@@ -189,14 +189,26 @@ function buildMessages(es, en) {
   ].join("\n");
 }
 
+function buildCurrencies(currencies) {
+  return [
+    generatedHeader,
+    "export const currencyRegions = " + json(currencies.regions) + " as const;",
+    "export type CurrencyRegion = keyof typeof currencyRegions | \"other\";",
+    "export const countryCurrency = " + json(currencies.countryCurrency) + " as const;",
+    "export type CountryCode = keyof typeof countryCurrency;",
+    "",
+  ].join("\n");
+}
+
 export async function buildFiles() {
-  const [tokens, avatarOptions, errorKeys, engine, es, en] = await Promise.all([
+  const [tokens, avatarOptions, errorKeys, engine, es, en, currencies] = await Promise.all([
     readJson("design-tokens/tokens.json"),
     readJson("shared/avatar/avatar-options.json"),
     readJson("shared/errors/error-keys.json"),
     readText("shared/avatar/avatar-engine.ts"),
     readJson("shared/i18n/es.json"),
     readJson("shared/i18n/en.json"),
+    readJson("shared/currencies/regions.json"),
   ]);
 
   const files = new Map();
@@ -206,6 +218,7 @@ export async function buildFiles() {
   const avatarOptionsTs = buildAvatarOptions(avatarOptions);
   const avatarEngineTs = buildAvatarEngine(engine);
   const messagesTs = buildMessages(es, en);
+  const currenciesTs = buildCurrencies(currencies);
 
   files.set("frontend-web/app/generated/tokens.generated.css", tokenCss);
   files.set("frontend-web/lib/generated/tokens.ts", tokensTs);
@@ -218,6 +231,8 @@ export async function buildFiles() {
   files.set("frontend-mobile/lib/avatar-engine.generated.ts", avatarEngineTs);
   files.set("frontend-web/lib/i18n/messages.generated.ts", messagesTs);
   files.set("frontend-mobile/lib/i18n/messages.generated.ts", messagesTs);
+  files.set("frontend-web/lib/currencies.generated.ts", currenciesTs);
+  files.set("frontend-mobile/lib/currencies.generated.ts", currenciesTs);
 
   return files;
 }

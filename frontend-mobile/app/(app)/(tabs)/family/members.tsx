@@ -1,12 +1,16 @@
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Share, StyleSheet, Text, View } from "react-native";
 
+import { FamilyActions } from "../../../../components/family/FamilyActions";
+import { InviteCode } from "../../../../components/family/InviteCode";
 import {
   Avatar,
   Button,
   Card,
   Dialog,
+  EmptyState,
   ErrorMessage,
   Loading,
   Page,
@@ -16,8 +20,13 @@ import { useI18n } from "../../../../components/providers/LocaleProvider";
 import { useTheme } from "../../../../components/providers/ThemeProvider";
 import { api, ApiError, refreshSession } from "../../../../lib/api";
 import { errorText } from "../../../../lib/errors";
-import { clearSession } from "../../../../lib/session";
-import type { FamilyDetail, Invitation } from "../../../../lib/types";
+import {
+  invitationCode,
+  invitationDaysRemaining,
+  invitationStatus,
+} from "../../../../lib/invitation";
+import { applyFamilyLeft, clearSession } from "../../../../lib/session";
+import type { FamilyDetail, Invitation, Member } from "../../../../lib/types";
 import { useAuthGuard } from "../../../../hooks/useAuthGuard";
 import { spacing, shape } from "../../../../lib/generated/tokens";
 import { typeStyle } from "../../../../lib/ui-styles";
@@ -32,7 +41,10 @@ export default function FamilyMembersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loadingAction, setLoadingAction] = useState<"delete" | "leave" | null>(null);
 
   const handleError = useCallback(
     async (err: unknown) => {
@@ -80,6 +92,7 @@ export default function FamilyMembersScreen() {
   }, [ready, session, loadFamily]);
 
   const generateInvitation = async () => {
+    setGenerating(true);
     setError(null);
     setMessage(null);
     try {
@@ -88,14 +101,60 @@ export default function FamilyMembersScreen() {
       setMessage(t("family.invitationGenerated"));
     } catch (err) {
       await handleError(err);
+    } finally {
+      setGenerating(false);
     }
+  };
+
+  const copyCode = async () => {
+    if (!invitation) return;
+    await Clipboard.setStringAsync(invitationCode(invitation));
+    setMessage(t("common.copiedCode"));
   };
 
   const shareInvitation = async () => {
     if (!invitation) return;
     await Share.share({
-      message: t("family.inviteShareMessage", { link: invitation.link }),
+      message: t("family.inviteShareMessage", {
+        code: invitationCode(invitation),
+      }),
     });
+  };
+
+  const leaveFamily = async () => {
+    setLoadingAction("leave");
+    setActionError(null);
+    try {
+      const data = await api.leaveFamily();
+      await applyFamilyLeft(data);
+      router.replace("/family/select");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await handleError(err);
+      } else {
+        setActionError(errorText(err, t, t("family.leaveFamilyFailed")));
+      }
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const deleteFamily = async () => {
+    setLoadingAction("delete");
+    setActionError(null);
+    try {
+      const data = await api.deleteFamily();
+      await applyFamilyLeft(data);
+      router.replace("/family/select");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await handleError(err);
+      } else {
+        setActionError(errorText(err, t, t("family.deleteFamilyFailed")));
+      }
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const promote = async (userId: string) => {
@@ -126,9 +185,13 @@ export default function FamilyMembersScreen() {
   if (!ready || !session) return <Loading />;
 
   const currentMember = family?.members.find((member) => member.user_id === session.user.id);
-  const isAdmin = currentMember?.role === "admin";
-  const roleLabel = (role: string) =>
-    role === "admin" ? t("family.adminRole") : t("family.memberRole");
+  const isAdmin = (currentMember?.rol_permiso ?? currentMember?.role) === "admin";
+  const roleLabel = (member: Member) => {
+    const role = member.rol_permiso ?? member.role;
+    return role === "admin" ? t("family.adminRole") : t("family.memberRole");
+  };
+  const familyRoleLabel = (member: Member) =>
+    member.rol_familiar ?? member.parentesco ?? t("family.memberRole");
 
   return (
     <Page
@@ -152,48 +215,63 @@ export default function FamilyMembersScreen() {
           <Text style={[typeStyle("titleLarge"), { color: colors.onSurface }]}>
             {t("family.membersHeading")}
           </Text>
-          {family.members.map((member) => (
-            <View
-              key={member.user_id}
-              style={[styles.member, { borderBottomColor: colors.outlineVariant }]}
-            >
-              <View style={styles.memberIdentity}>
-                <Avatar
-                  name={member.nombre_visualizacion}
-                  seed={member.user_id}
-                  src={member.foto_avatar}
-                  size="md"
-                />
-                <View style={styles.memberCopy}>
-                  <Text style={[typeStyle("bodyLarge"), { color: colors.onSurface }]}>
-                    {member.nombre_visualizacion || t("common.noName")}
-                  </Text>
-                  <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
-                    {roleLabel(member.role)}
-                    {member.parentesco ? ` · ${member.parentesco}` : ""}
-                    {member.user_id === session.user.id ? ` · ${t("common.you")}` : ""}
-                  </Text>
-                </View>
-              </View>
-
-              {isAdmin && member.user_id !== session.user.id ? (
-                <View style={styles.memberActions}>
-                  {member.role !== "admin" ? (
-                    <Button
-                      title={t("family.promote")}
-                      variant="tonal"
-                      onPress={() => void promote(member.user_id)}
-                    />
-                  ) : null}
-                  <Button
-                    title={t("family.remove")}
-                    variant="danger"
-                    onPress={() => setPendingRemoval(member.user_id)}
+          <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
+            {t("family.memberLimit")}
+          </Text>
+          {family.members.length === 0 ? (
+            <EmptyState
+              title={t("family.membersHeading")}
+              description={t("family.membersEmpty")}
+            />
+          ) : (
+            family.members.map((member) => (
+              <View
+                key={member.user_id}
+                style={[styles.member, { borderBottomColor: colors.outlineVariant }]}
+              >
+                <View style={styles.memberIdentity}>
+                  <Avatar
+                    name={member.nombre_visualizacion}
+                    seed={member.user_id}
+                    src={member.foto_avatar}
+                    size="md"
                   />
+                  <View style={styles.memberCopy}>
+                    <Text style={[typeStyle("bodyLarge"), { color: colors.onSurface }]}>
+                      {member.nombre_visualizacion || t("common.noName")}
+                    </Text>
+                    <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
+                      {t("family.roleFamilyLabel")}: {familyRoleLabel(member)} ·{" "}
+                      {t("family.rolePermissionLabel")}: {roleLabel(member)}
+                      {member.user_id === session.user.id ? ` · ${t("common.you")}` : ""}
+                    </Text>
+                    <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
+                      {member.estado === "activo"
+                        ? t("family.memberStatusActive")
+                        : member.estado}
+                    </Text>
+                  </View>
                 </View>
-              ) : null}
-            </View>
-          ))}
+
+                {isAdmin && member.user_id !== session.user.id ? (
+                  <View style={styles.memberActions}>
+                    {(member.rol_permiso ?? member.role) !== "admin" ? (
+                      <Button
+                        title={t("family.promote")}
+                        variant="tonal"
+                        onPress={() => void promote(member.user_id)}
+                      />
+                    ) : null}
+                    <Button
+                      title={t("family.remove")}
+                      variant="danger"
+                      onPress={() => setPendingRemoval(member.user_id)}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ))
+          )}
         </Card>
       ) : null}
 
@@ -205,19 +283,41 @@ export default function FamilyMembersScreen() {
           <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
             {t("family.inviteBody")}
           </Text>
-          <Button title={t("family.generateInvitation")} onPress={() => void generateInvitation()} />
+          <Button
+            title={t("family.generateInvitation")}
+            loading={generating}
+            onPress={() => void generateInvitation()}
+          />
           {invitation ? (
-            <View style={[styles.invitation, { backgroundColor: colors.surfaceContainerHigh }]}>
-              <Text selectable style={[typeStyle("bodyMedium"), { color: colors.onSurface }]}>
-                {invitation.link}
-              </Text>
-              <Button
-                title={t("common.shareLink")}
-                variant="secondary"
-                onPress={() => void shareInvitation()}
-              />
-            </View>
-          ) : null}
+            <InviteCode
+              code={invitationCode(invitation)}
+              expiresAt={invitation.expira_en}
+              daysRemaining={invitationDaysRemaining(invitation.expira_en)}
+              status={invitationStatus(invitation)}
+              loading={generating}
+              onCopy={copyCode}
+              onShare={shareInvitation}
+            />
+          ) : (
+            <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
+              {t("family.invitationEmpty")}
+            </Text>
+          )}
+        </Card>
+      ) : null}
+
+      {family ? (
+        <Card>
+          <Text style={[typeStyle("titleLarge"), { color: colors.onSurface }]}>
+            {t("family.familyActionsHeading")}
+          </Text>
+          <FamilyActions
+            memberCount={family.member_count}
+            loadingAction={loadingAction}
+            error={actionError}
+            onDelete={deleteFamily}
+            onLeave={leaveFamily}
+          />
         </Card>
       ) : null}
 

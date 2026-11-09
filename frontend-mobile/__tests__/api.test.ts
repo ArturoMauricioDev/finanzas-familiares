@@ -96,7 +96,14 @@ describe("mobile api client", () => {
 
   it("uses the invitation and membership endpoints", async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ invitation_id: "i", token: "t", link: "l" }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          invitation_id: "i",
+          codigo: "ABCD",
+          expira_en: "2026-11-02T00:00:00Z",
+          usado: false,
+        }),
+      )
       .mockResolvedValueOnce(
         jsonResponse({
           family_id: "f",
@@ -108,12 +115,14 @@ describe("mobile api client", () => {
       .mockResolvedValueOnce(jsonResponse({ success: true }));
 
     await api.createInvitation();
-    await api.joinInvitation({ token: "t" });
+    await api.joinFamilyByCode({ codigo: "ABCD" });
     await api.promoteMember("user-1");
 
     expect(fetchMock.mock.calls[0][0]).toContain("/families/me/invitations");
     expect(fetchMock.mock.calls[1][0]).toContain("/invitations/join");
     expect(fetchMock.mock.calls[2][0]).toContain("/members/user-1/promote");
+    expect(fetchMock.mock.calls[0][1].body).toBe(JSON.stringify({ expira_en_horas: 168 }));
+    expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ codigo: "ABCD" }));
   });
 
   it("refreshes the session and retries once after a 401", async () => {

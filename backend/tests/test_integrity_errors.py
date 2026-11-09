@@ -55,6 +55,7 @@ def test_join_invitation_integrity_conflict_maps_to_400(monkeypatch, db):
     db.flush()
     invitation = Invitation(
         family_id=family.id,
+        codigo="RACECODE",
         token="race-token",
         generado_por=admin.id,
         expira_en=datetime.utcnow() + timedelta(hours=1),

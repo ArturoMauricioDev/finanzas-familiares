@@ -10,11 +10,16 @@ export function GoogleSignInButton({
   onError: () => void;
 }) {
   return (
-    <GoogleLogin
-      onSuccess={(response) => onSuccess(response.credential ?? "")}
-      onError={onError}
-      useOneTap={false}
-      width="320"
-    />
+    <div className="w-full max-w-[320px]">
+      <GoogleLogin
+        onSuccess={(response) => onSuccess(response.credential ?? "")}
+        onError={onError}
+        useOneTap={false}
+        shape="pill"
+        size="large"
+        text="continue_with"
+        theme="outline"
+      />
+    </div>
   );
 }

@@ -1,73 +1,79 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { useI18n } from "../../../components/providers/LocaleProvider";
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "../../../components/ui";
 import { ApiError, api } from "../../../lib/api";
 import { errorText } from "../../../lib/errors";
+import { normalizeInvitationCode } from "../../../lib/invitation";
 import {
   applyInvitationJoined,
-  clearPendingInviteToken,
-  getPendingInviteToken,
-  savePendingInviteToken,
+  clearPendingInviteCode,
+  getPendingInviteCode,
+  savePendingInviteCode,
 } from "../../../lib/session";
 import { useAuthGuard } from "../../../hooks/useAuthGuard";
 
 export default function InviteScreen() {
   const router = useRouter();
   const { t } = useI18n();
-  const params = useLocalSearchParams<{ token?: string | string[] }>();
-  const [token, setToken] = useState("");
+  const [code, setCode] = useState("");
   const [parentesco, setParentesco] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
-    const value = Array.isArray(params.token) ? params.token[0] : params.token;
-    if (value) {
-      setToken(value);
-      void savePendingInviteToken(value);
-      return;
-    }
-    getPendingInviteToken().then((pending) => {
-      if (pending) setToken(pending);
+    void getPendingInviteCode().then((pending) => {
+      if (pending) setCode(pending);
     });
-  }, [params.token]);
+  }, []);
 
   const { session, ready } = useAuthGuard();
 
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
-      void clearPendingInviteToken();
+      void clearPendingInviteCode();
       router.replace("/family/members");
     }
   }, [ready, session, router]);
 
   const handleSubmit = async () => {
+    const normalized = normalizeInvitationCode(code);
+    if (!normalized) return;
+
     setJoining(true);
     setError(null);
+    setCodeError(null);
 
     try {
-      const data = await api.joinInvitation({
-        token: token.trim(),
+      const data = await api.joinFamilyByCode({
+        codigo: normalized,
         parentesco: parentesco.trim() || undefined,
       });
       await applyInvitationJoined(data);
-      await clearPendingInviteToken();
+      await clearPendingInviteCode();
       router.replace("/family/members");
     } catch (err) {
+      const message = errorText(err, t, t("invite.joinFailed"));
       if (err instanceof ApiError && err.status === 400) {
-        await clearPendingInviteToken();
-        setToken("");
+        await clearPendingInviteCode();
       }
-      setError(errorText(err, t, t("invite.joinFailed")));
+      if (
+        err instanceof ApiError &&
+        (err.messageKey?.includes("invitation") || err.status === 400)
+      ) {
+        setCodeError(message);
+      } else {
+        setError(message);
+      }
     } finally {
       setJoining(false);
     }
   };
 
   const discardInvitation = async () => {
-    await clearPendingInviteToken();
+    await clearPendingInviteCode();
     router.replace("/family/select");
   };
 
@@ -79,10 +85,19 @@ export default function InviteScreen() {
       <Card>
         <ErrorMessage message={error} />
         <Field
-          label={t("invite.tokenLabel")}
-          value={token}
-          onChangeText={setToken}
-          placeholder={t("invite.tokenPlaceholder")}
+          label={t("invite.codeLabel")}
+          value={code}
+          onChangeText={(value) => {
+            const next = value.toUpperCase();
+            setCode(next);
+            setCodeError(null);
+            void savePendingInviteCode(normalizeInvitationCode(next));
+          }}
+          placeholder={t("invite.codePlaceholder")}
+          error={codeError ?? undefined}
+          hint={t("invite.codeNotice")}
+          autoCapitalize="characters"
+          autoCorrect={false}
         />
         <Field
           label={t("invite.relationshipLabel")}
@@ -95,7 +110,7 @@ export default function InviteScreen() {
           title={joining ? t("invite.joining") : t("invite.join")}
           onPress={handleSubmit}
           loading={joining}
-          disabled={joining || !token.trim()}
+          disabled={joining || !normalizeInvitationCode(code)}
         />
         <Button
           title={t("invite.backToSelect")}

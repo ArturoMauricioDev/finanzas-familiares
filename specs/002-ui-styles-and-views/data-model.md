@@ -1,14 +1,26 @@
 # Data Model: UI, Estilos y Vistas Web y Móvil (Kitho)
 
 **Feature**: 002-ui-styles-and-views  
-**Date**: 2026-11-04
+**Date**: 2026-11-06
 
 ## Alcance
 
-Esta feature **no modifica el modelo de datos del backend**. Las entidades de PostgreSQL
-(`User`, `Family`, `Membership`, `Invitation`) y sus endpoints permanecen intactos. El modelo que
-sigue describe el estado de presentación, los artefactos compartidos y los contratos de UI que
-consumen web y móvil.
+Esta feature **no añade cambios propios al modelo de datos del backend**. Consume las extensiones
+funcionales definidas en la spec 001 para el ciclo de vida de familia y la invitación por código.
+El modelo que sigue describe el estado de presentación, los artefactos compartidos, los contratos
+de UI y las dependencias de datos que web y móvil necesitan.
+
+## Dependencias de la spec 001
+
+| Entidad / contrato | Campos o reglas consumidas | Uso en 002 |
+|--------------------|----------------------------|------------|
+| `Family` | `estado` activo/eliminado y `deleted_at`; soft delete solo con 1 integrante | Mostrar Eliminar/Abandonar y redirigir tras completar |
+| `Membership` | `rol_familiar` (Padre/Madre/Hijo/Otro), `rol_permiso` (Administrador/Miembro), `created_at` | Mostrar roles y respetar la reasignación de administrador al miembro más antiguo |
+| `Invitation` | `codigo` único, `expira_en` (7 días), `usado`, `fecha_uso` | Mostrar solo el código, validar unión y mapear inválido/usado/expirado |
+| Endpoints de spec 001 | Crear invitación, unirse por código, abandonar familia, eliminar familia y listar miembros | `InviteCode`, `FamilyActions` y pantallas de invitación/Miembros |
+
+La UI no calcula soft delete, autorización ni reasignación: solo presenta las acciones posibles y
+mapea los errores que devuelve el backend.
 
 ## Entities
 
@@ -206,6 +218,73 @@ fallback `System`.
 - Cambiar el locale actualiza todos los textos y errores visibles sin recargar.
 - Cerrar sesión o recibir `401` no borra la preferencia.
 
+### CurrencyOption
+
+Moneda seleccionable en el alta de familia. La fuente ISO 4217 es la del runtime (`Intl`), y las
+sugerencias regionales viven en `shared/currencies/regions.json`.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| code | string | ISO 4217 válido | Código de moneda, p. ej. `MXN` |
+| name | string | desde `Intl.DisplayNames` | Nombre en el idioma activo |
+| region | string | `latam`, `europe`, `us` o `other` | Región de la sugerencia |
+| isLocal | boolean | default false | Moneda detectada para el país |
+| isSuggested | boolean | default false | Pertenece a las 5 sugerencias |
+| source | `"geolocation" \| "locale" \| "fallback" \| "user"` | — | Origen de la preselección |
+
+### CurrencySelection
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| detectedCountry | string \| null | ISO 3166-1 alpha-2 | País detectado; null si no hay permiso |
+| region | `"latam" \| "europe" \| "us" \| "other"` | derivado | Región usada para sugerencias |
+| suggested | CurrencyOption[] | exactamente 5 | Sugerencias visibles |
+| selectedCode | string | ISO 4217 válido | Selección única |
+| source | `"geolocation" \| "locale" \| "fallback" \| "user"` | — | Cómo se eligió |
+
+**Validation**:
+- Las listas por región son: LatAm `MXN, BRL, ARS, COP, CLP`; Europa `EUR, GBP, CHF, SEK, PLN`;
+  EE.UU. `USD, CAD, MXN, EUR, GBP`.
+- La moneda local detectada se coloca primero; si no está en la lista, se añade como primera.
+- Si se deniega la geolocalización, se usa la moneda del locale; si no hay, `USD`.
+- **Otros** busca sobre todo ISO 4217 y no permite códigos inválidos.
+- La selección es única y se persiste en `Family.moneda_local`, no como preferencia local.
+
+### InvitationCodeView
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| code | string | no vacío, normalizado | Código visible y copiable |
+| expiresAt | ISO date | +7 días desde creación | Caducidad |
+| daysRemaining | number | >= 0 | Texto de vigencia |
+| singleUse | boolean | `true` | Se invalida al aceptar |
+| status | `"active" \| "used" \| "expired"` | derivado | Estado de la invitación |
+| canCopy | boolean | default true | Acción de copiar |
+| canShare | boolean | default true | Compartir solo texto, sin URL |
+
+**Validation**:
+- La UI muestra solo el código; nunca construye ni muestra un enlace de invitación.
+- El código introducido se normaliza (mayúsculas, sin espacios) antes de enviarlo.
+- `used`/`expired`/`invalid` se mapean a claves i18n y no permiten reintentar con el mismo código.
+
+### FamilyAction
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | `"delete" \| "leave"` | único | Acción disponible |
+| labelKey | string | clave i18n | Texto del botón |
+| visibleWhen | `"memberCount == 1" \| "memberCount > 1"` | — | Regla de visibilidad |
+| destructive | boolean | `true` | Usa estilo danger |
+| requiresConfirmation | boolean | `true` | Abre `ConfirmDialog` |
+| redirectTo | string | `/family/select` | Destino al completar |
+| endpoint | string | contrato spec 001 | Operación de backend |
+
+**Validation**:
+- Con exactamente 1 integrante se muestra **Eliminar familia** (soft delete).
+- Con más de 1 integrante se muestra **Abandonar familia**; nunca Eliminar.
+- La UI no ejecuta la reasignación: si el backend la realiza, se refresca la membresía.
+- Toda acción muestra carga, deshabilita doble envío y mapea errores.
+
 ### TranslationCatalog
 
 | Field | Type | Constraints | Description |
@@ -266,6 +345,9 @@ guardan las pantallas para traducir en render.
 | `/profile/avatar` | ambas | autenticado + grupo | No (desde Perfil/Ajustes) |
 | `/settings` | ambas | autenticado + grupo | Web: Sí; móvil: desde Perfil |
 
+**Nota**: `/invite` es la pantalla de unión mediante código; la invitación generada se muestra
+dentro de Miembros y nunca se expone como URL.
+
 **Nav visibility**:
 - Web expandida (`>=840px`): sidebar con Inicio, Miembros, Perfil y Ajustes.
 - Web media (`600–839px`): rail con los cuatro destinos.
@@ -280,6 +362,7 @@ por plataforma, pero la API y los estados son equivalentes.
 | Family | Components | Variants / states |
 |--------|------------|-------------------|
 | Formularios | `Button`, `IconButton`, `GoogleSignInButton`, `TextField`, `Select`, `Checkbox`, `Radio`, `Switch`, `SearchField` | filled, tonal, outlined, text, danger; hover, pressed, focus, disabled, error, helper |
+| Familia | `CurrencySelect`, `InviteCode`, `FamilyActions` | default, searching, loading, empty; invalid/used/expired code; destructive confirm |
 | Contenido | `Card`, `List`, `ListItem`, `Avatar`, `AvatarEditor`, `Chip`, `Badge`, `Divider`, `Wordmark` | elevated, filled, outlined; selected, unread, role |
 | Feedback | `Dialog`, `ConfirmDialog`, `Menu`, `InlineBanner`, `Spinner`, `EmptyState` | info, success, warning, error; loading |
 | Navegación | `TopAppBar`, `Sidebar`, `Rail`, `BottomTabs`, `Tabs`, `Breadcrumbs` | active, inactive, compact, expanded |
@@ -368,6 +451,10 @@ AvatarOptionCatalog 1 ──< AvatarConfig
 NavigationItem 1 ── 1 RouteDefinition
 ComponentSpec 1 ──< ScreenState
 ChartContainerProps 1 ── 1 DesignTokenSet (colores)
+CurrencyOption 1 ──< CurrencySelection
+Family 1 ──< Membership (spec 001)
+Family 1 ──< FamilyAction
+Invitation 1 ── 1 InvitationCodeView (spec 001)
 ```
 
 ## Persistence Mapping
@@ -375,9 +462,12 @@ ChartContainerProps 1 ── 1 DesignTokenSet (colores)
 | Data | Web | Móvil | Backend |
 |------|-----|-------|---------|
 | Session | `localStorage` (clave existente) | SecureStore (clave existente) | JWT existente |
-| Pending invite | `localStorage` (clave existente) | SecureStore (clave existente) | Invitation existente |
+| Pending invite code | `localStorage` (clave existente) | SecureStore (clave existente) | Código de invitación de spec 001 |
 | Theme | `localStorage` + cookie `kitho_theme` | SecureStore `kitho_theme` | No |
 | Locale | `localStorage` + cookie `kitho_locale` | SecureStore `kitho_locale` | No |
+| Family currency | Estado de la pantalla | Estado de la pantalla | `Family.moneda_local` |
+| Invitation code view | No persiste | No persiste | `Invitation.codigo` |
+| Family action state | No persiste | No persiste | `Family`/`Membership` de spec 001 |
 | Avatar default | `foto_avatar` en sesión y backend | `foto_avatar` en sesión y backend | Campo existente |
 | Avatar editor | Estado local (no persiste) | Estado local (no persiste) | No (spec 003) |
 | Tokens | Archivos generados versionados | Archivos generados versionados | No |
@@ -392,6 +482,7 @@ ChartContainerProps 1 ── 1 DesignTokenSet (colores)
 | `design-tokens/tokens.json` | `frontend-mobile/lib/design-tokens.generated.ts` | Componentes móvil |
 | `shared/avatar/avatar-engine.ts` | copia generada en ambos frontends | Avatar web/móvil |
 | `shared/avatar/avatar-options.json` | copia generada en ambos frontends | Editor de avatar |
+| `shared/currencies/regions.json` | copia generada en ambos frontends | `CurrencySelect` |
 | `shared/errors/error-keys.json` | `lib/error-keys.generated.ts` en ambos | Mapeo de errores |
 
 **Validation**: los archivos generados incluyen una cabecera `AUTO-GENERATED` y un hash; el script
@@ -403,4 +494,6 @@ ChartContainerProps 1 ── 1 DesignTokenSet (colores)
 - Entidades financieras, transacciones, presupuestos y sus gráficos reales.
 - Sincronización de tema/idioma en backend o entre dispositivos.
 - Assets definitivos de logo, icono de app y splash.
-- Cambios en el modelo de datos o endpoints del backend.
+- Invitaciones por enlace o multi-moneda.
+- Cambios de backend propios de 002; las extensiones de spec 001 se consumen tal como se definen
+  allí.

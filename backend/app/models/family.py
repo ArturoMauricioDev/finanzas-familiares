@@ -1,10 +1,16 @@
+import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
 from app.db.base import Base
+
+
+class FamilyStatusEnum(str, enum.Enum):
+    activo = "activo"
+    eliminado = "eliminado"
 
 
 class Family(Base):
@@ -15,3 +21,5 @@ class Family(Base):
     moneda_local = Column(String(3), nullable=False)
     creado_por = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    estado = Column(Enum(FamilyStatusEnum), default=FamilyStatusEnum.activo, nullable=False)
+    fecha_eliminacion = Column(DateTime(timezone=True), nullable=True)

@@ -75,7 +75,7 @@ def _create_invitation(db, admin):
     response = invitation_service.create_invitation(
         db, admin.id, CreateInvitationRequest(expira_en_horas=72)
     )
-    invitation = db.query(Invitation).filter(Invitation.token == response.token).first()
+    invitation = db.query(Invitation).filter(Invitation.codigo == response.codigo).first()
     assert invitation is not None
     return invitation
 
@@ -90,11 +90,11 @@ def test_expired_invitation_returns_400_on_postgres(pg_db):
 
     with pytest.raises(HTTPException) as error:
         invitation_service.join_invitation(
-            pg_db, invited.id, JoinInvitationRequest(token=invitation.token)
+            pg_db, invited.id, JoinInvitationRequest(codigo=invitation.codigo)
         )
 
     assert error.value.status_code == 400
-    assert error.value.detail == "Invitation expired"
+    assert error.value.detail == "Invitation code expired"
 
 
 def test_valid_invitation_join_succeeds_on_postgres(pg_db):
@@ -103,7 +103,7 @@ def test_valid_invitation_join_succeeds_on_postgres(pg_db):
     invited = _create_user(pg_db, "member@example.com")
 
     result = invitation_service.join_invitation(
-        pg_db, invited.id, JoinInvitationRequest(token=invitation.token)
+        pg_db, invited.id, JoinInvitationRequest(codigo=invitation.codigo)
     )
 
     assert result.family_id == str(family.id)

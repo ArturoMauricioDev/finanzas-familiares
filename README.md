@@ -1,7 +1,7 @@
 # Kitho
 
 Kitho es una aplicación de finanzas familiares con autenticación de Google, perfil obligatorio,
-grupo familiar y gestión de integrantes mediante invitaciones.
+grupo familiar y gestión de integrantes mediante códigos de invitación de un solo uso.
 
 ## Estructura
 
@@ -47,7 +47,7 @@ Variables principales en `.env`:
 | `GOOGLE_CLIENT_ID` | Client ID web usado para validar el `id_token`. |
 | `GOOGLE_CLIENT_IDS` | Client IDs adicionales de Android/iOS para validar sus `id_token`, separados por comas. |
 | `CORS_ORIGINS` | Orígenes permitidos, separados por comas. |
-| `INVITATION_LINK_BASE` | Base del enlace de invitación. |
+| `INVITATION_LINK_BASE` | Base de enlace heredada; la UI de feature 002 solo expone códigos. |
 
 ## Frontend web
 
@@ -93,9 +93,11 @@ Ejecuta:
 pnpm start
 ```
 
-El esquema de redirección OAuth es `finanzasfamiliares://auth/login`. En un dispositivo físico,
-`EXPO_PUBLIC_API_URL` debe apuntar a la IP de la máquina que ejecuta el backend, no a
-`localhost`.
+En Android/iOS el inicio de sesión usa **Google Sign-In nativo**
+(`react-native-nitro-google-signin`), no un `redirect_uri` con esquema personalizado. El
+esquema `finanzasfamiliares` sigue usándose para el enrutado interno, pero ya no se envía a Google
+como redirect. En un dispositivo físico, `EXPO_PUBLIC_API_URL` debe apuntar a la IP de la máquina
+que ejecuta el backend, no a `localhost`.
 
 ## Google OAuth
 
@@ -104,8 +106,23 @@ El esquema de redirección OAuth es `finanzasfamiliares://auth/login`. En un dis
 - Añade `http://localhost:3000` a los orígenes autorizados de la credencial web.
 - Para Android, registra el `package` `com.finanzasfamiliares.app` y el SHA-1 del keystore.
 - Para iOS, registra el bundle ID `com.finanzasfamiliares.app`.
+- **Android nativo**: descarga `google-services.json` del proyecto de Firebase/Google Cloud y
+  colócalo en `frontend-mobile/google-services.json` (está en `.gitignore`). La app configura
+  `webClientId` con `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y usa el cliente Android del archivo para
+  resolver package + SHA-1.
+- **iOS nativo**: coloca `GoogleService-Info.plist` en `frontend-mobile/GoogleService-Info.plist`
+  (está en `.gitignore`). El config plugin de `react-native-nitro-google-signin` copia el archivo y
+  añade el `REVERSED_CLIENT_ID` como URL scheme; sin él hay que declarar `iosUrlScheme` en las
+  opciones del plugin.
 - Añade los Client IDs de Android/iOS en `GOOGLE_CLIENT_IDS` del backend para que los `id_token`
   nativos también sean válidos.
+- Tras cambiar `google-services.json` o las credenciales, **reconstruye** el development build/APK
+  (`npx expo prebuild --clean && npx expo run:android` o un build EAS); no basta con recargar Metro.
+- Un `redirect_uri` personalizado en Android produce `Error 400: invalid_request`; no lo uses para
+  el flujo nativo.
+- `react-native-nitro-google-signin` requiere `react-native-nitro-modules`, la New Architecture
+  (predeterminada en Expo SDK 58) y un development build nativo (`expo run:android`/`expo run:ios` o
+  EAS); no funciona en Expo Go.
 
 ## Artefactos compartidos (feature 002)
 
@@ -122,6 +139,10 @@ node scripts/check-ui.mjs
 No edites a mano los archivos `*.generated.*` ni `lib/generated/*`: cambia las fuentes y vuelve a
 generar. `check-ui` impide importar Recharts o Victory Native fuera de `components/charts/` y
 detecta colores literales fuera de los archivos generados.
+
+El selector de moneda usa `expo-location` en móvil (permiso opcional con fallback al locale) y el
+código de invitación se copia con `expo-clipboard`; ambos se declaran en `frontend-mobile/app.json`
+y `frontend-mobile/package.json`.
 
 ## Pruebas y validación
 

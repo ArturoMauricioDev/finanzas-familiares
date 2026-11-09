@@ -13,13 +13,19 @@ export interface ChartSeries {
   color?: string;
 }
 
+const heightClasses = {
+  sm: "h-40",
+  md: "h-60",
+  lg: "h-80",
+} as const;
+
 export interface ChartContainerProps {
   type: ChartType;
   data: Array<Record<string, string | number>>;
   series: ChartSeries[];
   title: string;
   summary: string;
-  height?: number;
+  height?: keyof typeof heightClasses;
 }
 
 const ChartCanvas = dynamic(() => import("./ChartCanvas"), {
@@ -33,7 +39,7 @@ export function ChartContainer({
   series,
   title,
   summary,
-  height = 240,
+  height = "md",
 }: ChartContainerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -46,12 +52,18 @@ export function ChartContainer({
     <section aria-label={title} className="space-y-2">
       <h3 className="text-title-medium text-on-surface">{title}</h3>
       <p className="text-body-small text-on-surface-variant">{summary}</p>
-      <div style={{ height }} role="img" aria-label={summary}>
+      <div className={heightClasses[height]} role="img" aria-label={summary}>
         <ChartCanvas
           type={type}
           data={data}
           series={series}
           palette={[colors.primary, colors.secondary, colors.tertiary, colors.error]}
+          theme={{
+            grid: colors.outlineVariant,
+            axis: colors.onSurfaceVariant,
+            surface: colors.surface,
+            onSurface: colors.onSurface,
+          }}
         />
       </div>
     </section>

@@ -14,7 +14,9 @@ independientes. Las rutas y contratos de UI se mantienen alineados entre web y m
 - **[P]**: Puede ejecutarse en paralelo (archivos distintos, sin dependencias directas).
 - **[Story]**: Historia de usuario a la que pertenece la tarea.
 - Todas las tareas incluyen rutas de archivo exactas.
-- No se modifican `backend/`, `docker-compose.yml` ni el esquema de PostgreSQL.
+- No se modifican `backend/`, `docker-compose.yml` ni el esquema de PostgreSQL. La UI consume las
+  extensiones de la spec 001 (código de invitación de un solo uso/7 días, soft delete, abandono y
+  reasignación de administrador).
 
 ## Path Conventions
 
@@ -28,319 +30,273 @@ independientes. Las rutas y contratos de UI se mantienen alineados entre web y m
 
 **Purpose**: Dependencias y configuración base de ambos frontends.
 
-- [X] T001 Actualizar dependencias y scripts web en `frontend-web/package.json` y regenerar `frontend-web/pnpm-lock.yaml` con `next-intl`, `tailwindcss`, `@tailwindcss/postcss`, `lucide-react`, `recharts`, `react-is`, `jest-axe`, `@types/jest-axe`, `eslint-plugin-jsx-a11y` y tipos React 19.
-- [X] T002 Actualizar dependencias móvil en `frontend-mobile/package.json` y regenerar `frontend-mobile/pnpm-lock.yaml` con `i18n-js`, `@expo-google-fonts/inter`, `lucide-react-native`, `victory-native@41.16.1`, módulos Expo 52, Skia, Reanimated y Gesture Handler.
-- [X] T003 [P] Configurar Tailwind 4 y PostCSS en `frontend-web/postcss.config.mjs` y `frontend-web/app/globals.css` con `@import "tailwindcss"` y carga de `styles/tokens.generated.css`.
-- [X] T004 [P] Configurar `next-intl` sin rutas de locale en `frontend-web/next.config.ts`.
-- [X] T005 [P] Configurar Jest, Testing Library, `jest-axe`, mocks de `matchMedia` y reglas de accesibilidad en `frontend-web/jest.config.js`, `frontend-web/jest.setup.ts` y `frontend-web/.eslintrc.json`.
-- [X] T006 [P] Actualizar `frontend-mobile/app.json` con `name: "Kitho"`, `slug: "kitho"`, `userInterfaceStyle: "automatic"` y plugin `expo-localization` para `es`/`en`, conservando scheme, package y bundle.
-- [X] T007 [P] Ampliar mocks de Jest y reglas ESLint móvil en `frontend-mobile/jest.setup.js` y `frontend-mobile/.eslintrc.json` para SecureStore, `expo-localization`, `useColorScheme`, Google OAuth y fuentes.
+- [X] T001 Actualizar dependencias y scripts web en `frontend-web/package.json` y regenerar `frontend-web/pnpm-lock.yaml` con `next-intl`, `tailwindcss`, `@tailwindcss/postcss`, `lucide-react`, `recharts`, `react-is`, `jest-axe`, `@types/jest-axe` y `eslint-plugin-jsx-a11y`.
+- [X] T002 Actualizar dependencias móvil en `frontend-mobile/package.json` y regenerar `frontend-mobile/pnpm-lock.yaml` con `i18n-js`, `@expo-google-fonts/inter`, `lucide-react-native`, `expo-location`, `expo-localization`, `victory-native@42.0.1`, Skia 2.14.0, Reanimated 4.7.1 y Gesture Handler 3.3.0.
+- [X] T003 [P] Configurar Tailwind 4 y PostCSS en `frontend-web/postcss.config.mjs` y `frontend-web/app/globals.css` con `@import "tailwindcss"`, `@theme inline`, breakpoints MD3 `600px`/`840px` y carga de `frontend-web/app/generated/tokens.generated.css`.
+- [X] T004 [P] Configurar `next-intl` sin rutas `[locale]` en `frontend-web/next.config.ts` y el provider cliente en `frontend-web/components/providers/AppProviders.tsx`.
+- [X] T005 [P] Configurar Jest, Testing Library, `jest-axe`, mocks de `matchMedia`, `navigator.geolocation` y reglas de accesibilidad en `frontend-web/jest.config.js`, `frontend-web/jest.setup.ts` y `frontend-web/.eslintrc.json`.
+- [X] T006 [P] Actualizar `frontend-mobile/app.json` con `name: "Kitho"`, `slug: "kitho"`, `userInterfaceStyle: "automatic"`, plugin `expo-localization` para `es`/`en`, permiso de ubicación de `expo-location` y scheme/package/bundle existentes sin cambios.
+- [X] T007 [P] Ampliar mocks de Jest y reglas ESLint móvil en `frontend-mobile/jest.setup.js` y `frontend-mobile/.eslintrc.json` para SecureStore, `expo-localization`, `expo-location`, `useColorScheme`, Google OAuth y fuentes.
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Tokens, generación compartida, tema, idioma, errores, avatar y helpers comunes.
+**Purpose**: Tokens, generación compartida, proveedores, preferencias, API y utilidades que bloquean
+todas las historias. La spec 002 no modifica el backend.
 
-**⚠️ CRITICAL**: Ninguna historia puede darse por terminada hasta completar esta fase.
+**CRITICAL**: Ninguna historia puede considerarse terminada sin esta fase.
 
-- [X] T008 [P] Crear `design-tokens/tokens.json` con roles MD3 claros/oscuros, `success`/`warning`, tipografía Inter, espaciado, radios, elevación, movimiento, breakpoints `0/600/840`, iconos y `touchTarget: 48`.
-- [X] T009 Implementar `scripts/generate-shared.mjs` para validar el esquema y generar `frontend-web/lib/design-tokens.generated.ts`, `frontend-web/styles/tokens.generated.css`, `frontend-mobile/lib/design-tokens.generated.ts`, copias de avatar y `lib/error-keys.generated.ts`.
-- [X] T010 Implementar `scripts/check-shared.mjs` con comprobación `--check` byte a byte, paridad de catálogos i18n y validación de longitud del avatar por defecto.
-- [X] T011 Implementar `scripts/check-ui.mjs` para detectar imports de gráficos fuera de `components/charts/` y literales visuales fuera de archivos generados/permitidos.
-- [X] T012 Ejecutar `node scripts/generate-shared.mjs` y versionar las salidas en `frontend-web/lib/design-tokens.generated.ts`, `frontend-web/styles/tokens.generated.css`, `frontend-mobile/lib/design-tokens.generated.ts` y `lib/error-keys.generated.ts` de ambos frontends.
-- [X] T013 [P] Crear `frontend-web/lib/branding.ts` con `Kitho`, títulos de tienda España/Latam y global, y descripción de marca.
-- [X] T014 [P] Crear `frontend-mobile/lib/branding.ts` con las mismas constantes de marca que web.
-- [X] T015 [P] Implementar `frontend-web/lib/preferences.ts` para leer/escribir `kitho_theme` y `kitho_locale` en `localStorage` y cookies con `Path=/`, `SameSite=Lax` y `Max-Age=31536000`.
-- [X] T016 [P] Implementar `frontend-mobile/lib/preferences.ts` para persistir `kitho_theme` y `kitho_locale` en SecureStore, con fallback seguro si falla el almacenamiento.
-- [X] T017 [P] Implementar `frontend-web/components/providers/ThemeProvider.tsx` con modo `system/light/dark`, `data-theme`, `matchMedia` en caliente y respeto a `prefers-reduced-motion`.
-- [X] T018 [P] Implementar `frontend-mobile/components/providers/ThemeProvider.tsx` con `useColorScheme`, override persistido, `expo-system-ui` y actualización en caliente del tema del sistema.
-- [X] T019 [P] Crear el catálogo español web en `frontend-web/messages/es.json` con los namespaces `common`, `auth`, `profile`, `family`, `invite`, `members`, `settings`, `avatar`, `errors`, `a11y` y `legal`.
-- [X] T020 [P] Crear el catálogo inglés web en `frontend-web/messages/en.json` con exactamente las mismas claves que `es.json`.
-- [X] T021 Implementar la configuración i18n web en `frontend-web/lib/i18n/index.ts` y el provider cliente en `frontend-web/components/providers/LocaleProvider.tsx`, sin rutas `[locale]`.
-- [X] T022 [P] Crear el catálogo español móvil en `frontend-mobile/lib/i18n/messages/es.json` con los mismos namespaces y claves que web.
-- [X] T023 [P] Crear el catálogo inglés móvil en `frontend-mobile/lib/i18n/messages/en.json` con exactamente las mismas claves que `es.json`.
-- [X] T024 Implementar la configuración i18n móvil en `frontend-mobile/lib/i18n/index.ts` y el provider en `frontend-mobile/components/providers/LocaleProvider.tsx` usando `expo-localization` e `i18n-js`.
-- [X] T025 [P] Crear `shared/errors/error-keys.json` con el mapa detalle/status del backend a claves `errors.*` y `errors.status.<code>`.
-- [X] T026 [P] Refactorizar `frontend-web/lib/errors.ts` para exponer `ApiError` con `status`, `messageKey` y `fallbackDetail`, errores de configuración traducibles y resolución de arrays/objetos no string.
-- [X] T027 [P] Refactorizar `frontend-mobile/lib/errors.ts` con el mismo contrato de descriptor que web.
-- [X] T028 [P] Crear `frontend-web/lib/format.ts` con `formatCurrency`, `formatNumber` y `formatDate` basados en `Intl` y el locale activo.
-- [X] T029 [P] Crear `frontend-mobile/lib/format.ts` con el mismo contrato de formato que web y la moneda del grupo.
-- [X] T030 [P] Crear `shared/avatar/avatar-options.json` con bases, fondos, cabello, ropa, ojos y accesorios, sin assets externos.
-- [X] T031 Implementar `shared/avatar/avatar-engine.ts` con hash FNV-1a determinista desde `user.id`/`email`, construcción SVG compacta, data URI y validación `<=2048`.
-- [X] T032 [P] Crear `frontend-web/components/providers/AppProviders.tsx` que componga `ThemeProvider`, `LocaleProvider`, `GoogleOAuthProvider` y el provider de sesión cuando exista.
-- [X] T033 [P] Crear `frontend-mobile/components/providers/AppProviders.tsx` que componga tema, idioma, fuentes, safe area y sesión.
-- [X] T034 [P] Añadir helpers de prueba web en `frontend-web/__tests__/helpers/renderWithProviders.tsx` y mocks de `matchMedia`/Google en `frontend-web/jest.setup.ts`.
-- [X] T035 [P] Añadir helpers de prueba móvil en `frontend-mobile/__tests__/helpers/renderWithProviders.tsx` y mocks de SecureStore/`expo-localization`/color scheme en `frontend-mobile/jest.setup.js`.
-- [X] T036 [P] Añadir pruebas web de tokens generados y paridad i18n en `frontend-web/__tests__/design-tokens.test.ts` y `frontend-web/__tests__/i18n.test.ts`.
-- [X] T037 [P] Añadir pruebas móvil de tokens generados y paridad i18n en `frontend-mobile/__tests__/design-tokens.test.ts` y `frontend-mobile/__tests__/i18n.test.ts`.
-- [X] T038 [P] Añadir pruebas web de conservación de `kitho_theme`/`kitho_locale` tras logout y `401` en `frontend-web/__tests__/preferences.test.ts`.
-- [X] T039 [P] Añadir pruebas móvil de conservación de preferencias tras logout y `401` en `frontend-mobile/__tests__/preferences.test.ts`.
-- [X] T040 [P] Actualizar `frontend-web/lib/api.ts` para lanzar el nuevo descriptor de `ApiError` y preservar `status` para guards/redirecciones.
-- [X] T041 [P] Actualizar `frontend-mobile/lib/api.ts` para lanzar el nuevo descriptor de `ApiError` y preservar `status` para guards/redirecciones.
-- [X] T042 [P] Actualizar `frontend-web/__tests__/api.test.ts` y `frontend-web/__tests__/errors.test.ts` al contrato de descriptor, incluyendo arrays 422 y fallback desconocido.
-- [X] T043 [P] Actualizar `frontend-mobile/__tests__/api.test.ts` y `frontend-mobile/__tests__/errors.test.ts` al contrato de descriptor, incluyendo arrays 422 y fallback desconocido.
+- [X] T008 Crear/ajustar `design-tokens/tokens.json` con roles MD3 claros/oscuros derivados de `#6750A4`, roles `success`/`warning`, tipografía Inter, espaciado, radios, elevación, movimiento, iconos y breakpoints `compact=0`, `medium=600`, `expanded=840`.
+- [X] T009 Ampliar `scripts/generate-shared.mjs` para generar `frontend-web/lib/generated/tokens.ts`, `frontend-web/app/generated/tokens.generated.css` y `frontend-mobile/lib/generated/tokens.ts` desde `design-tokens/tokens.json` con cabecera `AUTO-GENERATED`.
+- [X] T010 Ampliar `scripts/generate-shared.mjs` para generar `frontend-web/lib/i18n/messages.generated.ts`, `frontend-mobile/lib/i18n/messages.generated.ts`, `frontend-web/lib/generated/error-keys.ts`, `frontend-mobile/lib/generated/error-keys.ts` y las copias de avatar desde `shared/`.
+- [X] T011 Crear `shared/currencies/regions.json` con las listas LatAm `MXN, BRL, ARS, COP, CLP`; España/Europa `EUR, GBP, CHF, SEK, PLN`; EE.UU. `USD, CAD, MXN, EUR, GBP`, y el mapeo país→moneda local.
+- [X] T012 Ampliar `scripts/generate-shared.mjs` para copiar `shared/currencies/regions.json` a `frontend-web/lib/currencies.generated.ts` y `frontend-mobile/lib/currencies.generated.ts`.
+- [X] T013 Crear/ajustar `shared/i18n/es.json` y `shared/i18n/en.json` con los namespaces `common`, `auth`, `profile`, `family`, `invite`, `members`, `settings`, `avatar`, `errors`, `a11y` y `legal`, incluyendo moneda, código de invitación, acciones de familia y errores usados/expirados.
+- [X] T014 Crear/ajustar `shared/errors/error-keys.json` con el mapeo detalle→clave para invitación inválida/usada/expirada, moneda inválida, eliminar/abandonar familia y reasignación fallida; mantener `errors.status.<code>`.
+- [X] T015 Implementar `frontend-web/lib/branding.ts` y `frontend-mobile/lib/branding.ts` con `BRAND_NAME`, títulos de tienda y wordmark provisional, sin imágenes externas.
+- [X] T016 Implementar preferencias web en `frontend-web/lib/preferences.ts` con `kitho_theme` y `kitho_locale` en `localStorage` + cookies `Path=/`, `SameSite=Lax`, `Max-Age=31536000` y `Secure` en HTTPS.
+- [X] T017 Implementar preferencias móvil en `frontend-mobile/lib/preferences.ts` con `kitho_theme` y `kitho_locale` en SecureStore, sin borrarlas en logout/`401`.
+- [X] T018 Implementar `frontend-web/components/providers/ThemeProvider.tsx` con modos Sistema/Claro/Oscuro, `data-theme`, `matchMedia` en caliente y sin flash inicial.
+- [X] T019 Implementar `frontend-mobile/components/providers/ThemeProvider.tsx` con `useColorScheme`, override persistido, `StatusBar` y splash retenido hasta hidratar.
+- [X] T020 Implementar `frontend-web/components/providers/LocaleProvider.tsx` con `next-intl`, locale inicial desde cookie y cambio de idioma sin recargar ni cambiar la URL.
+- [X] T021 Implementar `frontend-mobile/components/providers/LocaleProvider.tsx` con `i18n-js`, región de `expo-localization` para formato y español por defecto.
+- [X] T022 Implementar `frontend-web/lib/format.ts` y `frontend-mobile/lib/format.ts` con `Intl.NumberFormat`, `Intl.DateTimeFormat` y `Intl.DisplayNames` para la moneda única del grupo.
+- [X] T023 Actualizar `frontend-web/lib/types.ts` y `frontend-web/lib/api.ts` para el contrato de spec 001: `Invitation.codigo` sin `link`, `expira_en`, `usado`; `Member.rol_familiar`/`rol_permiso`/`created_at`; `Family.estado`; métodos `joinFamilyByCode`, `leaveFamily`, `deleteFamily` y creación de invitación con 168 horas.
+- [X] T024 Actualizar `frontend-mobile/lib/types.ts` y `frontend-mobile/lib/api.ts` con el mismo contrato de spec 001 que web, incluidos errores usados/expirados y acciones de familia.
+- [X] T025 Renombrar la persistencia de invitación pendiente a código en `frontend-web/lib/session.ts` y `frontend-mobile/lib/session.ts`, conservando la clave `finanzas_familiares_pending_invite` para no romper sesiones existentes.
+- [X] T026 Implementar el descriptor de error con `status`, `messageKey` y `fallbackDetail` en `frontend-web/lib/errors.ts` y `frontend-mobile/lib/errors.ts`, traduciendo en render.
+- [X] T027 Ampliar `frontend-web/__tests__/helpers/renderWithProviders.tsx` y `frontend-mobile/__tests__/helpers/renderWithProviders.tsx` con mocks de tema, locale, geolocalización, `Intl.DisplayNames` y API de spec 001.
 
-**Checkpoint**: Tokens, tema, idioma, errores, avatar y helpers listos; las historias pueden empezar.
+**Checkpoint**: Fundación lista; las historias pueden empezar en paralelo.
 
 ---
 
-## Phase 3: User Story 1 - Sistema visual coherente y accesible (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 - Sistema visual coherente y accesible (Priority: P1)
 
-**Goal**: Biblioteca MD3 propia con tokens, tipografía Inter, iconos Lucide y estados accesibles en
-web y móvil.
+**Goal**: Tokens, componentes MD3 y accesibilidad compartidos por nombre en web y móvil.
 
-**Independent Test**: Renderizar y recorrer los componentes de `frontend-web/components/ui/` y
-`frontend-mobile/components/ui/` verificando variantes, foco, teclado, roles y ausencia de literales
-visuales; después, comprobar que las pantallas migradas usan el mismo sistema.
+**Independent Test**: Navegar pantallas actuales en web y móvil y comprobar mismos tokens,
+tipografía Inter, iconos Lucide, estados de componente y ausencia de valores visuales hardcodeados.
 
 ### Tests for User Story 1
 
-- [X] T044 [P] [US1] Crear pruebas web de componentes, variantes y accesibilidad con `jest-axe` en `frontend-web/__tests__/ui-components.test.tsx`.
-- [X] T045 [P] [US1] Crear pruebas móvil de componentes, estados y etiquetas accesibles en `frontend-mobile/__tests__/ui-components.test.tsx`.
+- [X] T028 [P] [US1] Crear pruebas de tokens y derivación en `frontend-web/__tests__/design-tokens.test.ts`, validando `#6750A4`, breakpoints `0/600/840`, roles `on-*` y ausencia de hex hardcodeados.
+- [X] T029 [P] [US1] Crear pruebas equivalentes de tokens en `frontend-mobile/__tests__/design-tokens.test.ts`, incluyendo objetivos táctiles de 48 dp y contraste WCAG AA.
+- [X] T030 [P] [US1] Crear pruebas de componentes y accesibilidad web en `frontend-web/__tests__/ui-components.test.tsx` para roles, nombres, foco, disabled, error y `jest-axe`.
 
-### Implementation for User Story 1 (Web)
+### Implementation for User Story 1
 
-- [X] T046 [P] [US1] Implementar `Button` e `IconButton` MD3 con variantes filled/tonal/outlined/text/danger, loading, disabled y foco visible en `frontend-web/components/ui/Button.tsx` e `frontend-web/components/ui/IconButton.tsx`.
-- [X] T047 [P] [US1] Implementar `TextField` y `SearchField` con label, hint, error, iconos y anuncio de error en `frontend-web/components/ui/TextField.tsx` y `frontend-web/components/ui/SearchField.tsx`.
-- [X] T048 [P] [US1] Implementar `Select`, `Checkbox`, `Radio` y `Switch` accesibles en `frontend-web/components/ui/Select.tsx`, `Checkbox.tsx`, `Radio.tsx` y `Switch.tsx`.
-- [X] T049 [P] [US1] Implementar `Card`, `List`, `ListItem` y `Divider` en `frontend-web/components/ui/Card.tsx`, `List.tsx` y `Divider.tsx`.
-- [X] T050 [P] [US1] Implementar `Chip`, `Badge` y `Wordmark` en `frontend-web/components/ui/Chip.tsx`, `Badge.tsx` y `Wordmark.tsx`.
-- [X] T051 [P] [US1] Implementar `InlineBanner`, `Spinner` y `EmptyState` con regiones live en `frontend-web/components/ui/InlineBanner.tsx`, `Spinner.tsx` y `EmptyState.tsx`.
-- [X] T052 [P] [US1] Implementar `Dialog`, `ConfirmDialog` y `Menu` con `<dialog>`, foco atrapado, Escape y retorno de foco en `frontend-web/components/ui/Dialog.tsx` y `Menu.tsx`.
-- [X] T053 [P] [US1] Implementar `Page`, `Tabs` de contenido y `Breadcrumbs` cuando apliquen en `frontend-web/components/ui/Page.tsx` y `Tabs.tsx`.
-- [X] T054 [US1] Crear el barrel `frontend-web/components/ui/index.ts` y las utilidades de clase/tokens en `frontend-web/lib/ui.ts`.
-- [X] T055 [P] [US1] Implementar `GoogleSignInButton` web con Google Identity Services oficial (`GoogleLogin`, `locale`, `shape="pill"`, `size="large"`, `text="continue_with"`) en `frontend-web/components/ui/GoogleSignInButton.tsx`.
-- [X] T056 [US1] Migrar las pantallas web actuales a `frontend-web/components/ui/index.ts` y eliminar `frontend-web/components/ui.tsx`: `frontend-web/app/auth/login/page.tsx`, `frontend-web/app/profile/setup/page.tsx`, `frontend-web/app/family/select/page.tsx`, `frontend-web/app/family/create/page.tsx`, `frontend-web/app/family/members/page.tsx`, `frontend-web/app/invite/page.tsx` y `frontend-web/app/page.tsx`.
+- [X] T031 [P] [US1] Refactorizar botones y campos web en `frontend-web/components/ui/Button.tsx`, `frontend-web/components/ui/IconButton.tsx`, `frontend-web/components/ui/TextField.tsx`, `frontend-web/components/ui/Select.tsx`, `frontend-web/components/ui/Checkbox.tsx`, `frontend-web/components/ui/RadioGroup.tsx`, `frontend-web/components/ui/Switch.tsx` y `frontend-web/components/ui/SearchField.tsx` con variantes filled/tonal/outlined/text/danger y estados completos.
+- [X] T032 [P] [US1] Refactorizar contenido web en `frontend-web/components/ui/Card.tsx`, `frontend-web/components/ui/List.tsx`, `frontend-web/components/ui/Avatar.tsx`, `frontend-web/components/ui/Chip.tsx`, `frontend-web/components/ui/Badge.tsx`, `frontend-web/components/ui/Wordmark.tsx` y `frontend-web/components/ui/Breadcrumbs.tsx` usando tokens.
+- [X] T033 [P] [US1] Refactorizar feedback web en `frontend-web/components/ui/Dialog.tsx`, `frontend-web/components/ui/Menu.tsx`, `frontend-web/components/ui/InlineBanner.tsx`, `frontend-web/components/ui/Spinner.tsx`, `frontend-web/components/ui/Loading.tsx` y `frontend-web/components/ui/EmptyState.tsx` con `<dialog>`, foco atrapado, Escape y regiones live.
+- [X] T034 [US1] Actualizar `frontend-web/components/ui/GoogleSignInButton.tsx` al botón oficial de Google Identity Services con `locale`, `shape="pill"`, `size="large"`, `text="continue_with"`, fondo blanco/outline y logo G sin recolorear.
+- [X] T035 [P] [US1] Refactorizar formularios móvil en `frontend-mobile/components/ui/Button.tsx`, `frontend-mobile/components/ui/Field.tsx`, `frontend-mobile/components/ui/Select.tsx`, `frontend-mobile/components/ui/Checkbox.tsx`, `frontend-mobile/components/ui/ChoiceGroup.tsx`, `frontend-mobile/components/ui/Switch.tsx` y `frontend-mobile/components/ui/SearchField.tsx` con las mismas variantes y estados.
+- [X] T036 [P] [US1] Refactorizar contenido móvil en `frontend-mobile/components/ui/Card.tsx`, `frontend-mobile/components/ui/List.tsx`, `frontend-mobile/components/ui/Avatar.tsx`, `frontend-mobile/components/ui/Chip.tsx`, `frontend-mobile/components/ui/Badge.tsx`, `frontend-mobile/components/ui/Wordmark.tsx` y `frontend-mobile/components/ui/Breadcrumbs.tsx` usando tokens.
+- [X] T037 [P] [US1] Refactorizar feedback móvil en `frontend-mobile/components/ui/Dialog.tsx`, `frontend-mobile/components/ui/Menu.tsx`, `frontend-mobile/components/ui/InlineBanner.tsx`, `frontend-mobile/components/ui/Spinner.tsx`, `frontend-mobile/components/ui/Loading.tsx` y `frontend-mobile/components/ui/EmptyState.tsx` con `accessibilityViewIsModal`, foco inicial y live regions.
+- [X] T038 [US1] Actualizar `frontend-mobile/components/ui/GoogleSignInButton.tsx` y `frontend-mobile/components/ui/google-brand.ts` para mantener logo G oficial multicolor, texto traducido, estados disabled/loading y objetivo táctil de 48 dp.
+- [X] T039 [US1] Actualizar `frontend-web/components/ui/index.ts` para exportar todos los componentes, variantes y tipos compartidos sin duplicar APIs.
+- [X] T040 [US1] Actualizar `frontend-mobile/components/ui/index.ts` para exportar los equivalentes móviles con los mismos nombres y variantes.
+- [X] T041 [US1] Aplicar foco visible de 2 px, orden lógico, `aria-describedby`/`aria-invalid`, `aria-busy` y `prefers-reduced-motion` en `frontend-web/components/ui/` y `frontend-web/app/globals.css`.
+- [X] T042 [US1] Aplicar foco visible, `accessibilityRole`, `accessibilityState`, `accessibilityLiveRegion`, objetivos de 48 dp y `use-reduced-motion.ts` en `frontend-mobile/components/ui/` y `frontend-mobile/lib/use-reduced-motion.ts`.
+- [X] T043 [P] [US1] Completar pruebas de componentes/feedback web en `frontend-web/__tests__/ui-components.test.tsx` y `frontend-web/__tests__/feedback.test.tsx`, incluyendo `jest-axe` sin violaciones críticas.
+- [X] T044 [P] [US1] Completar pruebas de componentes/feedback móvil en `frontend-mobile/__tests__/ui-components.test.tsx` y `frontend-mobile/__tests__/feedback.test.tsx`, incluyendo roles, estados y nombres accesibles.
+- [X] T045 [US1] Actualizar `scripts/check-ui.mjs` para fallar ante colores/tipografías/espaciados literales fuera de tokens o excepciones documentadas.
 
-### Implementation for User Story 1 (Móvil)
-
-- [X] T057 [P] [US1] Implementar `Button` e `IconButton` MD3 con `Pressable`, variantes, loading, disabled y foco en `frontend-mobile/components/ui/Button.tsx` e `frontend-mobile/components/ui/IconButton.tsx`.
-- [X] T058 [P] [US1] Implementar `TextField` y `SearchField` con `TextInput`, label, hint, error y `accessibilityLiveRegion` en `frontend-mobile/components/ui/TextField.tsx` y `frontend-mobile/components/ui/SearchField.tsx`.
-- [X] T059 [P] [US1] Implementar `Select`, `Checkbox`, `Radio` y `Switch` con modal/lista accesible en `frontend-mobile/components/ui/Select.tsx`, `Checkbox.tsx`, `Radio.tsx` y `Switch.tsx`.
-- [X] T060 [P] [US1] Implementar `Card`, `List`, `ListItem` y `Divider` en `frontend-mobile/components/ui/Card.tsx`, `List.tsx` y `Divider.tsx`.
-- [X] T061 [P] [US1] Implementar `Chip`, `Badge` y `Wordmark` en `frontend-mobile/components/ui/Chip.tsx`, `Badge.tsx` y `Wordmark.tsx`.
-- [X] T062 [P] [US1] Implementar `InlineBanner`, `Spinner` y `EmptyState` con `accessibilityLiveRegion` en `frontend-mobile/components/ui/InlineBanner.tsx`, `Spinner.tsx` y `EmptyState.tsx`.
-- [X] T063 [P] [US1] Implementar `Dialog`, `ConfirmDialog` y `Menu` con `Modal`, `accessibilityViewIsModal` y foco accesible en `frontend-mobile/components/ui/Dialog.tsx` y `Menu.tsx`.
-- [X] T064 [P] [US1] Implementar `Screen`, `Tabs` de contenido y `Breadcrumbs` cuando apliquen en `frontend-mobile/components/ui/Screen.tsx` y `Tabs.tsx`.
-- [X] T065 [US1] Crear el barrel `frontend-mobile/components/ui/index.ts` y las utilidades de estilos por tema en `frontend-mobile/lib/ui.ts`.
-- [X] T066 [P] [US1] Implementar `GoogleSignInButton` móvil como `Pressable` MD3 con icono oficial SVG inline y nombre accesible traducido en `frontend-mobile/components/ui/GoogleSignInButton.tsx`.
-- [X] T067 [US1] Migrar las pantallas móvil actuales a `frontend-mobile/components/ui/index.ts` y eliminar `frontend-mobile/components/ui.tsx`: `frontend-mobile/app/auth/login.tsx`, `frontend-mobile/app/profile/setup.tsx`, `frontend-mobile/app/family/select.tsx`, `frontend-mobile/app/family/create.tsx`, `frontend-mobile/app/family/members.tsx`, `frontend-mobile/app/invite/index.tsx` y `frontend-mobile/app/index.tsx`.
-
-**Checkpoint**: Biblioteca MD3 y pantallas actuales usan tokens, Inter, Lucide y componentes accesibles.
+**Checkpoint**: US1 funcional y verificable de forma independiente.
 
 ---
 
 ## Phase 4: User Story 2 - Navegación adaptada al dispositivo (Priority: P1)
 
-**Goal**: Topbar + sidebar/rail/tabs web, tabs móvil y redirección de Inicio a Miembros sin cambiar
-las URLs existentes.
+**Goal**: Shell y navegación responsive con sidebar/rail/tabs y guards de la spec 001.
 
-**Independent Test**: Con sesión completa, recorrer Inicio, Miembros, Perfil y Ajustes a `1440`,
-`840`, `839`, `600`, `599` y `320` px en web, y las tabs/stack en móvil, verificando visibilidad,
-estado activo, vuelta y redirección de `/`.
+**Independent Test**: Iniciar sesión y recorrer Inicio, Miembros, Perfil y Ajustes en 1440/840/839/600/599/320 px y en móvil.
 
 ### Tests for User Story 2
 
-- [X] T068 [P] [US2] Crear pruebas web de navegación responsive, `aria-current`, visibilidad de Ajustes y redirección de `/` en `frontend-web/__tests__/navigation.test.tsx`.
-- [X] T069 [P] [US2] Crear pruebas móvil de tabs, rutas del stack, botón de vuelta y ausencia de tab Ajustes en `frontend-mobile/__tests__/navigation.test.tsx`.
+- [X] T046 [P] [US2] Crear pruebas de navegación web en `frontend-web/__tests__/navigation.test.tsx` para sidebar/rail/tabs, `aria-current`, guards y redirección de Inicio.
+- [X] T047 [P] [US2] Crear pruebas de navegación móvil en `frontend-mobile/__tests__/navigation.test.tsx` para tabs Inicio/Miembros/Perfil, Ajustes desde Perfil y botón de vuelta.
 
-### Implementation for User Story 2 (Web)
+### Implementation for User Story 2
 
-- [X] T070 [P] [US2] Crear la configuración de navegación con iconos Lucide y claves i18n en `frontend-web/lib/navigation.ts`.
-- [X] T071 [P] [US2] Implementar `TopAppBar` con wordmark, título de sección y menú de usuario en `frontend-web/components/layout/TopAppBar.tsx`.
-- [X] T072 [P] [US2] Implementar `Sidebar` expandida en `frontend-web/components/layout/Sidebar.tsx`.
-- [X] T073 [P] [US2] Implementar `Rail` media con iconos y etiquetas cortas en `frontend-web/components/layout/Rail.tsx`.
-- [X] T074 [P] [US2] Implementar `BottomTabs` compacta con Inicio, Miembros y Perfil en `frontend-web/components/layout/BottomTabs.tsx`.
-- [X] T075 [US2] Implementar `AppShell` con skip link, layout responsive y espacio para tabs en `frontend-web/components/layout/AppShell.tsx`.
-- [X] T076 [US2] Implementar `frontend-web/components/providers/SessionProvider.tsx` y adaptar `frontend-web/hooks/useAuthGuard.ts` para el orden login → perfil → grupo, invitación pendiente y `401`.
-- [X] T077 [US2] Reorganizar las rutas públicas y de onboarding web en `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(onboarding)/profile/setup/page.tsx`, `frontend-web/app/(onboarding)/family/select/page.tsx`, `frontend-web/app/(onboarding)/family/create/page.tsx` y `frontend-web/app/(onboarding)/invite/page.tsx`, conservando las URLs.
-- [X] T078 [US2] Reorganizar las rutas autenticadas web en `frontend-web/app/(app)/layout.tsx`, `frontend-web/app/(app)/page.tsx` y `frontend-web/app/(app)/family/members/page.tsx`, con `SessionProvider` y `AppShell`.
-- [X] T079 [US2] Implementar la redirección de Inicio y el estado activo (`aria-current`) para Miembros/Perfil/Ajustes en `frontend-web/app/(app)/page.tsx` y `frontend-web/lib/navigation.ts`.
+- [X] T048 [US2] Implementar `frontend-web/components/navigation/AppShell.tsx`, `TopAppBar.tsx`, `Sidebar.tsx`, `NavigationRail.tsx` y `BottomNavigation.tsx` con topbar + sidebar `>=840px`, rail `600–839px` y tabs `<600px`.
+- [X] T049 [US2] Actualizar `frontend-web/components/navigation/nav-items.ts` con Inicio, Miembros, Perfil y Ajustes, visibilidad por breakpoint, iconos Lucide y estado activo accesible.
+- [X] T050 [US2] Actualizar `frontend-web/app/(app)/layout.tsx` para montar `AppShell`, `SessionProvider` y el guard de sesión sin duplicar refresh.
+- [X] T051 [US2] Implementar `frontend-mobile/components/navigation/BottomTabs.tsx` y `ScreenHeader.tsx` con tabs Inicio/Miembros/Perfil, header propio y safe area.
+- [X] T052 [US2] Actualizar `frontend-mobile/app/(app)/(tabs)/_layout.tsx` y `frontend-mobile/app/(app)/_layout.tsx` para tabs, stack de Ajustes/Perfil y botón de vuelta.
+- [X] T053 [US2] Implementar la redirección de `frontend-web/app/(app)/page.tsx` y `frontend-mobile/app/(app)/(tabs)/index.tsx` a Miembros, y los guards login→perfil→grupo en layouts.
+- [X] T054 [US2] Aplicar `SafeAreaView`/`useSafeAreaInsets`, `min-w-0`, `flexShrink` y ausencia de scroll horizontal en `frontend-web/components/navigation/` y `frontend-mobile/components/navigation/`.
+- [X] T055 [US2] Actualizar `frontend-web/__tests__/navigation.test.tsx`, `frontend-mobile/__tests__/navigation.test.tsx` y `frontend-web/__tests__/useAuthGuard.test.tsx` con los breakpoints y redirecciones finales.
 
-### Implementation for User Story 2 (Móvil)
-
-- [X] T080 [P] [US2] Crear la configuración de navegación móvil con iconos Lucide y claves i18n en `frontend-mobile/lib/navigation.ts`.
-- [X] T081 [P] [US2] Implementar `ScreenHeader` MD3 con título, vuelta opcional y acción en `frontend-mobile/components/layout/ScreenHeader.tsx`.
-- [X] T082 [P] [US2] Implementar `BottomTabs` y el layout de tabs con Inicio, Miembros y Perfil en `frontend-mobile/components/layout/BottomTabs.tsx` y `frontend-mobile/app/(app)/(tabs)/_layout.tsx`.
-- [X] T083 [US2] Implementar `frontend-mobile/components/providers/SessionProvider.tsx` y adaptar `frontend-mobile/hooks/useAuthGuard.ts` para el orden login → perfil → grupo, invitación pendiente y `401`.
-- [X] T084 [US2] Reorganizar las rutas públicas y de onboarding móvil en `frontend-mobile/app/(auth)/auth/login.tsx`, `frontend-mobile/app/(onboarding)/profile/setup.tsx`, `frontend-mobile/app/(onboarding)/family/select.tsx`, `frontend-mobile/app/(onboarding)/family/create.tsx` y `frontend-mobile/app/(onboarding)/invite/index.tsx`.
-- [X] T085 [US2] Reorganizar las rutas autenticadas móvil en `frontend-mobile/app/(app)/_layout.tsx`, `frontend-mobile/app/(app)/(tabs)/index.tsx` y `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, con redirección de Inicio a Miembros.
-- [X] T086 [US2] Implementar la navegación de Ajustes desde Perfil y el botón de vuelta a Perfil cuando no hay historial en `frontend-mobile/app/(app)/settings.tsx` y `frontend-mobile/components/layout/ScreenHeader.tsx`.
-- [X] T087 [US2] Actualizar las pruebas de guard existentes a la matriz de redirecciones y rutas agrupadas en `frontend-web/__tests__/useAuthGuard.test.tsx` y `frontend-mobile/__tests__/useAuthGuard.test.tsx`.
-
-**Checkpoint**: Navegación web responsive y móvil completa, con URLs existentes y guards operativos.
+**Checkpoint**: US2 funcional y verificable de forma independiente.
 
 ---
 
 ## Phase 5: User Story 3 - Tema e idioma controlables (Priority: P2)
 
-**Goal**: Tema Sistema/Claro/Oscuro sin parpadeo, idioma español/inglés completo y persistencia
-local, con Ajustes operativo en ambas plataformas.
+**Goal**: Ajustes con tema e idioma persistentes, sin flash y con errores traducidos.
 
-**Independent Test**: Cambiar tema e idioma en Ajustes, recargar web, cerrar/abrir móvil y verificar
-persistencia, actualización en caliente, `lang`/`data-theme` iniciales y errores visibles
-traducidos.
+**Independent Test**: Cambiar tema/idioma en Ajustes, recargar y comprobar persistencia, cambio en caliente y ausencia de cadenas sin traducir.
 
 ### Tests for User Story 3
 
-- [X] T088 [P] [US3] Crear pruebas web de tema inicial sin parpadeo, cambio en caliente y persistencia en `frontend-web/__tests__/theme.test.tsx`.
-- [X] T089 [P] [US3] Crear pruebas web de cambio de idioma sin recarga, traducción de errores visibles y persistencia en `frontend-web/__tests__/locale.test.tsx`.
-- [X] T090 [P] [US3] Crear pruebas móvil de tema sistema/claro/oscuro, cambio en caliente y persistencia en `frontend-mobile/__tests__/theme.test.tsx`.
-- [X] T091 [P] [US3] Crear pruebas móvil de cambio de idioma, formato `Intl` y persistencia en `frontend-mobile/__tests__/locale.test.tsx`.
+- [X] T056 [P] [US3] Crear pruebas de tema web en `frontend-web/__tests__/theme.test.tsx` para Sistema/Claro/Oscuro, cookie, `localStorage`, `data-theme` y cambio de `matchMedia` en caliente.
+- [X] T057 [P] [US3] Crear pruebas de tema móvil en `frontend-mobile/__tests__/theme.test.tsx` para SecureStore, `useColorScheme` y persistencia tras reapertura.
+- [X] T058 [P] [US3] Crear pruebas de locale en `frontend-web/__tests__/locale.test.tsx` y `frontend-mobile/__tests__/locale.test.tsx` para español por defecto, cambio a inglés sin recargar y errores ya visibles traducidos.
 
 ### Implementation for User Story 3
 
-- [X] T092 [US3] Convertir `frontend-web/app/layout.tsx` en server layout con Inter (`next/font/google`, `--font-inter`, `display: "swap"`), `lang` desde cookie, `data-theme`, script previo al paint, `AppProviders` y `generateMetadata` con marca Kitho.
-- [X] T093 [US3] Implementar Ajustes web con tema, idioma, cerrar sesión, acerca de/versión (`package.json`), aviso legal y enlaces a editar perfil/avatar en `frontend-web/app/(app)/settings/page.tsx`.
-- [X] T094 [US3] Refactorizar `frontend-mobile/app/_layout.tsx` con `GestureHandlerRootView`, `SafeAreaProvider`, fuentes Inter, splash retenido hasta hidratar preferencias, `AppProviders` y Stack raíz.
-- [X] T095 [US3] Implementar Ajustes móvil con tema, idioma, cerrar sesión, acerca de/versión (`app.json`), aviso legal y enlaces a editar perfil/avatar en `frontend-mobile/app/(app)/settings.tsx`.
-- [X] T096 [US3] Conectar los selectores de tema/idioma a `ThemeProvider`/`LocaleProvider` y asegurar que logout y `401` no borran `kitho_theme`/`kitho_locale` en `frontend-web/app/(app)/settings/page.tsx`, `frontend-mobile/app/(app)/settings.tsx`, `frontend-web/lib/session.ts` y `frontend-mobile/lib/session.ts`.
+- [X] T059 [US3] Implementar `frontend-web/app/(app)/settings/page.tsx` con tema, idioma, editar perfil, avatar, acerca de/versión/legal y logout con confirmación.
+- [X] T060 [US3] Implementar `frontend-mobile/app/(app)/settings.tsx` con las mismas secciones y navegación de vuelta a Perfil.
+- [X] T061 [US3] Implementar el script inline y la lectura de cookie en `frontend-web/app/layout.tsx` para aplicar `data-theme` antes del paint, con `suppressHydrationWarning`.
+- [X] T062 [US3] Sincronizar cambios de tema del sistema en caliente en `frontend-web/components/providers/ThemeProvider.tsx` y `frontend-mobile/components/providers/ThemeProvider.tsx`.
+- [X] T063 [US3] Sincronizar cambio de idioma en caliente en `frontend-web/components/providers/LocaleProvider.tsx` y `frontend-mobile/components/providers/LocaleProvider.tsx`, actualizando textos y errores visibles.
+- [X] T064 [US3] Actualizar `scripts/check-shared.mjs` para validar paridad exacta de claves `es`/`en` y entre catálogos web/móvil.
+- [X] T065 [US3] Actualizar `frontend-web/lib/format.ts` y `frontend-mobile/lib/format.ts` para usar la moneda del grupo y el locale activo en montos, números y fechas.
+- [X] T066 [US3] Completar `frontend-web/__tests__/theme.test.tsx`, `frontend-web/__tests__/locale.test.tsx`, `frontend-mobile/__tests__/theme.test.tsx` y `frontend-mobile/__tests__/locale.test.tsx` con persistencia y errores i18n.
 
-**Checkpoint**: Tema e idioma persisten, cambian en caliente y no dejan cadenas sin traducir.
+**Checkpoint**: US3 funcional y verificable de forma independiente.
 
 ---
 
 ## Phase 6: User Story 4 - Onboarding y gestión familiar con las nuevas vistas (Priority: P2)
 
-**Goal**: Refactorizar login, perfil, grupo, invitación y miembros; añadir Perfil, edición de perfil
-e Inicio sin romper los flujos de la spec 001.
+**Goal**: Refactor de login, perfil, grupo, invitación y miembros; unión por código, moneda por
+geolocalización, invitación solo con código y acciones Eliminar/Abandonar.
 
-**Independent Test**: Ejecutar login → perfil → creación/unión de grupo → miembros → perfil/edición
-en web y móvil, comprobando URLs, guards, errores y datos existentes.
+**Independent Test**: Ejecutar login→perfil→crear familia→miembros→generar invitación→unirse por
+código→abandonar/eliminar, sin romper autenticación, perfil, grupo, invitación ni miembros.
 
 ### Tests for User Story 4
 
-- [X] T097 [P] [US4] Actualizar las pruebas de flujos web existentes a las nuevas rutas/componentes en `frontend-web/__tests__/flows.test.tsx`.
-- [X] T098 [P] [US4] Actualizar las pruebas de flujos móvil existentes a las nuevas rutas/componentes en `frontend-mobile/__tests__/flows.test.tsx`.
+- [X] T067 [P] [US4] Crear pruebas de moneda web en `frontend-web/__tests__/currency.test.ts` para 5 sugerencias, local primero, geolocalización denegada, fallback locale/USD y búsqueda **Otros** ISO 4217.
+- [X] T068 [P] [US4] Crear pruebas de moneda móvil en `frontend-mobile/__tests__/currency.test.ts` con los mismos casos y el mock de `expo-location`.
+- [X] T069 [P] [US4] Crear pruebas de invitación web en `frontend-web/__tests__/invite-code.test.tsx` para código único, single-use, 7 días, sin URL, normalización y errores inválido/usado/expirado.
+- [X] T070 [P] [US4] Crear pruebas de invitación móvil en `frontend-mobile/__tests__/invite-code.test.tsx` con los mismos casos.
+- [X] T071 [P] [US4] Crear pruebas de acciones de familia web en `frontend-web/__tests__/family-actions.test.tsx` para Eliminar con 1 integrante, Abandonar con más de 1, confirmación, carga y redirección.
+- [X] T072 [P] [US4] Crear pruebas de acciones de familia móvil en `frontend-mobile/__tests__/family-actions.test.tsx` con los mismos casos.
 
-### Implementation for User Story 4 (Web)
+### Implementation for User Story 4
 
-- [X] T099 [P] [US4] Refactorizar el login web con `Wordmark`, `GoogleSignInButton`, `InlineBanner`, spinner y errores traducidos en `frontend-web/app/(auth)/auth/login/page.tsx`.
-- [X] T100 [P] [US4] Refactorizar la configuración de perfil web con `TextField`, avatar por defecto y estados en `frontend-web/app/(onboarding)/profile/setup/page.tsx`.
-- [X] T101 [P] [US4] Refactorizar selección y creación de grupo web con `Card`, `Select` de moneda, validación y conflictos en `frontend-web/app/(onboarding)/family/select/page.tsx` y `frontend-web/app/(onboarding)/family/create/page.tsx`.
-- [X] T102 [P] [US4] Refactorizar invitación web con resumen, parentesco, estados inválido/expirado y acciones en `frontend-web/app/(onboarding)/invite/page.tsx`.
-- [X] T103 [P] [US4] Refactorizar miembros web con lista, límite de 10, roles, invitación y acciones accesibles en `frontend-web/app/(app)/family/members/page.tsx`.
-- [X] T104 [P] [US4] Crear Perfil web con avatar, nombre, correo, editar perfil, editar avatar y enlace a Ajustes en `frontend-web/app/(app)/profile/page.tsx`.
-- [X] T105 [P] [US4] Crear edición de perfil web con nombre, avatar actual y guardar/cancelar en `frontend-web/app/(app)/profile/edit/page.tsx`.
+- [X] T073 [P] [US4] Implementar `frontend-web/lib/currency.ts` con catálogo ISO 4217, 5 sugerencias regionales, moneda local, búsqueda por código/nombre y fallback locale/USD.
+- [X] T074 [P] [US4] Implementar `frontend-mobile/lib/currency.ts` con el mismo contrato y `Intl.DisplayNames` para nombres traducidos.
+- [X] T075 [US4] Implementar `frontend-web/components/family/CurrencySelect.tsx` como selector único con 5 sugerencias, indicador de moneda local, **Otros** y estados loading/error/disabled.
+- [X] T076 [US4] Implementar `frontend-mobile/components/family/CurrencySelect.tsx` con el mismo contrato y modal/lista accesible.
+- [X] T077 [US4] Implementar `frontend-web/lib/geolocation.ts` con geolocalización opcional, timeout, país detectado y fallback al locale sin bloquear el alta.
+- [X] T078 [US4] Implementar `frontend-mobile/lib/geolocation.ts` con `expo-location`, permiso opcional y fallback al locale.
+- [X] T079 [US4] Actualizar `frontend-web/app/(onboarding)/family/create/page.tsx` para usar `CurrencySelect`, preseleccionar la moneda local y enviar `moneda_local` única.
+- [X] T080 [US4] Actualizar `frontend-mobile/app/(onboarding)/family/create.tsx` para usar `CurrencySelect` y el mismo comportamiento.
+- [X] T081 [US4] Actualizar `frontend-web/app/(auth)/auth/login/page.tsx` para integrar el botón oficial de Google, textos traducidos y errores accesibles.
+- [X] T082 [US4] Actualizar `frontend-mobile/app/(auth)/auth/login.tsx` para integrar el botón oficial de Google, estados loading/disabled y errores accesibles.
+- [X] T083 [US4] Actualizar `frontend-web/app/(onboarding)/profile/setup/page.tsx` con nombre, avatar por defecto, validación, carga, error y redirección.
+- [X] T084 [US4] Actualizar `frontend-mobile/app/(onboarding)/profile/setup.tsx` con el mismo flujo y estados.
+- [X] T085 [US4] Actualizar `frontend-web/app/(onboarding)/family/select/page.tsx` para rotular **Unirme mediante código**, navegar a `/invite` y eliminar cualquier opción de enlace.
+- [X] T086 [US4] Actualizar `frontend-mobile/app/(onboarding)/family/select.tsx` con la misma opción y navegación.
+- [X] T087 [US4] Actualizar `frontend-web/app/(onboarding)/invite/page.tsx` para unirse introduciendo código, normalizar mayúsculas/espacios, limpiar código pendiente y mapear errores inválido/usado/expirado inline.
+- [X] T088 [US4] Actualizar `frontend-mobile/app/(onboarding)/invite/index.tsx` con el mismo flujo y sin leer `token` de la URL.
+- [X] T089 [US4] Implementar `frontend-web/components/family/InviteCode.tsx` para mostrar solo el código agrupado, caducidad de 7 días, single-use, copiar y compartir texto sin URL.
+- [X] T090 [US4] Implementar `frontend-mobile/components/family/InviteCode.tsx` con el mismo contrato y `Share.share` solo de texto.
+- [X] T091 [US4] Actualizar `frontend-web/app/(app)/family/members/page.tsx` para generar invitación con `codigo`, mostrar `InviteCode`, caducidad y acciones de copiar/compartir, sin `link`.
+- [X] T092 [US4] Actualizar `frontend-mobile/app/(app)/(tabs)/family/members.tsx` para el mismo comportamiento sin `link`.
+- [X] T093 [US4] Implementar `frontend-web/components/family/FamilyActions.tsx` con Eliminar visible solo si `memberCount === 1`, Abandonar si `> 1`, `ConfirmDialog`, loading/error y redirección a `/family/select`.
+- [X] T094 [US4] Implementar `frontend-mobile/components/family/FamilyActions.tsx` con el mismo contrato.
+- [X] T095 [US4] Integrar `FamilyActions` y llamadas `deleteFamily`/`leaveFamily` en `frontend-web/app/(app)/family/members/page.tsx`, refrescando sesión tras completar.
+- [X] T096 [US4] Integrar `FamilyActions` y llamadas `deleteFamily`/`leaveFamily` en `frontend-mobile/app/(app)/(tabs)/family/members.tsx`.
+- [X] T097 [US4] Mostrar límite de 10 integrantes, rol familiar, rol de permiso y estado en `frontend-web/app/(app)/family/members/page.tsx`.
+- [X] T098 [US4] Mostrar límite de 10 integrantes, rol familiar, rol de permiso y estado en `frontend-mobile/app/(app)/(tabs)/family/members.tsx`.
 
-### Implementation for User Story 4 (Móvil)
-
-- [X] T106 [P] [US4] Refactorizar el login móvil con `Wordmark`, `GoogleSignInButton`, `InlineBanner`, spinner y errores traducidos en `frontend-mobile/app/(auth)/auth/login.tsx`.
-- [X] T107 [P] [US4] Refactorizar la configuración de perfil móvil con `TextField`, avatar por defecto y estados en `frontend-mobile/app/(onboarding)/profile/setup.tsx`.
-- [X] T108 [P] [US4] Refactorizar selección y creación de grupo móvil con `Card`, `Select` de moneda, validación y conflictos en `frontend-mobile/app/(onboarding)/family/select.tsx` y `frontend-mobile/app/(onboarding)/family/create.tsx`.
-- [X] T109 [P] [US4] Refactorizar invitación móvil con resumen, parentesco, estados inválido/expirado y acciones en `frontend-mobile/app/(onboarding)/invite/index.tsx`.
-- [X] T110 [P] [US4] Refactorizar miembros móvil con lista, límite de 10, roles, invitación y acciones accesibles en `frontend-mobile/app/(app)/(tabs)/family/members.tsx`.
-- [X] T111 [P] [US4] Crear Perfil móvil con avatar, nombre, correo, editar perfil, editar avatar y enlace a Ajustes en `frontend-mobile/app/(app)/(tabs)/profile.tsx`.
-- [X] T112 [P] [US4] Crear edición de perfil móvil con nombre, avatar actual y guardar/cancelar en `frontend-mobile/app/(app)/profile/edit.tsx`.
-- [X] T113 [US4] Integrar el avatar por defecto determinista en onboarding web/móvil y validar que `foto_avatar` no supera 2048 caracteres en `frontend-web/app/(onboarding)/profile/setup/page.tsx` y `frontend-mobile/app/(onboarding)/profile/setup.tsx`.
-- [X] T114 [US4] Conectar las entradas a Ajustes, edición de perfil y editor de avatar desde Perfil en `frontend-web/app/(app)/profile/page.tsx` y `frontend-mobile/app/(app)/(tabs)/profile.tsx`.
-
-**Checkpoint**: Flujos de la spec 001 completos con el nuevo sistema y nuevas vistas Perfil/edición.
+**Checkpoint**: US4 funcional y verificable de forma independiente.
 
 ---
 
 ## Phase 7: User Story 5 - Feedback claro en todas las acciones (Priority: P3)
 
-**Goal**: Spinners, banners inline, estados vacíos, regiones live y confirmaciones destructivas en
-todas las pantallas.
+**Goal**: Spinners, banners inline, estados vacíos y confirmaciones consistentes, sin toasts ni skeletons.
 
-**Independent Test**: Forzar carga lenta, error conocido/desconocido, lista vacía y acción
-destructiva en web y móvil, comprobando spinner + control deshabilitado, banner traducido, estado
-vacío y diálogo MD3 con foco.
+**Independent Test**: Forzar cargas lentas, errores de backend y listas vacías en web y móvil.
 
 ### Tests for User Story 5
 
-- [X] T115 [P] [US5] Crear pruebas web de estados de carga/error/éxito/vacío, live regions y confirmación destructiva en `frontend-web/__tests__/feedback.test.tsx`.
-- [X] T116 [P] [US5] Crear pruebas móvil de estados de carga/error/éxito/vacío, live regions y confirmación destructiva en `frontend-mobile/__tests__/feedback.test.tsx`.
+- [X] T099 [P] [US5] Actualizar `frontend-web/__tests__/feedback.test.tsx` para loading, error inline, éxito, vacío, confirmación y `role="alert"`/`status`.
+- [X] T100 [P] [US5] Actualizar `frontend-mobile/__tests__/feedback.test.tsx` para loading, error inline, éxito, vacío, confirmación y live regions.
 
 ### Implementation for User Story 5
 
-- [X] T117 [US5] Sustituir `window.confirm` por `ConfirmDialog` en la expulsión de miembros web y actualizar las expectativas en `frontend-web/app/(app)/family/members/page.tsx` y `frontend-web/__tests__/flows.test.tsx`.
-- [X] T118 [US5] Sustituir `Alert.alert` por `ConfirmDialog` en la expulsión de miembros móvil y actualizar las expectativas en `frontend-mobile/app/(app)/(tabs)/family/members.tsx` y `frontend-mobile/__tests__/flows.test.tsx`.
-- [X] T119 [US5] Integrar spinner con texto y control deshabilitado en todas las acciones asíncronas web (`frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(onboarding)/profile/setup/page.tsx`, `frontend-web/app/(onboarding)/family/select/page.tsx`, `frontend-web/app/(onboarding)/family/create/page.tsx`, `frontend-web/app/(onboarding)/invite/page.tsx`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-web/app/(app)/profile/edit/page.tsx`).
-- [X] T120 [US5] Integrar spinner con texto y control deshabilitado en todas las acciones asíncronas móvil (`frontend-mobile/app/(auth)/auth/login.tsx`, `frontend-mobile/app/(onboarding)/profile/setup.tsx`, `frontend-mobile/app/(onboarding)/family/select.tsx`, `frontend-mobile/app/(onboarding)/family/create.tsx`, `frontend-mobile/app/(onboarding)/invite/index.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `frontend-mobile/app/(app)/profile/edit.tsx`).
-- [X] T121 [US5] Integrar banners inline con reintento y descriptor `{ key, fallback, status }`, incluido error de configuración, en `frontend-web/components/ui/InlineBanner.tsx`, `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(onboarding)/profile/setup/page.tsx`, `frontend-web/app/(onboarding)/family/select/page.tsx`, `frontend-web/app/(onboarding)/family/create/page.tsx`, `frontend-web/app/(onboarding)/invite/page.tsx`, `frontend-web/app/(app)/family/members/page.tsx` y `frontend-web/app/(app)/profile/edit/page.tsx`.
-- [X] T122 [US5] Integrar banners inline con reintento y descriptor `{ key, fallback, status }`, incluido error de configuración, en `frontend-mobile/components/ui/InlineBanner.tsx`, `frontend-mobile/app/(auth)/auth/login.tsx`, `frontend-mobile/app/(onboarding)/profile/setup.tsx`, `frontend-mobile/app/(onboarding)/family/select.tsx`, `frontend-mobile/app/(onboarding)/family/create.tsx`, `frontend-mobile/app/(onboarding)/invite/index.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx` y `frontend-mobile/app/(app)/profile/edit.tsx`.
-- [X] T123 [US5] Añadir estados vacíos y acciones sugeridas web en miembros/invitación/grupo en `frontend-web/app/(app)/family/members/page.tsx`, `frontend-web/app/(onboarding)/invite/page.tsx` y `frontend-web/app/(onboarding)/family/select/page.tsx`.
-- [X] T124 [US5] Añadir estados vacíos y acciones sugeridas móvil en miembros/invitación/grupo en `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `frontend-mobile/app/(onboarding)/invite/index.tsx` y `frontend-mobile/app/(onboarding)/family/select.tsx`.
-- [X] T125 [US5] Verificar y ajustar regiones `role="alert"`/`role="status"`, `aria-live`, `accessibilityLiveRegion`, foco y anuncios en `frontend-web/components/ui/InlineBanner.tsx` y `frontend-web/components/ui/Dialog.tsx`.
-- [X] T126 [US5] Verificar y ajustar regiones live, foco y anuncios en `frontend-mobile/components/ui/InlineBanner.tsx` y `frontend-mobile/components/ui/Dialog.tsx`.
-- [X] T127 [US5] Cubrir expiración de sesión con `401` conservando tema/idioma y redirigiendo a login en `frontend-web/hooks/useAuthGuard.ts` y `frontend-mobile/hooks/useAuthGuard.ts`.
+- [X] T101 [US5] Integrar `Loading`, `Spinner`, `InlineBanner`, `EmptyState` y `ConfirmDialog` en las pantallas web de `frontend-web/app/(auth)`, `frontend-web/app/(onboarding)` y `frontend-web/app/(app)`.
+- [X] T102 [US5] Integrar los equivalentes de feedback en las pantallas móvil de `frontend-mobile/app/(auth)`, `frontend-mobile/app/(onboarding)` y `frontend-mobile/app/(app)`.
+- [X] T103 [US5] Actualizar `frontend-web/lib/errors.ts` y `frontend-mobile/lib/errors.ts` para que todos los errores conocidos usen claves i18n y los desconocidos usen fallback sin romper la UI.
+- [X] T104 [US5] Verificar en `frontend-web/__tests__/feedback.test.tsx` y `frontend-mobile/__tests__/feedback.test.tsx` que no se usan `window.confirm`, `Alert.alert`, toasts ni skeletons.
+- [X] T105 [US5] Añadir estados vacíos con acción sugerida en listas de miembros/invitaciones y estados de carga/error en `frontend-web/app/(auth)`, `frontend-web/app/(onboarding)`, `frontend-web/app/(app)`, `frontend-mobile/app/(auth)`, `frontend-mobile/app/(onboarding)` y `frontend-mobile/app/(app)`.
 
-**Checkpoint**: Todas las acciones muestran carga, error, éxito, vacío o confirmación según contrato.
+**Checkpoint**: US5 funcional y verificable de forma independiente.
 
 ---
 
 ## Phase 8: User Story 6 - Editor de avatar con vista previa (Priority: P3)
 
-**Goal**: Avatar por defecto y editor dedicado con vista previa inmediata, sin persistencia ni
-subida de archivos en 002.
+**Goal**: Avatar por defecto generado y editor con vista previa sin persistencia.
 
-**Independent Test**: Abrir el editor desde Perfil, cambiar base/fondo/cabello/ropa/ojos/accesorios,
-ver la vista previa actualizarse en `<100 ms`, pulsar Guardar y comprobar el aviso de spec 003 sin
-cambiar el avatar guardado.
+**Independent Test**: Abrir el editor desde Perfil, modificar base/fondo/cabello/ropa/ojos/accesorios y comprobar vista previa, aviso de guardado y `foto_avatar` intacto.
 
 ### Tests for User Story 6
 
-- [X] T128 [P] [US6] Crear pruebas web del motor de avatar determinista, longitud `<=2048` y data URI válido en `frontend-web/__tests__/avatar.test.ts`.
-- [X] T129 [P] [US6] Crear pruebas móvil del motor de avatar determinista, longitud `<=2048` y data URI válido en `frontend-mobile/__tests__/avatar.test.ts`.
-- [X] T130 [P] [US6] Crear pruebas web del editor: opciones, vista previa inmediata, aviso de guardado y confirmación al descartar en `frontend-web/__tests__/avatar-editor.test.tsx`.
-- [X] T131 [P] [US6] Crear pruebas móvil del editor: opciones, vista previa inmediata, aviso de guardado y confirmación al descartar en `frontend-mobile/__tests__/avatar-editor.test.tsx`.
+- [X] T106 [P] [US6] Actualizar `frontend-web/__tests__/avatar.test.ts` y `frontend-web/__tests__/avatar-editor.test.tsx` para determinismo, `foto_avatar` `<=2048`, vista previa `<100 ms` y aviso de spec 003.
+- [X] T107 [P] [US6] Actualizar `frontend-mobile/__tests__/avatar.test.ts` y `frontend-mobile/__tests__/avatar-editor.test.tsx` con los mismos casos.
 
 ### Implementation for User Story 6
 
-- [X] T132 [P] [US6] Implementar `Avatar` web con `src`, `config`, iniciales, tamaños y `alt` en `frontend-web/components/avatar/Avatar.tsx`.
-- [X] T133 [P] [US6] Implementar `Avatar` móvil con `SvgXml`/`Image`, iniciales, tamaños y etiqueta accesible en `frontend-mobile/components/avatar/Avatar.tsx`.
-- [X] T134 [P] [US6] Implementar `AvatarEditor` web con controles de base/fondo/cabello/ropa/ojos/accesorios, vista previa y aviso de spec 003 en `frontend-web/components/avatar/AvatarEditor.tsx`.
-- [X] T135 [P] [US6] Implementar `AvatarEditor` móvil con los mismos controles, vista previa y aviso de spec 003 en `frontend-mobile/components/avatar/AvatarEditor.tsx`.
-- [X] T136 [P] [US6] Crear la ruta dedicada web del editor en `frontend-web/app/(app)/profile/avatar/page.tsx` con vuelta y confirmación si hay cambios.
-- [X] T137 [P] [US6] Crear la ruta dedicada móvil del editor en `frontend-mobile/app/(app)/profile/avatar.tsx` con `ScreenHeader`, vuelta y confirmación si hay cambios.
-- [X] T138 [US6] Mostrar el avatar por defecto en Perfil y conectar las entradas al editor desde Perfil/Ajustes en `frontend-web/app/(app)/profile/page.tsx`, `frontend-web/app/(app)/settings/page.tsx`, `frontend-mobile/app/(app)/(tabs)/profile.tsx` y `frontend-mobile/app/(app)/settings.tsx`.
-- [X] T139 [US6] Asegurar que Guardar solo muestra el aviso inline de spec 003, no persiste ni navega, y que el data URI por defecto se mantiene en `frontend-web/components/avatar/AvatarEditor.tsx` y `frontend-mobile/components/avatar/AvatarEditor.tsx`.
+- [X] T108 [US6] Ajustar `shared/avatar/avatar-engine.ts` y `shared/avatar/avatar-options.json` para generar un SVG compacto determinista con base, fondo, cabello, ropa, ojos y accesorios, y validar longitud `<=2048`.
+- [X] T109 [US6] Integrar avatar por defecto generado en `frontend-web/app/(onboarding)/profile/setup/page.tsx` y `frontend-web/app/(app)/profile/page.tsx`.
+- [X] T110 [US6] Integrar avatar por defecto generado en `frontend-mobile/app/(onboarding)/profile/setup.tsx` y `frontend-mobile/app/(app)/(tabs)/profile.tsx`.
+- [X] T111 [US6] Implementar `frontend-web/components/ui/AvatarEditor.tsx` y `frontend-web/app/(app)/profile/avatar/page.tsx` con vista previa, controles y aviso de guardado en 003.
+- [X] T112 [US6] Implementar `frontend-mobile/components/ui/AvatarEditor.tsx` y `frontend-mobile/app/(app)/profile/avatar.tsx` con el mismo contrato y navegación de vuelta.
+- [X] T113 [US6] Actualizar `frontend-web/app/(app)/profile/edit/page.tsx` y `frontend-web/app/(app)/profile/page.tsx` para enlazar edición de perfil y avatar.
+- [X] T114 [US6] Actualizar `frontend-mobile/app/(app)/profile/edit.tsx` y `frontend-mobile/app/(app)/(tabs)/profile.tsx` para enlazar edición de perfil y avatar.
 
-**Checkpoint**: Editor de avatar previsualiza al instante y comunica claramente que no persiste.
+**Checkpoint**: US6 funcional y verificable de forma independiente.
 
 ---
 
 ## Phase 9: User Story 7 - Base de visualización de datos para el futuro (Priority: P4)
 
-**Goal**: Contenedores de gráficos diferidos con tokens de tema, sin incluirlos en el bundle
-inicial de las rutas actuales.
+**Goal**: Contenedores de gráficos diferidos que no entren en el bundle inicial.
 
-**Independent Test**: Verificar que Recharts/Victory Native solo se importan desde
-`components/charts/`, que ninguna ruta actual los importa y que `check-ui`/build no los incluyen en
-el bundle inicial.
+**Independent Test**: Verificar que las rutas actuales no cargan Recharts/Victory Native y que los contenedores consumen tokens.
 
 ### Tests for User Story 7
 
-- [X] T140 [P] [US7] Crear prueba web de frontera de gráficos y ausencia de imports en rutas actuales en `frontend-web/__tests__/charts.test.ts`.
-- [X] T141 [P] [US7] Crear prueba móvil de frontera de gráficos y ausencia de imports en rutas actuales en `frontend-mobile/__tests__/charts.test.ts`.
+- [X] T115 [P] [US7] Actualizar `frontend-web/__tests__/charts.test.ts` para carga diferida, ausencia de imports en rutas y resumen accesible.
+- [X] T116 [P] [US7] Actualizar `frontend-mobile/__tests__/charts.test.ts` para Victory Native encapsulado, tokens de tema y ausencia de imports en rutas.
 
 ### Implementation for User Story 7
 
-- [X] T142 [P] [US7] Implementar `ChartContainer` web con `next/dynamic`/`ssr:false`, tokens de tema y resumen accesible en `frontend-web/components/charts/ChartContainer.tsx`.
-- [X] T143 [P] [US7] Implementar `ChartContainer` móvil con Victory Native, tokens de tema y resumen accesible en `frontend-mobile/components/charts/ChartContainer.tsx`.
-- [X] T144 [US7] Añadir reglas `no-restricted-imports` para `recharts` y `victory-native` fuera de `components/charts/` en `frontend-web/.eslintrc.json` y `frontend-mobile/.eslintrc.json`.
-- [X] T145 [US7] Ejecutar `node scripts/check-ui.mjs` y verificar que ninguna ruta actual importa `ChartContainer` ni las librerías de gráficos; documentar el resultado en `specs/002-ui-styles-and-views/quickstart.md`.
+- [X] T117 [US7] Actualizar `frontend-web/components/charts/ChartContainer.tsx` y `frontend-web/components/charts/ChartCanvas.tsx` con Recharts 3, `next/dynamic` y `ssr:false`.
+- [X] T118 [US7] Actualizar `frontend-mobile/components/charts/ChartContainer.tsx` con Victory Native 42.0.1, Skia 2.14.0 y resumen textual accesible.
+- [X] T119 [US7] Conectar colores de gráficos a `design-tokens/tokens.json` y `lib/generated/tokens.ts` en ambos frontends, sin valores literales.
+- [X] T120 [US7] Actualizar `scripts/check-ui.mjs` para impedir imports de `recharts`/`victory-native` fuera de `frontend-web/components/charts/` y `frontend-mobile/components/charts/`.
+- [X] T121 [US7] Verificar build web y `expo-doctor` móvil para confirmar que las librerías de gráficos no están en el bundle inicial de rutas actuales.
 
-**Checkpoint**: Base de gráficos disponible y fuera del bundle inicial actual.
+**Checkpoint**: US7 funcional y verificable de forma independiente.
 
 ---
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-**Purpose**: Limpieza, validación integral y cierre de la feature.
+**Purpose**: Cierre, documentación y validación end-to-end.
 
-- [X] T146 Eliminar restos de la UI antigua y referencias obsoletas en `frontend-web/components/ui.tsx`, `frontend-mobile/components/ui.tsx`, `frontend-web/__tests__/ui.test.tsx` y `frontend-mobile/__tests__/ui.test.tsx`.
-- [X] T147 [P] Actualizar `README.md` con los comandos de instalación, generación y validación de la feature 002.
-- [X] T148 [P] Ejecutar `node scripts/generate-shared.mjs --check`, `node scripts/check-shared.mjs` y `node scripts/check-ui.mjs`; corregir cualquier deriva en `design-tokens/tokens.json`, `shared/` o archivos generados.
-- [X] T149 [P] Ejecutar y corregir `pnpm run typecheck`, `pnpm run lint`, `pnpm test` y `pnpm run build` definidos en `frontend-web/package.json`.
-- [X] T150 [P] Ejecutar y corregir `pnpm run typecheck`, `pnpm run lint`, `pnpm test` y `npx expo-doctor` definidos en `frontend-mobile/package.json`.
-- [ ] T151 Ejecutar auditoría de accesibilidad con `jest-axe` en `frontend-web/__tests__/ui-components.test.tsx` y `frontend-web/__tests__/feedback.test.tsx`, Lighthouse `>=95` en `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(app)/family/members/page.tsx` y `frontend-web/app/(app)/settings/page.tsx`, además de teclado, zoom 200 %, 320 px y movimiento reducido.
-- [ ] T152 Ejecutar los escenarios manuales de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil, incluidos tema, idioma, avatar, sesión expirada y breakpoints.
-- [X] T153 Auditar marca y metadatos en `frontend-web/lib/branding.ts`, `frontend-mobile/lib/branding.ts`, `frontend-web/app/layout.tsx` y `frontend-mobile/app.json`: wordmark Kitho, títulos `Kitho: Tareas y Finanzas Familiares`/`Kitho Family`, ausencia de imágenes rotas y ausencia de variantes no aprobadas.
-- [ ] T154 Verificar paridad visual web/móvil en `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-web/app/(app)/profile/page.tsx`, `frontend-web/app/(app)/settings/page.tsx`, `frontend-mobile/app/(auth)/auth/login.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `frontend-mobile/app/(app)/(tabs)/profile.tsx` y `frontend-mobile/app/(app)/settings.tsx`, y ausencia de scroll horizontal en 320/600/840/1440 px.
+- [X] T122 [P] Actualizar `README.md` y `specs/002-ui-styles-and-views/quickstart.md` con dependencias, comandos, escenarios 15–18 y nota de extensiones de spec 001.
+- [X] T123 Ejecutar `node scripts/generate-shared.mjs` y `node scripts/generate-shared.mjs --check`; corregir cualquier deriva en `design-tokens/`, `shared/` y artefactos generados.
+- [X] T124 Ejecutar `node scripts/check-shared.mjs` y `node scripts/check-ui.mjs`; corregir paridad i18n, literales visuales e imports de gráficos.
+- [X] T125 Ejecutar en `frontend-web`: `pnpm run typecheck`, `pnpm run lint` y `pnpm test`; corregir fallos de componentes, navegación, tema, locale, avatar, feedback, código, moneda y acciones de familia.
+- [X] T126 Ejecutar `pnpm run build` en `frontend-web` y verificar que Recharts no entra en el bundle inicial de rutas actuales.
+- [X] T127 Ejecutar en `frontend-mobile`: `pnpm run typecheck`, `pnpm run lint` y `pnpm test`; corregir los mismos fallos que web.
+- [X] T128 Ejecutar `npx expo-doctor` en `frontend-mobile` y resolver incompatibilidades de Expo SDK 58, Skia, Reanimated, Victory Native y `expo-location`.
+- [ ] T129 Ejecutar manualmente los escenarios 1–14 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil.
+- [ ] T130 Ejecutar manualmente los escenarios 15–18 de `specs/002-ui-styles-and-views/quickstart.md`: botón Google, invitación por código, moneda regional y Eliminar/Abandonar familia.
+- [ ] T131 Ejecutar auditoría Lighthouse de accesibilidad `>=95` en Login, Miembros y Ajustes, y revisar foco/teclado, zoom 200 %, 320 px, movimiento reducido y VoiceOver/TalkBack.
+- [X] T132 Corregir incidencias encontradas en T123–T131 en `frontend-web/`, `frontend-mobile/`, `shared/`, `scripts/` y `design-tokens/`, y repetir las puertas de calidad afectadas.
+- [X] T133 Actualizar el estado final de `specs/002-ui-styles-and-views/tasks.md` y registrar la validación en `specs/002-ui-styles-and-views/quickstart.md`.
 
 ---
 
@@ -348,134 +304,158 @@ el bundle inicial.
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: sin dependencias; puede empezar de inmediato.
-- **Foundational (Phase 2)**: depende de Phase 1 y bloquea todas las historias.
-- **User Stories (Phase 3+)**: dependen de Foundational.
-  - US1 y US2 son P1 y forman el MVP técnico; US2 consume componentes de US1.
-  - US3 depende de US1/US2 para Ajustes y navegación.
-  - US4 depende de US1–US3 para reutilizar componentes y enlaces.
-  - US5 depende de US4 porque integra estados en esas pantallas.
-  - US6 depende de US1/US2 y de las entradas de Perfil/Ajustes de US3/US4.
-  - US7 solo depende de Foundational y US1; puede ejecutarse en paralelo con US3–US6.
-- **Polish (Phase 10)**: depende de todas las historias incluidas en la entrega.
+- **Setup (Phase 1)**: Sin dependencias; puede empezar de inmediato.
+- **Foundational (Phase 2)**: Depende de Setup y bloquea todas las historias.
+- **User Stories (Phase 3–9)**: Dependen de Foundational; pueden ejecutarse en paralelo si hay equipo.
+- **Polish (Phase 10)**: Depende de las historias deseadas.
 
 ### User Story Dependencies
 
-- **US1 (P1)**: sin dependencias de otras historias; base de componentes.
-- **US2 (P1)**: depende de Botón/IconButton/Wordmark/Page de US1.
-- **US3 (P2)**: depende de US1/US2 y de la ruta de Ajustes.
-- **US4 (P2)**: depende de US1–US3 y del motor de avatar foundational.
-- **US5 (P3)**: depende de US4.
-- **US6 (P3)**: depende de US1, US2 y las entradas de Perfil de US3/US4.
-- **US7 (P4)**: independiente tras Foundational; no debe importarse desde rutas actuales.
+- **US1 (P1)**: Base visual; puede empezar tras Foundational.
+- **US2 (P1)**: Depende de US1 para shell/componentes, pero se valida de forma independiente.
+- **US3 (P2)**: Depende de US1 y de los providers de Foundational.
+- **US4 (P2)**: Depende de US1, US2 y de los contratos de API de Foundational; consume endpoints de spec 001.
+- **US5 (P3)**: Depende de US1 (feedback) y se integra en US2/US4.
+- **US6 (P3)**: Depende de US1 (Avatar) y de los enlaces de Perfil de US2.
+- **US7 (P4)**: Solo depende de Foundational (tokens) y es independiente de las demás historias.
 
 ### Within Each User Story
 
-- Las pruebas deben escribirse y fallar antes de la implementación.
-- Componentes base antes de pantallas.
-- Rutas y guards antes de integraciones de estado.
-- La historia debe validarse en su checkpoint antes de pasar a la siguiente prioridad.
+- Pruebas primero, deben fallar antes de implementar.
+- Componentes/utilidades antes de pantallas.
+- Pantallas antes de integración y pruebas end-to-end.
+- Validar la historia antes de pasar a la siguiente prioridad.
 
 ### Parallel Opportunities
 
 - T003–T007 de Setup pueden ejecutarse en paralelo.
-- T008–T011, T013–T020, T022–T023, T025–T030, T032–T039 y T042–T043 de Foundational pueden ejecutarse en paralelo dentro de sus dependencias.
-- En US1, los componentes web T046–T053 y T055 comparten pocas dependencias y pueden paralelizarse; igual en móvil T057–T064 y T066.
-- En US2, T070–T074 y T080–T082 pueden paralelizarse; los layouts T075–T079 y T083–T086 son secuenciales.
-- En US3, las pruebas T088–T091 y las pantallas T093/T095 pueden paralelizarse; layouts T092/T094 van antes de validar.
-- En US4, las pantallas T099–T112 pueden repartirse por flujo (login, onboarding, miembros, perfil).
-- En US6, componentes T132–T135 y rutas T136–T137 pueden paralelizarse.
-- US7 T142–T143 pueden ejecutarse en paralelo.
+- T008–T027 de Foundational pueden paralelizarse por archivo (tokens, i18n, API web, API móvil).
+- US1 y US2 pueden trabajar en paralelo con dos desarrolladores tras Foundational.
+- US3, US4, US5, US6 y US7 pueden paralelizarse por plataforma o por historia una vez que US1/US2 estén estables.
+- Las tareas web y móvil de una misma historia pueden ejecutarse en paralelo si no comparten archivos.
 
 ---
 
 ## Parallel Example: User Story 1
 
 ```bash
-# Componentes web independientes
-Task: "Implementar Button e IconButton en frontend-web/components/ui/Button.tsx e IconButton.tsx"
-Task: "Implementar TextField y SearchField en frontend-web/components/ui/TextField.tsx y SearchField.tsx"
-Task: "Implementar Card, List, ListItem y Divider en frontend-web/components/ui/Card.tsx, List.tsx y Divider.tsx"
+Task: "Refactorizar botones y campos web en frontend-web/components/ui/*.tsx"
+Task: "Refactorizar formularios móvil en frontend-mobile/components/ui/*.tsx"
+Task: "Crear pruebas de tokens y derivación en frontend-web/__tests__/design-tokens.test.ts"
+Task: "Crear pruebas equivalentes de tokens en frontend-mobile/__tests__/design-tokens.test.ts"
+```
 
-# Componentes móvil independientes
-Task: "Implementar Button e IconButton en frontend-mobile/components/ui/Button.tsx e IconButton.tsx"
-Task: "Implementar TextField y SearchField en frontend-mobile/components/ui/TextField.tsx y SearchField.tsx"
-Task: "Implementar Card, List, ListItem y Divider en frontend-mobile/components/ui/Card.tsx, List.tsx y Divider.tsx"
+## Parallel Example: User Story 4
+
+```bash
+Task: "Implementar frontend-web/lib/currency.ts"
+Task: "Implementar frontend-mobile/lib/currency.ts"
+Task: "Implementar frontend-web/components/family/CurrencySelect.tsx"
+Task: "Implementar frontend-mobile/components/family/CurrencySelect.tsx"
+Task: "Actualizar frontend-web/app/(onboarding)/invite/page.tsx"
+Task: "Actualizar frontend-mobile/app/(onboarding)/invite/index.tsx"
+```
+
+## Parallel Example: User Story 7
+
+```bash
+Task: "Actualizar frontend-web/components/charts/ChartContainer.tsx"
+Task: "Actualizar frontend-mobile/components/charts/ChartContainer.tsx"
+Task: "Actualizar scripts/check-ui.mjs"
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (US1 + US2)
+### MVP First
 
-1. Completar Phase 1: Setup.
-2. Completar Phase 2: Foundational.
-3. Completar US1 (sistema visual y componentes).
-4. Completar US2 (navegación adaptativa y guards).
-5. **STOP and VALIDATE**: recorrer las pantallas existentes en web/móvil, comprobar tokens, rutas,
-   breakpoints y accesibilidad básica.
-6. Demo del MVP técnico si está listo.
+1. Completar Phase 1 y Phase 2.
+2. Completar US1 y US2 (P1): sistema visual y navegación.
+3. Validar US1/US2 de forma independiente y desplegar una base visual navegable.
 
 ### Incremental Delivery
 
-1. Setup + Foundational → base compartida sin deriva.
-2. US1 + US2 → MVP visual/navegable.
-3. US3 → tema e idioma persistentes.
-4. US4 → flujos existentes refactorizados y Perfil/edición.
-5. US5 → estados y confirmaciones completos.
-6. US6 → editor de avatar con vista previa.
-7. US7 → base de gráficos diferida.
-8. Polish → validación integral y cierre.
+1. Setup + Foundational.
+2. US1 + US2 → validar → demo de base visual/navegación.
+3. US3 → tema/idioma persistentes → validar.
+4. US4 → onboarding/familia/código/moneda/acciones → validar.
+5. US5 + US6 → feedback y avatar → validar.
+6. US7 → base de gráficos → validar.
+7. Polish → puertas de calidad y quickstart completo.
 
 ### Parallel Team Strategy
 
-1. El equipo completa Setup + Foundational.
-2. Tras Foundational:
-   - Persona A: US1 web.
-   - Persona B: US1 móvil.
-   - Persona C: US7 (contenedores y guardas).
-3. Tras US1: US2 web/móvil en paralelo; después US3 y US4 por flujo.
-4. US5 y US6 después de US4; Polish al final con todas las personas.
+1. Equipo completo termina Setup + Foundational.
+2. Developer A: US1; Developer B: US2.
+3. Tras estabilizar US1/US2:
+   - Developer A: US3.
+   - Developer B: US4 web.
+   - Developer C: US4 móvil.
+   - Developer D: US5/US6.
+4. US7 puede hacerse en paralelo desde el inicio de las historias.
 
 ---
 
 ## Notes
 
-- `[P]` implica archivos distintos y sin dependencia directa.
-- Cada tarea conserva la trazabilidad a un FR/SC mediante el contrato o la historia.
-- No se modifican backend, API, PostgreSQL ni Docker Compose.
-- Los tests deben fallar antes de implementar y pasar en el checkpoint de cada historia.
-- No se persiste la personalización del avatar en 002; solo se previsualiza.
-- No se importan librerías de gráficos desde rutas actuales.
-- Verificar `quickstart.md` antes de considerar la feature terminada.
+- [P] significa archivos distintos y sin dependencia directa.
+- Cada historia se puede validar de forma independiente en web y móvil.
+- Las pruebas deben fallar antes de implementar cuando se incluyan.
+- No se modifican `backend/`, `docker-compose.yml` ni PostgreSQL; las extensiones de spec 001 son
+  prerequisito funcional.
+- Evitar tareas vagas, conflictos de archivo y dependencias cruzadas que rompan la independencia.
 
 ---
 
 ## Phase 11: Convergence
 
-**Purpose**: Cerrar las brechas detectadas entre `spec.md`, `plan.md`, `tasks.md` y la implementación actual.
-
-- [X] T155 Añadir personalización de ropa y ojos al avatar en `shared/avatar/avatar-options.json`, `shared/avatar/avatar-engine.ts`, catálogos i18n y editores web/móvil (`frontend-web/components/ui/AvatarEditor.tsx`, `frontend-mobile/components/ui/AvatarEditor.tsx`), con pruebas de opciones y vista previa, per FR-050 (partial).
-- [X] T156 Implementar `prefers-reduced-motion` en web (`frontend-web/app/globals.css`) y respetar la preferencia de movimiento reducido en las animaciones móviles, con verificación documentada, per FR-040 (missing).
-- [X] T157 Sustituir los colores literales `rgba(0,0,0,0.4)` de `frontend-mobile/components/ui/Dialog.tsx` y `frontend-mobile/components/ui/Select.tsx` por un token de scrim del tema, per FR-008 (contradicts).
-- [X] T158 Eliminar las cadenas visibles hardcodeadas en los valores por defecto de `Spinner`, `Loading`, `Dialog` y `Breadcrumbs` de web y móvil, usando los catálogos i18n, per FR-030 (partial).
-- [X] T159 Añadir la sección de aviso legal en Ajustes web y móvil usando `legal.title`/`legal.body`, conservando acerca de y versión, per FR-042 (partial).
-- [X] T160 Añadir confirmación de cambios sin guardar y navegación de vuelta correcta en las rutas del editor de avatar web/móvil, per FR-047/FR-051 (partial).
-- [X] T161 Añadir una acción explícita de guardado en el editor de avatar web/móvil que solo muestre el aviso de la spec 003, sin persistir ni navegar, per FR-053 (partial).
-- [X] T162 Sincronizar el fondo del sistema móvil con el tema resuelto usando `expo-system-ui`, per T018/plan: tema móvil (partial).
-- [X] T163 Añadir estados pressed/focus visibles a los componentes interactivos móviles que aún no los exponen (`Chip`, `ListItem`), per FR-014 (partial).
-
-**Nota**: T151, T152 y T154 siguen pendientes como validación manual (Lighthouse, teclado/zoom/movimiento reducido, VoiceOver/TalkBack, breakpoints y paridad visual); no se duplican aquí.
+- [X] T134 Implementar las extensiones de la spec 001 que consume esta feature (código de invitación de un solo uso con caducidad de 7 días, soft delete y abandono de familia, y reasignación de administrador) en `backend/app/services/invitation_service.py`, `backend/app/services/family_service.py`, `backend/app/api/v1/invitations.py`, `backend/app/api/v1/families.py` y esquemas/migraciones asociadas, dejando de exponer `token`/`link` per `spec 001 FR-006` y `spec 001 FR-014–FR-018` (missing).
+- [X] T135 Asociar los errores de código inválido, usado y expirado al campo de código con estado inválido y descripción accesible, y mapearlos inline en `frontend-web/app/(onboarding)/invite/page.tsx` y `frontend-mobile/app/(onboarding)/invite/index.tsx` per `FR-078` (partial).
+- [X] T136 Mostrar en las pantallas de unión por código de `frontend-web/app/(onboarding)/invite/page.tsx` y `frontend-mobile/app/(onboarding)/invite/index.tsx` que el código es de un solo uso y caduca a los 7 días per `FR-083` (partial).
+- [ ] T137 Ejecutar la auditoría de accesibilidad (Lighthouse `>=95`, teclado, zoom 200 %, movimiento reducido y VoiceOver/TalkBack) y registrar los resultados en `specs/002-ui-styles-and-views/quickstart.md` per `T131`, `SC-002` y `SC-003` (missing).
+- [ ] T138 Ejecutar y registrar los escenarios manuales 1–18 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil per `T129` y `T130` (missing).
 
 ---
 
 ## Phase 12: Convergence
 
-**Purpose**: Cerrar las brechas restantes detectadas tras completar la Fase 11.
+- [X] T139 Configurar `frontend-web/components/ui/GoogleSignInButton.tsx` con los props oficiales de Google Identity Services (`text="continue_with"`, `shape="pill"`, `size="large"` y `locale` derivado del idioma activo) y añadir `locale` a `GoogleOAuthProvider` en `frontend-web/components/providers/AppProviders.tsx`, evitando además el desbordamiento horizontal en 320 px por `width` fijo, per `FR-046`/`SC-015`/`T034` (partial).
+- [ ] T140 Ejecutar la auditoría de accesibilidad (Lighthouse `>=95` en Login, Miembros y Ajustes; recorrido con teclado, zoom de texto al 200 %, movimiento reducido y VoiceOver/TalkBack) y corregir en `frontend-web/` y `frontend-mobile/` las incidencias halladas, registrando los resultados en `specs/002-ui-styles-and-views/quickstart.md`, per `SC-002`/`SC-003`/`T131`/`T137` (missing).
+- [ ] T141 Ejecutar y registrar los escenarios manuales 1–18 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil (breakpoints 320/600/840/1440 px, paridad visual web/móvil y flujos de onboarding/familia), corrigiendo cualquier desviación, per `SC-006`/`SC-007`/`T129`/`T130`/`T138` (missing).
+- [X] T142 Eliminar `// @ts-nocheck` de `frontend-mobile/components/charts/ChartContainer.tsx` y tipar correctamente la integración con Victory Native/Skia para que `pnpm run typecheck` la valide, per `FR-066`/`FR-058`/`T118` (contradicts).
+- [X] T143 Ajustar `scripts/check-ui.mjs` para que la verificación de colores literales cubra `frontend-web/components/charts/` y `frontend-mobile/components/charts/`, o documentar explícitamente la excepción de `components/charts/`, per `FR-008`/`T045`/`T120` (partial).
+- [X] T144 Trasladar a los catálogos i18n las descripciones de metadatos y `BRAND_DESCRIPTION` de `frontend-web/app/layout.tsx`, `frontend-web/lib/branding.ts` y `frontend-mobile/app.json`, evitando cadenas visibles hardcodeadas, per `FR-030` (partial).
 
-- [X] T164 Añadir un control editable de color de fondo (`palette`) al editor de avatar web/móvil, con etiqueta i18n y pruebas de vista previa, per FR-050 (partial).
-- [X] T165 Añadir un enlace directo al editor de avatar desde las pantallas de Perfil web y móvil, per FR-043/T114/T138 (partial).
-- [X] T166 Aplicar `useSafeAreaInsets` en `Page` y `ScreenHeader` móviles para respetar áreas seguras (notch, barra de estado y borde inferior), per FR-023 (partial).
+---
 
-**Nota**: T151, T152 y T154 continúan como validación manual pendiente.
+## Phase 13: Migración de autenticación Google móvil a `react-native-nitro-google-signin`
+
+**Goal**: Sustituir `@react-native-google-signin/google-signin` por `react-native-nitro-google-signin` en el frontend móvil, sin cambios funcionales en el flujo de login.
+
+**Independent Test**: `frontend-mobile` compila con `npx expo-doctor` y un development build nativo, y el login obtiene un `idToken` (o cancelación) a través de la nueva librería; `typecheck`, `lint` y `test` en verde.
+
+- [X] T145 [P] Actualizar `frontend-mobile/package.json` y regenerar `frontend-mobile/pnpm-lock.yaml`: eliminar `@react-native-google-signin/google-signin` y añadir `react-native-nitro-google-signin` (~2.3.x) y su peer `react-native-nitro-modules` (>=0.36.0) mediante `npx expo install`, per `FR-068`/plan: decisión botón Google (partial).
+- [X] T146 Actualizar `frontend-mobile/app.json`: sustituir el plugin `@react-native-google-signin/google-signin` por `react-native-nitro-google-signin`, configurar el `webClientId`/`google-services.json` de Android y el `REVERSED_CLIENT_ID`/`urlScheme` de iOS, conservando `name`/`slug`/`userInterfaceStyle`, per plan: decisión botón Google (partial).
+- [X] T147 Habilitar la React Native New Architecture en `frontend-mobile/app.json` (`newArchEnabled: true`) y la configuración nativa asociada, requisito de `react-native-nitro-modules`, per plan: restricción Nitro (missing).
+- [X] T148 Reescribir `frontend-mobile/lib/google-signin.ts` contra la API `GoogleOneTapSignIn` (`configure({ webClientId })`, `checkPlayServices()` en Android, `signIn()`, `isSuccessResponse(response)` → `response.data.idToken`), conservando el export `requestGoogleIdToken`, per `FR-046`/plan: decisión botón Google (contradicts).
+- [X] T149 [P] Actualizar el mock de Google en `frontend-mobile/jest.setup.js` de `@react-native-google-signin/google-signin` a `react-native-nitro-google-signin` (`GoogleOneTapSignIn` con `configure`/`checkPlayServices`/`signIn`, más `isSuccessResponse` e `isNoSavedCredentialFoundResponse`), per `T007` (partial).
+- [X] T150 Verificar que `frontend-mobile/app/(auth)/auth/login.tsx` y `frontend-mobile/components/ui/GoogleSignInButton.tsx` siguen integrando el login nativo con nombre accesible "Continuar con Google", estados loading/disabled y objetivo táctil de 48 dp, per `FR-046`/`T038`/`T082` (partial).
+- [ ] T151 Ejecutar en `frontend-mobile` `npx expo-doctor`, `pnpm run typecheck`, `pnpm run lint`, `pnpm test` y un development build nativo (no Expo Go) para confirmar que el módulo Nitro resuelve, y actualizar `specs/002-ui-styles-and-views/quickstart.md` con los pasos resultantes, per `FR-066`/plan: riesgo Nitro/Expo Go (missing).
+
+---
+
+## Phase 14: Convergence
+
+- [X] T152 Ajustar `frontend-mobile/components/providers/LocaleProvider.tsx` para que el idioma inicial sea español cuando no exista preferencia guardada, usando `expo-localization` solo para región/formato, y añadir en `frontend-mobile/__tests__/locale.test.tsx` una prueba con dispositivo en inglés que verifique que la UI sigue en español per `FR-028`/contracts/i18n-contracts.md (`contradicts`).
+- [X] T153 Encaminar las traducciones de `frontend-web/components/providers/LocaleProvider.tsx` a través de `next-intl` (`createTranslator`/`useTranslations`) conservando la API `useI18n` y actualizando `frontend-web/__tests__/locale.test.tsx` para cubrir la integración real per `FR-029` (`partial`).
+- [X] T154 Hacer que `frontend-web/app/layout.tsx` y el provider de locale generen y actualicen título y metadatos según el idioma activo con los títulos aprobados (**Kitho: Tareas y Finanzas Familiares** para `es`, **Kitho Family** para `en`), y alinear `shared/i18n/en.json` `app.webTitle` para no introducir variantes traducidas no aprobadas per `FR-030`/`FR-031`/`FR-034`/`SC-005`/`SC-014` (`partial`).
+- [X] T155 Localizar el texto de permiso de ubicación de `frontend-mobile/app.json` para `es`/`en` mediante la configuración `locales` de Expo, evitando cadenas visibles hardcodeadas per `FR-030` (`partial`).
+- [X] T156 Completar `frontend-mobile/components/charts/ChartContainer.tsx` y `frontend-web/components/charts/ChartCanvas.tsx` para respetar el `type` declarado (`line`/`bar`/`pie`/`area`) o reducir la API a los tipos realmente soportados, y aplicar tokens del tema a ejes, grid y tooltip per `FR-058`/`US7/AC2` (`partial`).
+- [X] T157 Sustituir los estilos inline de `frontend-web/components/ui/Avatar.tsx` y `frontend-web/components/charts/ChartContainer.tsx` por clases o variables CSS basadas en tokens, o documentar explícitamente la excepción per `FR-065` (`partial`).
+
+---
+
+## Phase 15: Convergence
+
+- [X] T158 Derivar el locale/región del dispositivo por separado del idioma de UI (`expo-localization` en móvil y `navigator.language` en web) y usarlo en `detectCountry`/`createCurrencySelection` y en `format.ts` para el fallback de moneda y formato, manteniendo español por defecto, con pruebas de dispositivo en inglés/región US mientras la UI sigue en español per `FR-029`/`FR-073`/plan: geolocalización opcional/`T021`/`T077`/`T078` (`partial`).

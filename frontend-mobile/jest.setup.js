@@ -6,6 +6,20 @@ jest.mock("expo-system-ui", () => ({
   setBackgroundColorAsync: jest.fn(async () => {}),
 }));
 
+jest.mock("react-native-nitro-google-signin", () => ({
+  GoogleOneTapSignIn: {
+    configure: jest.fn(),
+    checkPlayServices: jest.fn(async () => true),
+    signIn: jest.fn(async () => ({ type: "noSavedCredentialFound", data: null })),
+    createAccount: jest.fn(async () => ({ type: "cancelled", data: null })),
+    presentExplicitSignIn: jest.fn(async () => ({ type: "cancelled", data: null })),
+  },
+  isSuccessResponse: (response) => response?.type === "success",
+  isNoSavedCredentialFoundResponse: (response) =>
+    response?.type === "noSavedCredentialFound",
+  isCancelledResponse: (response) => response?.type === "cancelled",
+}));
+
 jest.mock("react-native-safe-area-context", () => {
   const React = require("react");
   const { View } = require("react-native");
@@ -46,3 +60,17 @@ jest.mock("expo-secure-store", () => {
     __clear: () => store.clear(),
   };
 });
+
+jest.mock("expo-location", () => ({
+  Accuracy: { Balanced: 3 },
+  requestForegroundPermissionsAsync: jest.fn(async () => ({ status: "denied" })),
+  getCurrentPositionAsync: jest.fn(async () => ({
+    coords: { latitude: 19.4326, longitude: -99.1332 },
+  })),
+  reverseGeocodeAsync: jest.fn(async () => [{ isoCountryCode: "MX" }]),
+}));
+
+jest.mock("expo-clipboard", () => ({
+  setStringAsync: jest.fn(async () => true),
+  getStringAsync: jest.fn(async () => ""),
+}));

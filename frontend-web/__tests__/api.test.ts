@@ -118,7 +118,14 @@ describe("api client", () => {
   it("calls the family and invitation endpoints", async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ family: {}, members: [], member_count: 0 }))
-      .mockResolvedValueOnce(jsonResponse({ invitation_id: "i", token: "t", link: "l" }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          invitation_id: "i",
+          codigo: "ABCD",
+          expira_en: "2026-11-02T00:00:00Z",
+          usado: false,
+        }),
+      )
       .mockResolvedValueOnce(
         jsonResponse({
           family_id: "f",
@@ -130,11 +137,15 @@ describe("api client", () => {
 
     await api.getFamily();
     await api.createInvitation();
-    await api.joinInvitation({ token: "t", parentesco: "hija" });
+    await api.joinFamilyByCode({ codigo: "ABCD", parentesco: "hija" });
 
     expect(fetchMock.mock.calls[0][0]).toContain("/families/me");
     expect(fetchMock.mock.calls[1][0]).toContain("/families/me/invitations");
     expect(fetchMock.mock.calls[2][0]).toContain("/invitations/join");
+    expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ expira_en_horas: 168 }));
+    expect(fetchMock.mock.calls[2][1].body).toBe(
+      JSON.stringify({ codigo: "ABCD", parentesco: "hija" }),
+    );
   });
 
   it("refreshes the session and retries once after a 401", async () => {

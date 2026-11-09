@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 
 import type {
   FamilyCreateResponse,
+  FamilyLifecycleResponse,
   JoinInvitationResponse,
   TokenResponse,
   UserAuthInfo,
@@ -43,12 +44,12 @@ export async function clearSession(): Promise<void> {
   await SecureStore.deleteItemAsync(SESSION_KEY);
 }
 
-export async function savePendingInviteToken(token: string): Promise<void> {
-  if (!token) return;
-  await SecureStore.setItemAsync(PENDING_INVITE_KEY, token);
+export async function savePendingInviteCode(code: string): Promise<void> {
+  if (!code) return;
+  await SecureStore.setItemAsync(PENDING_INVITE_KEY, code);
 }
 
-export async function getPendingInviteToken(): Promise<string | null> {
+export async function getPendingInviteCode(): Promise<string | null> {
   try {
     return await SecureStore.getItemAsync(PENDING_INVITE_KEY);
   } catch {
@@ -56,9 +57,13 @@ export async function getPendingInviteToken(): Promise<string | null> {
   }
 }
 
-export async function clearPendingInviteToken(): Promise<void> {
+export async function clearPendingInviteCode(): Promise<void> {
   await SecureStore.deleteItemAsync(PENDING_INVITE_KEY);
 }
+
+export const savePendingInviteToken = savePendingInviteCode;
+export const getPendingInviteToken = getPendingInviteCode;
+export const clearPendingInviteToken = clearPendingInviteCode;
 
 export async function getAccessToken(): Promise<string | null> {
   const session = await getSession();
@@ -137,5 +142,26 @@ export async function applyInvitationJoined(
     needs_family_setup: false,
   };
   await saveSession(next);
+  return next;
+}
+
+export async function applyFamilyLeft(
+  data?: FamilyLifecycleResponse,
+): Promise<SessionState | null> {
+  const current = await getSession();
+  if (!current) return null;
+  const next: SessionState = {
+    ...current,
+    access_token: data?.tokens?.access_token ?? current.access_token,
+    refresh_token: data?.tokens?.refresh_token ?? current.refresh_token,
+    user: {
+      ...current.user,
+      family_id: null,
+      role: null,
+    },
+    needs_family_setup: true,
+  };
+  await saveSession(next);
+  await clearPendingInviteCode();
   return next;
 }

@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
-from app.schemas.family import CreateFamilyRequest, FamilyCreateResponse, FamilyDetailResponse
+from app.schemas.family import (
+    CreateFamilyRequest,
+    FamilyCreateResponse,
+    FamilyDetailResponse,
+    FamilyLifecycleResponse,
+)
 from app.services import family_service
 
 router = APIRouter()
@@ -25,6 +30,22 @@ def get_my_family(
     current_user: dict = Depends(get_current_user),
 ):
     return family_service.get_family_detail(db, current_user["user_id"])
+
+
+@router.post("/me/leave", response_model=FamilyLifecycleResponse)
+def leave_family(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return family_service.leave_family(db, current_user["user_id"])
+
+
+@router.delete("/me", response_model=FamilyLifecycleResponse)
+def delete_family(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return family_service.delete_family(db, current_user["user_id"])
 
 
 @router.post("/me/members/{user_id}/promote")

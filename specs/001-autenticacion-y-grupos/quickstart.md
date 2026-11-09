@@ -22,6 +22,11 @@
    docker compose exec backend alembic upgrade head
    ```
 3. Configurar Google Sign-In en `frontend-web` y `frontend-mobile` con sus Client IDs.
+   - Web: Google Identity Services con `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+   - Android/iOS: `@react-native-google-signin/google-signin` con `webClientId`
+     (`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`) y `frontend-mobile/google-services.json` (package
+     `com.finanzasfamiliares.app` + SHA-1). Reconstruye el development build tras cambiar el
+     archivo: `npx expo prebuild --clean && npx expo run:android`.
 4. Verificar salud de la API.
    ```bash
    curl http://localhost:8000/health

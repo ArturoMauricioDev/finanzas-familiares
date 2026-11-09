@@ -11,10 +11,9 @@ const sourceRoots = [
   "frontend-mobile/components",
 ];
 
-const excluded = [
+const sharedExcluded = [
   ".generated.",
   "/generated/",
-  "/charts/",
   "avatar-engine",
   "avatar-options",
   "google-brand",
@@ -22,10 +21,12 @@ const excluded = [
   ".test.",
 ];
 
+const chartImportExcluded = [...sharedExcluded, "/charts/"];
+
 const chartLibraries = ["recharts", "victory-native", "victory"];
 
-function isExcluded(relativePath) {
-  return excluded.some((fragment) => relativePath.includes(fragment));
+function isExcluded(relativePath, exclusions = sharedExcluded) {
+  return exclusions.some((fragment) => relativePath.includes(fragment));
 }
 
 async function collect(directory) {
@@ -49,18 +50,21 @@ async function main() {
 
   for (const relativePath of files) {
     const content = await readFile(path.join(root, relativePath), "utf8");
+
     const hexMatches = content.match(/#[0-9a-fA-F]{3,8}\b/g);
     if (hexMatches) {
       failures.push(`${relativePath}: literal color values are not allowed (${hexMatches.join(", ")})`);
     }
 
-    for (const library of chartLibraries) {
-      if (
-        content.includes(`from "${library}"`) ||
-        content.includes(`from '${library}'`) ||
-        content.includes(`require("${library}")`)
-      ) {
-        failures.push(`${relativePath}: chart library ${library} must stay behind components/ui/charts`);
+    if (!isExcluded(relativePath, chartImportExcluded)) {
+      for (const library of chartLibraries) {
+        if (
+          content.includes(`from "${library}"`) ||
+          content.includes(`from '${library}'`) ||
+          content.includes(`require("${library}")`)
+        ) {
+          failures.push(`${relativePath}: chart library ${library} must stay behind components/ui/charts`);
+        }
       }
     }
 

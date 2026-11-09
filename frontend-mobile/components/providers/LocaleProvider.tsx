@@ -3,9 +3,9 @@ import { I18n } from "i18n-js";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { defaultLocale, messages, type Locale } from "../../lib/i18n/messages.generated";
+import { formatLocaleFor } from "../../lib/format";
 import {
   getLocalePreference,
-  isLocale,
   normalizeLocale,
   setLocalePreference,
 } from "../../lib/preferences";
@@ -14,8 +14,25 @@ type TranslationValues = Record<string, string | number>;
 
 interface LocaleContextValue {
   locale: Locale;
+  formatLocale: string;
   setLocale: (locale: Locale) => void;
   t: (key: string, values?: TranslationValues) => string;
+}
+
+function deviceLocaleTag(): string {
+  try {
+    const primary = getLocales()[0];
+    if (!primary) return defaultLocale;
+    if (primary.languageTag) return primary.languageTag;
+    if (primary.languageCode) {
+      return primary.regionCode
+        ? `${primary.languageCode}-${primary.regionCode}`
+        : primary.languageCode;
+    }
+  } catch {
+    return defaultLocale;
+  }
+  return defaultLocale;
 }
 
 function createI18n(locale: Locale): I18n {
@@ -33,18 +50,10 @@ const defaultT = (key: string, values?: TranslationValues) =>
 
 const LocaleContext = createContext<LocaleContextValue>({
   locale: defaultLocale,
+  formatLocale: defaultLocale,
   setLocale: () => undefined,
   t: defaultT,
 });
-
-function deviceLocale(): Locale {
-  try {
-    const language = getLocales()[0]?.languageCode;
-    return isLocale(language) ? language : defaultLocale;
-  } catch {
-    return defaultLocale;
-  }
-}
 
 export function LocaleProvider({
   children,
@@ -54,12 +63,13 @@ export function LocaleProvider({
   initialLocale?: Locale;
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const [deviceLocale] = useState(deviceLocaleTag);
 
   useEffect(() => {
     let active = true;
     getLocalePreference().then((stored) => {
       if (!active) return;
-      setLocaleState(stored ?? deviceLocale());
+      setLocaleState(stored ?? defaultLocale);
     });
     return () => {
       active = false;
@@ -71,10 +81,15 @@ export function LocaleProvider({
     () => (key: string, values?: TranslationValues) => i18n.t(key, values) as string,
     [i18n],
   );
+  const formatLocale = useMemo(
+    () => formatLocaleFor(locale, deviceLocale),
+    [deviceLocale, locale],
+  );
 
   const value = useMemo<LocaleContextValue>(
     () => ({
       locale,
+      formatLocale,
       setLocale: (nextLocale) => {
         const normalized = normalizeLocale(nextLocale);
         setLocaleState(normalized);
@@ -82,7 +97,7 @@ export function LocaleProvider({
       },
       t,
     }),
-    [locale, t],
+    [formatLocale, locale, t],
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
