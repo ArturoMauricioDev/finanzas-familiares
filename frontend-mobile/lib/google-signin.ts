@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-import { GOOGLE_WEB_CLIENT_ID } from "./auth";
+import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./auth";
 
 let configured = false;
 
@@ -15,7 +15,8 @@ export async function requestGoogleIdToken(): Promise<string | null> {
 
   if (!configured) {
     GoogleOneTapSignIn.configure({
-      webClientId: GOOGLE_WEB_CLIENT_ID || "autoDetect",
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
       offlineAccess: false,
     });
     configured = true;

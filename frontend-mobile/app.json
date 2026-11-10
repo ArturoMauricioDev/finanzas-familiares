@@ -36,18 +36,21 @@
           "locationWhenInUsePermission": "Kitho usa tu ubicación solo para sugerir la moneda local de tu familia."
         }
       ],
-      "react-native-nitro-google-signin"
+      [
+        "react-native-nitro-google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.633589769730-v2stl5vv1piaiaqfceg9b3gs1d6drje9"
+        }
+      ]
     ],
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "android": {
-      "package": "com.finanzasfamiliares.app",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.finanzasfamiliares.app"
     },
     "ios": {
       "bundleIdentifier": "com.finanzasfamiliares.app",
-      "supportsTablet": true,
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "supportsTablet": true
     }
   }
 }

@@ -106,17 +106,15 @@ que ejecuta el backend, no a `localhost`.
 - Añade `http://localhost:3000` a los orígenes autorizados de la credencial web.
 - Para Android, registra el `package` `com.finanzasfamiliares.app` y el SHA-1 del keystore.
 - Para iOS, registra el bundle ID `com.finanzasfamiliares.app`.
-- **Android nativo**: descarga `google-services.json` del proyecto de Firebase/Google Cloud y
-  colócalo en `frontend-mobile/google-services.json` (está en `.gitignore`). La app configura
-  `webClientId` con `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` y usa el cliente Android del archivo para
-  resolver package + SHA-1.
-- **iOS nativo**: coloca `GoogleService-Info.plist` en `frontend-mobile/GoogleService-Info.plist`
-  (está en `.gitignore`). El config plugin de `react-native-nitro-google-signin` copia el archivo y
-  añade el `REVERSED_CLIENT_ID` como URL scheme; sin él hay que declarar `iosUrlScheme` en las
-  opciones del plugin.
+- **Android nativo (sin Firebase)**: no se usa `google-services.json`; basta con registrar el
+  `package` `com.finanzasfamiliares.app` y el SHA-1 del keystore en Google Cloud Console. La app pasa
+  `webClientId` explícito desde `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+- **iOS nativo (sin Firebase)**: no se usa `GoogleService-Info.plist`; el config plugin recibe
+  `iosUrlScheme` (el reversed iOS client ID, `com.googleusercontent.apps.<id>`) en `app.json`, y la
+  app pasa `iosClientId` desde `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
 - Añade los Client IDs de Android/iOS en `GOOGLE_CLIENT_IDS` del backend para que los `id_token`
   nativos también sean válidos.
-- Tras cambiar `google-services.json` o las credenciales, **reconstruye** el development build/APK
+- Tras cambiar las credenciales, `app.json` o los client IDs, **reconstruye** el development build/APK
   (`npx expo prebuild --clean && npx expo run:android` o un build EAS); no basta con recargar Metro.
 - Un `redirect_uri` personalizado en Android produce `Error 400: invalid_request`; no lo uses para
   el flujo nativo.
