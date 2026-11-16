@@ -9,7 +9,12 @@ import {
   createDefaultAvatar,
   isAvatarDataUri,
 } from "../../../lib/avatar-engine.generated";
-import { errorText } from "../../../lib/errors";
+import {
+  errorDescriptorFromKey,
+  errorDescriptorText,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "../../../lib/errors";
 import { getPendingInviteCode, updateSession } from "../../../lib/session";
 import { useAuthGuard } from "../../../hooks/useAuthGuard";
 
@@ -18,7 +23,7 @@ export default function ProfileSetupScreen() {
   const { t } = useI18n();
   const { session, ready } = useAuthGuard();
   const [nombre, setNombre] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [saving, setSaving] = useState(false);
 
   const seed = session?.user.email || session?.user.id || "kitho";
@@ -56,7 +61,7 @@ export default function ProfileSetupScreen() {
 
     try {
       if (avatar.length > AVATAR_MAX_LENGTH) {
-        setError(t("avatar.svgUnsupported"));
+        setError(errorDescriptorFromKey("avatar.svgUnsupported"));
         return;
       }
 
@@ -80,7 +85,7 @@ export default function ProfileSetupScreen() {
         : "/family/members";
       router.replace(destination);
     } catch (err) {
-      setError(errorText(err, t, t("profile.saveFailed")));
+      setError(toErrorDescriptor(err));
     } finally {
       setSaving(false);
     }
@@ -91,7 +96,9 @@ export default function ProfileSetupScreen() {
   return (
     <Page title={t("profile.setupTitle")} subtitle={t("profile.setupSubtitle")}>
       <Card>
-        <ErrorMessage message={error} />
+        <ErrorMessage
+          message={error ? errorDescriptorText(error, t, t("profile.saveFailed")) : null}
+        />
         <Avatar name={nombre || session.user.email} seed={seed} src={avatar} size="xl" />
         <Field
           label={t("profile.displayName")}

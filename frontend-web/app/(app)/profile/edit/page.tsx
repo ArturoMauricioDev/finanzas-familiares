@@ -17,7 +17,11 @@ import {
   SuccessMessage,
 } from "@/components/ui";
 import { api } from "@/lib/api";
-import { errorText } from "@/lib/errors";
+import {
+  errorDescriptorText,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "@/lib/errors";
 import { updateSession } from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
@@ -27,8 +31,8 @@ export default function ProfileEditPage() {
   const { session, ready } = useAuthGuard(true);
   const [nombre, setNombre] = useState("");
   const [avatar, setAvatar] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
+  const [messageKey, setMessageKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function ProfileEditPage() {
 
     setSaving(true);
     setError(null);
-    setMessage(null);
+    setMessageKey(null);
 
     try {
       const updated = await api.updateProfile({
@@ -54,10 +58,10 @@ export default function ProfileEditPage() {
       updateSession({
         user: { ...session.user, ...updated },
       });
-      setMessage(t("profile.updated"));
+      setMessageKey("profile.updated");
       router.push("/profile");
     } catch (err) {
-      setError(errorText(err, t, t("profile.saveFailed")));
+      setError(toErrorDescriptor(err));
     } finally {
       setSaving(false);
     }
@@ -81,8 +85,10 @@ export default function ProfileEditPage() {
     >
       <Card variant="elevated">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <ErrorMessage message={error} />
-          <SuccessMessage message={message} />
+          <ErrorMessage
+            message={error ? errorDescriptorText(error, t, t("profile.saveFailed")) : null}
+          />
+          <SuccessMessage message={messageKey ? t(messageKey) : null} />
           <div className="flex items-center gap-4">
             <Avatar
               name={nombre || session.user.email}

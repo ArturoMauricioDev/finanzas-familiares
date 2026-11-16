@@ -285,6 +285,11 @@
       "422": "Revisa los datos ingresados e inténtalo de nuevo.",
       "500": "Ocurrió un error en el servidor. Inténtalo de nuevo."
     },
+    "auth": {
+      "googlePlayServicesUnavailable": "Los servicios de Google Play no están disponibles o están desactualizados en este dispositivo.",
+      "googleNoIdToken": "Google no devolvió un token válido. Inténtalo de nuevo.",
+      "googleSignInFailed": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+    },
     "details": {
       "invalidGoogleToken": "El inicio de sesión con Google no es válido.",
       "invalidRefreshToken": "Tu sesión ha expirado. Vuelve a iniciar sesión.",

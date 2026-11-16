@@ -4,6 +4,7 @@ export interface ErrorDescriptor {
   status: number;
   key: string | null;
   fallback: string;
+  source?: "api" | "native";
 }
 
 export class ConfigurationError extends Error {
@@ -69,7 +70,47 @@ export function resolveError(status: number, detail?: unknown): ErrorDescriptor 
     status,
     key: detailKey ?? statusKey,
     fallback: detailValue ?? "",
+    source: "api",
   };
+}
+
+export function toErrorDescriptor(error: unknown): ErrorDescriptor {
+  if (error instanceof ApiError) {
+    const statusKey =
+      errorStatusKeys[String(error.status) as keyof typeof errorStatusKeys] ?? null;
+    return {
+      status: error.status,
+      key: error.messageKey ?? (error.fallbackDetail ? null : statusKey),
+      fallback: error.fallbackDetail,
+      source: "api",
+    };
+  }
+  if (error instanceof ConfigurationError) {
+    return {
+      status: 0,
+      key: error.messageKey,
+      fallback: error.fallbackDetail,
+      source: "api",
+    };
+  }
+  if (error instanceof Error) {
+    return { status: 0, key: null, fallback: error.message, source: "api" };
+  }
+  return { status: 0, key: null, fallback: "", source: "api" };
+}
+
+export function errorDescriptorFromKey(key: string, status = 0): ErrorDescriptor {
+  return { status, key, fallback: "", source: "api" };
+}
+
+export function errorDescriptorText(
+  descriptor: ErrorDescriptor,
+  translate: (key: string) => string,
+  fallback: string,
+): string {
+  if (descriptor.key) return translate(descriptor.key);
+  if (descriptor.fallback) return descriptor.fallback;
+  return fallback;
 }
 
 export function errorText(

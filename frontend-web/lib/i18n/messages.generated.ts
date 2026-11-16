@@ -288,6 +288,11 @@ export const messages = {
       "422": "Revisa los datos ingresados e inténtalo de nuevo.",
       "500": "Ocurrió un error en el servidor. Inténtalo de nuevo."
     },
+    "auth": {
+      "googlePlayServicesUnavailable": "Los servicios de Google Play no están disponibles o están desactualizados en este dispositivo.",
+      "googleNoIdToken": "Google no devolvió un token válido. Inténtalo de nuevo.",
+      "googleSignInFailed": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+    },
     "details": {
       "invalidGoogleToken": "El inicio de sesión con Google no es válido.",
       "invalidRefreshToken": "Tu sesión ha expirado. Vuelve a iniciar sesión.",
@@ -611,6 +616,11 @@ export const messages = {
       "409": "The action conflicts with the current state. Refresh and try again.",
       "422": "Review the entered data and try again.",
       "500": "A server error occurred. Please try again."
+    },
+    "auth": {
+      "googlePlayServicesUnavailable": "Google Play services are unavailable or out of date on this device.",
+      "googleNoIdToken": "Google did not return a valid token. Please try again.",
+      "googleSignInFailed": "Google sign-in failed. Please try again."
     },
     "details": {
       "invalidGoogleToken": "Google sign-in is invalid.",

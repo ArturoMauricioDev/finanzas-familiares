@@ -25,6 +25,7 @@ describe("resolveError", () => {
       status: 400,
       key: "errors.details.userAlreadyInFamily",
       fallback: "User already belongs to a family",
+      source: "api",
     });
     expect(resolveError(403, "Only admins can create invitations").key).toBe(
       "errors.details.adminOnlyInvitations",
@@ -37,6 +38,7 @@ describe("resolveError", () => {
       status: 409,
       key: "errors.status.409",
       fallback: "",
+      source: "api",
     });
   });
 
@@ -45,6 +47,7 @@ describe("resolveError", () => {
       status: 422,
       key: "errors.status.422",
       fallback: "",
+      source: "api",
     });
   });
 
@@ -53,6 +56,7 @@ describe("resolveError", () => {
       status: 500,
       key: "errors.status.500",
       fallback: "database connection reset",
+      source: "api",
     });
   });
 });

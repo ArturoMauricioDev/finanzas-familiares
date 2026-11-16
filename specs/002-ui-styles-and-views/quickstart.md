@@ -42,7 +42,7 @@ pnpm install
 
 **Notas**:
 
-- El proyecto usa **Expo SDK 58** (`expo 58.0.23`, RN `0.88.1`, React `19.3.0`, TypeScript 6).
+- El proyecto usa **Expo SDK 58** (`expo 58.0.24`, RN `0.88.1`, React `19.3.0`, TypeScript 6).
   Ejecuta `npx expo install --fix` tras actualizar para alinear todos los módulos nativos.
 - `victory-native` se fija en `42.0.1`, compatible con Skia `2.14.0` y Reanimated `4.7.1` que
   incluye Expo 58. La 43 exige Skia `>=2.15.1`, fuera de la versión que fija SDK 58.
@@ -135,17 +135,25 @@ docker compose exec backend pytest
 
 El login móvil usa `react-native-nitro-google-signin` sobre `react-native-nitro-modules`. En Expo
 SDK 58 la New Architecture está activa por defecto, por lo que `app.json` ya no declara
-`newArchEnabled` (el esquema de Expo lo rechaza). Para validar en un development build:
+`newArchEnabled` (el esquema de Expo lo rechaza). Los IDs de cliente se leen de
+`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` y
+`EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`; no se necesitan `google-services.json` ni
+`GoogleService-Info.plist`. Para validar en un development build:
 
 ```bash
 cd frontend-mobile
-# Coloca google-services.json (Android) y GoogleService-Info.plist (iOS), ambos en .gitignore
 npx expo prebuild --clean
 npx expo run:android   # o npx expo run:ios
 ```
 
-El config plugin aplica Google Services en Android y añade el `REVERSED_CLIENT_ID` como URL scheme
-en iOS. El login real no se prueba en Expo Go porque el módulo Nitro exige código nativo.
+El config plugin añade el `iosUrlScheme` de Google en iOS. El login real no se prueba en Expo Go
+porque el módulo Nitro exige código nativo. Para un build instalable, usar el perfil `development`
+de EAS (`eas build --profile development --platform android`).
+
+`requestGoogleIdToken` devuelve un resultado discriminado: `success` con `idToken`, `cancelled` o
+`error` con `code`/`message`. El login ignora la cancelación y mapea `PLAY_SERVICES_NOT_AVAILABLE`
+y `MISSING_ID_TOKEN` a `errors.auth.*`; cualquier otro fallo nativo usa
+`errors.auth.googleSignInFailed`.
 
 ## Manual Acceptance Scenarios
 
@@ -336,6 +344,34 @@ el formato usa la moneda guardada.
 abandonar; la reasignación de administrador recae en la membresía con `created_at` más antiguo; la
 UI muestra carga/error, no duplica envíos y no ejecuta reglas de dominio por su cuenta.
 
+### 19. Feedback del login con Google en móvil
+
+1. En un development build, abrir Login y pulsar **Continuar con Google**.
+2. Elegir una cuenta válida.
+3. Repetir el flujo y cancelar el selector de cuentas.
+4. Simular un error nativo (Play Services no disponible o respuesta sin `idToken`) y un fallo de
+   canje del backend.
+5. Con un error visible, cambiar el idioma a English.
+
+**Esperado**:
+
+- Tras elegir la cuenta, la app canjea el token y navega automáticamente: sin perfil →
+  `/profile/setup`; sin grupo → `/invite` (con código pendiente) o `/family/select`; con grupo →
+  `/family/members`. No se queda en login sin feedback.
+- Cancelar vuelve al estado inicial sin banner, sin anuncio y sin cambiar de ruta.
+- Los errores muestran un `InlineBanner` traducido (`role="alert"`/`accessibilityLiveRegion`) y el
+  botón se rehabilita; un `idToken` ausente se trata como error, no como cancelación.
+- El error visible cambia a inglés sin recargar.
+
+**Estado**: cubierto automáticamente por `frontend-mobile/__tests__/google-signin.test.ts` y
+`frontend-mobile/__tests__/login.test.tsx`. Validado manualmente en un dispositivo Android con
+development build vía `--tunnel`: dos cuentas distintas completaron `signIn` →
+`POST /auth/google` → navegación según onboarding (una con `needs_profile_setup`/`needs_family_setup`
+en `true` y otra en `false`). El APK requiere registrar su SHA-1
+(`f0ea8c762dc30eb0ea53f6edf04e00b37f44c1e3`) en el cliente OAuth Android
+`com.finanzasfamiliares.app`. La re-verificación manual de cancelación y error nativo sigue
+pendiente; ambos están cubiertos por las pruebas automatizadas.
+
 ## Troubleshooting
 
 | Síntoma | Revisión |
@@ -353,8 +389,10 @@ UI muestra carga/error, no duplica envíos y no ejecuta reglas de dominio por su
 | Web build incluye Recharts | Revisar que solo `components/charts/ChartContainer` importe `recharts` y que use `next/dynamic` |
 | Pruebas móviles fallan por RNTL | Usar `@testing-library/react-native@14.1.0` y `await render(...)` / `await fireEvent...(...)` |
 | Lint móvil marca `react-hooks/set-state-in-effect` | La regla se dejó como `warn` para los efectos de carga/sincronización de sesión |
-| Android: `Error 400: invalid_request` con `redirect_uri=finanzasfamiliares://...` | Usar Google Sign-In nativo (`react-native-nitro-google-signin`) con `google-services.json`; no enviar un esquema personalizado a Google |
+| Android: `Error 400: invalid_request` con `redirect_uri=finanzasfamiliares://...` | Usar Google Sign-In nativo (`react-native-nitro-google-signin`) con los client IDs por entorno; no enviar un esquema personalizado a Google ni depender de `google-services.json` |
 | Login Google móvil no resuelve el módulo Nitro | Instalar `react-native-nitro-modules`, habilitar New Architecture y usar un development build (no Expo Go); ejecutar `npx expo install --fix` |
+| Expo web: `Error 400: redirect_uri_mismatch` | Registrar el `redirect_uri` exacto (`origin + /auth/login`) en los *Authorized redirect URIs* de la credencial Web; fijar `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` (URL estable) o usar `http://localhost:8081/auth/login` en local |
+| Tras elegir cuenta de Google vuelve a login sin mensaje | Revisar el resultado discriminado del adaptador: un `idToken` ausente o un fallo de canje debe ser `error` (banner inline), no `cancelled`; comprobar `POST /auth/google`, la sesión y el `redirectTo`; ver FR-084 |
 
 ## Definition of Done
 
@@ -365,6 +403,8 @@ UI muestra carga/error, no duplica envíos y no ejecuta reglas de dominio por su
 - [ ] Avatar por defecto generado y editor con vista previa sin persistencia.
 - [ ] Errores mapeados a i18n con fallback.
 - [ ] Botón de Google con estilo oficial y logo sin recolorear.
+- [ ] Login móvil con Google navega según onboarding, cancela en silencio y muestra errores inline
+  traducidos (FR-084).
 - [ ] Invitación solo por código, de un solo uso y con caducidad de 7 días; sin enlaces.
 - [ ] Selector de moneda con 5 sugerencias, geolocalización opcional, fallback locale/USD y **Otros**.
 - [ ] Eliminar/Abandonar familia según integrantes, con confirmación y redirección.
@@ -383,11 +423,11 @@ UI muestra carga/error, no duplica envíos y no ejecuta reglas de dominio por su
 | `node scripts/check-ui.mjs` | 105 archivos; sin imports de gráficos fuera de `components/charts/` ni colores literales fuera de excepciones documentadas (incluye `components/charts/` en ambos frontends). |
 | Web `pnpm run typecheck` | Sin errores. |
 | Web `pnpm run lint` | Sin avisos ni errores. |
-| Web `pnpm test` | 19 suites, 104 pruebas correctas (incluye moneda, código de invitación, error inline de código, acciones de familia, `jest-axe`, tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
+| Web `pnpm test` | 20 suites, 110 pruebas correctas (incluye moneda, código de invitación, error inline de código, acciones de familia, `jest-axe`, tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
 | Web `pnpm run build` | Compilación de producción correcta; Recharts queda fuera de las rutas actuales. |
 | Móvil `pnpm run typecheck` | Sin errores. |
 | Móvil `pnpm run lint` | Sin errores (4 avisos de `react-hooks/set-state-in-effect`). |
-| Móvil `pnpm test` | 20 suites, 92 pruebas correctas (incluye moneda, código de invitación, error inline de código, acciones de familia, tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
+| Móvil `pnpm test` | 24 suites, 118 pruebas correctas (incluye Google nativo, login con feedback FR-084, mensajes traducidos en render, moneda, código de invitación, error inline de código, acciones de familia, tema, idioma, navegación, avatar, feedback, gráficos, tokens, i18n y preferencias). |
 | Móvil `npx expo-doctor` | 20/20 comprobaciones correctas con Expo SDK 58; `expo-location` y `expo-clipboard` instalados. |
 | Móvil login Google | `react-native-nitro-google-signin@2.3.1` con `react-native-nitro-modules@0.37.2`; `GoogleOneTapSignIn` (`configure`/`checkPlayServices`/`signIn`/`createAccount`/`presentExplicitSignIn`) y mock de Jest actualizados. |
 | Backend `pytest` | 43 pruebas correctas, 2 omitidas (PostgreSQL opcional). |
@@ -404,8 +444,10 @@ token `scrim`; Ajustes muestra el aviso legal; las cadenas de `Spinner`, `Loadin
 **Pendiente de validación manual**: auditoría Lighthouse de accesibilidad en Login, Miembros y
 Ajustes; recorrido con teclado, zoom de texto al 200 % y movimiento reducido; revisión con
 VoiceOver/TalkBack y Accessibility Scanner; comprobación visual de breakpoints
-320/600/840/1440 px y paridad web/móvil. Los escenarios manuales de este documento siguen siendo
-la referencia para cerrar esas comprobaciones.
+320/600/840/1440 px y paridad web/móvil; re-verificación manual de cancelación y error del login
+con Google móvil (FR-084) en un device Android con development build, ya que el éxito se validó.
+Los escenarios manuales de este documento siguen siendo la referencia para cerrar esas
+comprobaciones.
 
 **Nota**: la tabla incluye los cambios de botón de Google, invitación por código, selector de moneda
 con geolocalización y acciones de familia, además de las extensiones de backend de la spec 001

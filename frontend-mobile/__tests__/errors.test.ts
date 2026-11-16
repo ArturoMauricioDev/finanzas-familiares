@@ -25,6 +25,7 @@ describe("mobile resolveError", () => {
       status: 400,
       key: "errors.details.userAlreadyInFamily",
       fallback: "User already belongs to a family",
+      source: "api",
     });
     expect(resolveError(403, "Only admins can manage members").key).toBe(
       "errors.details.adminOnlyMembers",
@@ -35,7 +36,12 @@ describe("mobile resolveError", () => {
   });
 
   it("maps statuses without detail to the status key", () => {
-    expect(resolveError(409)).toEqual({ status: 409, key: "errors.status.409", fallback: "" });
+    expect(resolveError(409)).toEqual({
+      status: 409,
+      key: "errors.status.409",
+      fallback: "",
+      source: "api",
+    });
   });
 
   it("falls back to the status key for array validation payloads", () => {
@@ -43,6 +49,7 @@ describe("mobile resolveError", () => {
       status: 422,
       key: "errors.status.422",
       fallback: "",
+      source: "api",
     });
   });
 
@@ -51,6 +58,7 @@ describe("mobile resolveError", () => {
       status: 500,
       key: "errors.status.500",
       fallback: "database connection reset",
+      source: "api",
     });
   });
 });

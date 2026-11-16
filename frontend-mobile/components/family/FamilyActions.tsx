@@ -6,6 +6,7 @@ import { useTheme } from "../providers/ThemeProvider";
 import { Button } from "../ui/Button";
 import { Dialog } from "../ui/Dialog";
 import { ErrorMessage } from "../ui/InlineBanner";
+import { errorDescriptorText, type ErrorDescriptor } from "../../lib/errors";
 import { spacing } from "../../lib/generated/tokens";
 import { typeStyle } from "../../lib/ui-styles";
 
@@ -14,7 +15,7 @@ export interface FamilyActionsProps {
   onDelete?: () => void | Promise<void>;
   onLeave?: () => void | Promise<void>;
   loadingAction?: "delete" | "leave" | null;
-  error?: string | null;
+  error?: ErrorDescriptor | null;
 }
 
 export function FamilyActions({
@@ -38,6 +39,9 @@ export function FamilyActions({
     ? t("family.deleteFamilyConfirmBody")
     : t("family.leaveFamilyConfirmBody");
   const label = canDelete ? t("family.deleteFamily") : t("family.leaveFamily");
+  const errorFallback = canDelete
+    ? t("family.deleteFamilyFailed")
+    : t("family.leaveFamilyFailed");
 
   return (
     <View style={styles.root}>
@@ -47,7 +51,9 @@ export function FamilyActions({
         loading={loadingAction === action}
         onPress={() => setConfirming(action)}
       />
-      <ErrorMessage message={error} />
+      <ErrorMessage
+        message={error ? errorDescriptorText(error, t, errorFallback) : null}
+      />
       <Dialog
         open={confirming !== null}
         title={title}

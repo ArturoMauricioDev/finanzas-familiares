@@ -8,7 +8,12 @@ import { useI18n } from "@/components/providers/LocaleProvider";
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "@/components/ui";
 import { api } from "@/lib/api";
 import { createCurrencySelection, isValidCurrencyCode } from "@/lib/currency";
-import { errorText } from "@/lib/errors";
+import {
+  errorDescriptorFromKey,
+  errorDescriptorText,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "@/lib/errors";
 import { detectCountry } from "@/lib/geolocation";
 import { applyFamilyCreated, clearPendingInviteCode } from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -21,7 +26,7 @@ export default function FamilyCreatePage() {
   const [selection, setSelection] = useState(() => createCurrencySelection({ locale: formatLocale }));
   const [moneda, setMoneda] = useState(() => createCurrencySelection({ locale: formatLocale }).selectedCode);
   const [detecting, setDetecting] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -53,7 +58,7 @@ export default function FamilyCreatePage() {
     setError(null);
 
     if (!isValidCurrencyCode(moneda)) {
-      setError(t("family.currencyInvalid"));
+      setError(errorDescriptorFromKey("family.currencyInvalid"));
       return;
     }
 
@@ -68,7 +73,7 @@ export default function FamilyCreatePage() {
       clearPendingInviteCode();
       router.replace("/family/members");
     } catch (err) {
-      setError(errorText(err, t, t("family.createFailed")));
+      setError(toErrorDescriptor(err));
     } finally {
       setSaving(false);
     }
@@ -81,7 +86,9 @@ export default function FamilyCreatePage() {
     <Page title={t("family.createTitle")} subtitle={t("family.createSubtitle")}>
       <Card variant="elevated">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <ErrorMessage message={error} />
+          <ErrorMessage
+            message={error ? errorDescriptorText(error, t, t("family.createFailed")) : null}
+          />
           <Field
             label={t("family.nameLabel")}
             value={nombre}

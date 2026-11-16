@@ -10,6 +10,7 @@ function Probe() {
       <span data-testid="formatLocale">{formatLocale}</span>
       <span data-testid="home">{t("nav.home")}</span>
       <span data-testid="error">{t("errors.details.invitationExpired")}</span>
+      <span data-testid="success">{t("profile.updated")}</span>
       <span data-testid="version">{t("settings.version", { version: "1.2.3" })}</span>
       <button type="button" onClick={() => setLocale("en")}>
         English
@@ -41,6 +42,7 @@ describe("web locale provider", () => {
 
     expect(screen.getByTestId("locale")).toHaveTextContent("es");
     expect(screen.getByTestId("home")).toHaveTextContent("Inicio");
+    expect(screen.getByTestId("success")).toHaveTextContent("Perfil actualizado.");
     expect(screen.getByTestId("version")).toHaveTextContent("Versión 1.2.3");
     await waitFor(() =>
       expect(screen.getByTestId("formatLocale")).toHaveTextContent("es-US"),
@@ -58,6 +60,7 @@ describe("web locale provider", () => {
 
     await waitFor(() => expect(screen.getByTestId("home")).toHaveTextContent("Home"));
     expect(screen.getByTestId("error")).toHaveTextContent("This invitation expired.");
+    expect(screen.getByTestId("success")).toHaveTextContent("Profile updated.");
     expect(screen.getByTestId("version")).toHaveTextContent("Version 1.2.3");
     expect(window.localStorage.getItem("kitho_locale")).toBe("en");
     expect(document.documentElement.lang).toBe("en");

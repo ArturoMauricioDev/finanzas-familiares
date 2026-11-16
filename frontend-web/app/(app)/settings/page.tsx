@@ -17,17 +17,17 @@ export default function SettingsPage() {
   const router = useRouter();
   const { t, locale, setLocale } = useI18n();
   const theme = useTheme();
-  const [message, setMessage] = useState<string | null>(null);
+  const [messageKey, setMessageKey] = useState<string | null>(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
   const changeTheme = (value: string) => {
     theme.setMode(value as ThemePreference);
-    setMessage(t("settings.themeChanged"));
+    setMessageKey("settings.themeChanged");
   };
 
   const changeLocale = (value: string) => {
     setLocale(value as Locale);
-    setMessage(t("settings.localeChanged"));
+    setMessageKey("settings.localeChanged");
   };
 
   const logout = () => {
@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
   return (
     <Page title={t("settings.title")} subtitle={t("settings.subtitle")}>
-      <SuccessMessage message={message} />
+      <SuccessMessage message={messageKey ? t(messageKey) : null} />
 
       <Card variant="outlined" className="space-y-4">
         <div>

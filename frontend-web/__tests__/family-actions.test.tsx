@@ -1,8 +1,26 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 
 import { FamilyActions } from "@/components/family/FamilyActions";
+import { useI18n } from "@/components/providers/LocaleProvider";
+import type { ErrorDescriptor } from "@/lib/errors";
 
 import { renderWithProviders } from "./helpers/renderWithProviders";
+
+const deleteError: ErrorDescriptor = {
+  status: 0,
+  key: "family.deleteFamilyFailed",
+  fallback: "",
+  source: "api",
+};
+
+function LocaleToggle() {
+  const { setLocale } = useI18n();
+  return (
+    <button type="button" onClick={() => setLocale("en")}>
+      English
+    </button>
+  );
+}
 
 describe("FamilyActions", () => {
   it("offers delete only when the family has one member", async () => {
@@ -45,17 +63,34 @@ describe("FamilyActions", () => {
     await waitFor(() => expect(onLeave).toHaveBeenCalledTimes(1));
   });
 
-  it("disables the action and maps an error while loading", async () => {
+  it("disables the action and maps an error descriptor while loading", async () => {
     await renderWithProviders(
       <FamilyActions
         memberCount={1}
         loadingAction="delete"
-        error="No se pudo eliminar la familia."
+        error={deleteError}
         onDelete={jest.fn()}
       />,
     );
 
     expect(screen.getByText("No se pudo eliminar la familia.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Eliminar familia" })).toBeDisabled();
+  });
+
+  it("re-translates a visible error when the language changes", async () => {
+    await renderWithProviders(
+      <>
+        <LocaleToggle />
+        <FamilyActions memberCount={1} error={deleteError} onDelete={jest.fn()} />
+      </>,
+    );
+
+    expect(screen.getByText("No se pudo eliminar la familia.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Could not delete the family.")).toBeInTheDocument(),
+    );
   });
 });

@@ -285,7 +285,7 @@ código→abandonar/eliminar, sin romper autenticación, perfil, grupo, invitaci
 
 **Purpose**: Cierre, documentación y validación end-to-end.
 
-- [X] T122 [P] Actualizar `README.md` y `specs/002-ui-styles-and-views/quickstart.md` con dependencias, comandos, escenarios 15–18 y nota de extensiones de spec 001.
+- [X] T122 [P] Actualizar `README.md` y `specs/002-ui-styles-and-views/quickstart.md` con dependencias, comandos, escenarios 15–19 (incluido feedback del login con Google móvil) y nota de extensiones de spec 001.
 - [X] T123 Ejecutar `node scripts/generate-shared.mjs` y `node scripts/generate-shared.mjs --check`; corregir cualquier deriva en `design-tokens/`, `shared/` y artefactos generados.
 - [X] T124 Ejecutar `node scripts/check-shared.mjs` y `node scripts/check-ui.mjs`; corregir paridad i18n, literales visuales e imports de gráficos.
 - [X] T125 Ejecutar en `frontend-web`: `pnpm run typecheck`, `pnpm run lint` y `pnpm test`; corregir fallos de componentes, navegación, tema, locale, avatar, feedback, código, moneda y acciones de familia.
@@ -293,7 +293,7 @@ código→abandonar/eliminar, sin romper autenticación, perfil, grupo, invitaci
 - [X] T127 Ejecutar en `frontend-mobile`: `pnpm run typecheck`, `pnpm run lint` y `pnpm test`; corregir los mismos fallos que web.
 - [X] T128 Ejecutar `npx expo-doctor` en `frontend-mobile` y resolver incompatibilidades de Expo SDK 58, Skia, Reanimated, Victory Native y `expo-location`.
 - [ ] T129 Ejecutar manualmente los escenarios 1–14 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil.
-- [ ] T130 Ejecutar manualmente los escenarios 15–18 de `specs/002-ui-styles-and-views/quickstart.md`: botón Google, invitación por código, moneda regional y Eliminar/Abandonar familia.
+- [ ] T130 Ejecutar manualmente los escenarios 15–19 de `specs/002-ui-styles-and-views/quickstart.md`: botón Google, invitación por código, moneda regional, Eliminar/Abandonar familia y feedback del login con Google móvil.
 - [ ] T131 Ejecutar auditoría Lighthouse de accesibilidad `>=95` en Login, Miembros y Ajustes, y revisar foco/teclado, zoom 200 %, 320 px, movimiento reducido y VoiceOver/TalkBack.
 - [X] T132 Corregir incidencias encontradas en T123–T131 en `frontend-web/`, `frontend-mobile/`, `shared/`, `scripts/` y `design-tokens/`, y repetir las puertas de calidad afectadas.
 - [X] T133 Actualizar el estado final de `specs/002-ui-styles-and-views/tasks.md` y registrar la validación en `specs/002-ui-styles-and-views/quickstart.md`.
@@ -308,6 +308,8 @@ código→abandonar/eliminar, sin romper autenticación, perfil, grupo, invitaci
 - **Foundational (Phase 2)**: Depende de Setup y bloquea todas las historias.
 - **User Stories (Phase 3–9)**: Dependen de Foundational; pueden ejecutarse en paralelo si hay equipo.
 - **Polish (Phase 10)**: Depende de las historias deseadas.
+- **FR-084 (Phase 16)**: Depende de US4 (login) y de la migración Nitro (Phase 13); puede ejecutarse
+  después de T150 y en paralelo con el resto de convergence que no toque el login móvil.
 
 ### User Story Dependencies
 
@@ -318,6 +320,8 @@ código→abandonar/eliminar, sin romper autenticación, perfil, grupo, invitaci
 - **US5 (P3)**: Depende de US1 (feedback) y se integra en US2/US4.
 - **US6 (P3)**: Depende de US1 (Avatar) y de los enlaces de Perfil de US2.
 - **US7 (P4)**: Solo depende de Foundational (tokens) y es independiente de las demás historias.
+- **FR-084 (US4/US5)**: Se integra en el login de US4 y reutiliza el feedback de US5; requiere la
+  migración Nitro de Phase 13 y no depende de US6/US7.
 
 ### Within Each User Story
 
@@ -333,6 +337,8 @@ código→abandonar/eliminar, sin romper autenticación, perfil, grupo, invitaci
 - US1 y US2 pueden trabajar en paralelo con dos desarrolladores tras Foundational.
 - US3, US4, US5, US6 y US7 pueden paralelizarse por plataforma o por historia una vez que US1/US2 estén estables.
 - Las tareas web y móvil de una misma historia pueden ejecutarse en paralelo si no comparten archivos.
+- En FR-084, T159–T161 pueden ejecutarse en paralelo; T162–T164 son secuenciales porque comparten
+  el adaptador, el login y su mock.
 
 ---
 
@@ -366,6 +372,22 @@ Task: "Actualizar scripts/check-ui.mjs"
 
 ---
 
+## Parallel Example: FR-084
+
+```bash
+# Tests e i18n en paralelo (archivos distintos):
+Task: "Añadir claves i18n y regenerar catálogos en shared/i18n/*.json"
+Task: "Crear pruebas del adaptador en frontend-mobile/__tests__/google-signin.test.ts"
+Task: "Crear pruebas del login en frontend-mobile/__tests__/login.test.tsx"
+
+# Después, en secuencia:
+Task: "Refactorizar frontend-mobile/lib/google-signin.ts"
+Task: "Actualizar frontend-mobile/app/(auth)/auth/login.tsx"
+Task: "Actualizar el mock en frontend-mobile/jest.setup.js"
+```
+
+---
+
 ## Implementation Strategy
 
 ### MVP First
@@ -382,7 +404,8 @@ Task: "Actualizar scripts/check-ui.mjs"
 4. US4 → onboarding/familia/código/moneda/acciones → validar.
 5. US5 + US6 → feedback y avatar → validar.
 6. US7 → base de gráficos → validar.
-7. Polish → puertas de calidad y quickstart completo.
+7. FR-084 → feedback del login con Google móvil → validar éxito/cancelación/error en dispositivo.
+8. Polish → puertas de calidad y quickstart completo.
 
 ### Parallel Team Strategy
 
@@ -404,6 +427,8 @@ Task: "Actualizar scripts/check-ui.mjs"
 - Las pruebas deben fallar antes de implementar cuando se incluyan.
 - No se modifican `backend/`, `docker-compose.yml` ni PostgreSQL; las extensiones de spec 001 son
   prerequisito funcional.
+- FR-084 no cambia el backend: solo distingue éxito, cancelación y error en el adaptador nativo y
+  consume `POST /auth/google` de la spec 001.
 - Evitar tareas vagas, conflictos de archivo y dependencias cruzadas que rompan la independencia.
 
 ---
@@ -414,7 +439,7 @@ Task: "Actualizar scripts/check-ui.mjs"
 - [X] T135 Asociar los errores de código inválido, usado y expirado al campo de código con estado inválido y descripción accesible, y mapearlos inline en `frontend-web/app/(onboarding)/invite/page.tsx` y `frontend-mobile/app/(onboarding)/invite/index.tsx` per `FR-078` (partial).
 - [X] T136 Mostrar en las pantallas de unión por código de `frontend-web/app/(onboarding)/invite/page.tsx` y `frontend-mobile/app/(onboarding)/invite/index.tsx` que el código es de un solo uso y caduca a los 7 días per `FR-083` (partial).
 - [ ] T137 Ejecutar la auditoría de accesibilidad (Lighthouse `>=95`, teclado, zoom 200 %, movimiento reducido y VoiceOver/TalkBack) y registrar los resultados en `specs/002-ui-styles-and-views/quickstart.md` per `T131`, `SC-002` y `SC-003` (missing).
-- [ ] T138 Ejecutar y registrar los escenarios manuales 1–18 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil per `T129` y `T130` (missing).
+- [ ] T138 Ejecutar y registrar los escenarios manuales 1–19 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil per `T129` y `T130` (missing).
 
 ---
 
@@ -422,7 +447,7 @@ Task: "Actualizar scripts/check-ui.mjs"
 
 - [X] T139 Configurar `frontend-web/components/ui/GoogleSignInButton.tsx` con los props oficiales de Google Identity Services (`text="continue_with"`, `shape="pill"`, `size="large"` y `locale` derivado del idioma activo) y añadir `locale` a `GoogleOAuthProvider` en `frontend-web/components/providers/AppProviders.tsx`, evitando además el desbordamiento horizontal en 320 px por `width` fijo, per `FR-046`/`SC-015`/`T034` (partial).
 - [ ] T140 Ejecutar la auditoría de accesibilidad (Lighthouse `>=95` en Login, Miembros y Ajustes; recorrido con teclado, zoom de texto al 200 %, movimiento reducido y VoiceOver/TalkBack) y corregir en `frontend-web/` y `frontend-mobile/` las incidencias halladas, registrando los resultados en `specs/002-ui-styles-and-views/quickstart.md`, per `SC-002`/`SC-003`/`T131`/`T137` (missing).
-- [ ] T141 Ejecutar y registrar los escenarios manuales 1–18 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil (breakpoints 320/600/840/1440 px, paridad visual web/móvil y flujos de onboarding/familia), corrigiendo cualquier desviación, per `SC-006`/`SC-007`/`T129`/`T130`/`T138` (missing).
+- [ ] T141 Ejecutar y registrar los escenarios manuales 1–19 de `specs/002-ui-styles-and-views/quickstart.md` en web y móvil (breakpoints 320/600/840/1440 px, paridad visual web/móvil y flujos de onboarding/familia), corrigiendo cualquier desviación, per `SC-006`/`SC-007`/`T129`/`T130`/`T138` (missing).
 - [X] T142 Eliminar `// @ts-nocheck` de `frontend-mobile/components/charts/ChartContainer.tsx` y tipar correctamente la integración con Victory Native/Skia para que `pnpm run typecheck` la valide, per `FR-066`/`FR-058`/`T118` (contradicts).
 - [X] T143 Ajustar `scripts/check-ui.mjs` para que la verificación de colores literales cubra `frontend-web/components/charts/` y `frontend-mobile/components/charts/`, o documentar explícitamente la excepción de `components/charts/`, per `FR-008`/`T045`/`T120` (partial).
 - [X] T144 Trasladar a los catálogos i18n las descripciones de metadatos y `BRAND_DESCRIPTION` de `frontend-web/app/layout.tsx`, `frontend-web/lib/branding.ts` y `frontend-mobile/app.json`, evitando cadenas visibles hardcodeadas, per `FR-030` (partial).
@@ -435,10 +460,10 @@ Task: "Actualizar scripts/check-ui.mjs"
 
 **Independent Test**: `frontend-mobile` compila con `npx expo-doctor` y un development build nativo, y el login obtiene un `idToken` (o cancelación) a través de la nueva librería; `typecheck`, `lint` y `test` en verde.
 
-- [X] T145 [P] Actualizar `frontend-mobile/package.json` y regenerar `frontend-mobile/pnpm-lock.yaml`: eliminar `@react-native-google-signin/google-signin` y añadir `react-native-nitro-google-signin` (~2.3.x) y su peer `react-native-nitro-modules` (>=0.36.0) mediante `npx expo install`, per `FR-068`/plan: decisión botón Google (partial).
-- [X] T146 Actualizar `frontend-mobile/app.json`: sustituir el plugin `@react-native-google-signin/google-signin` por `react-native-nitro-google-signin`, configurar el `webClientId`/`google-services.json` de Android y el `REVERSED_CLIENT_ID`/`urlScheme` de iOS, conservando `name`/`slug`/`userInterfaceStyle`, per plan: decisión botón Google (partial).
-- [X] T147 Habilitar la React Native New Architecture en `frontend-mobile/app.json` (`newArchEnabled: true`) y la configuración nativa asociada, requisito de `react-native-nitro-modules`, per plan: restricción Nitro (missing).
-- [X] T148 Reescribir `frontend-mobile/lib/google-signin.ts` contra la API `GoogleOneTapSignIn` (`configure({ webClientId })`, `checkPlayServices()` en Android, `signIn()`, `isSuccessResponse(response)` → `response.data.idToken`), conservando el export `requestGoogleIdToken`, per `FR-046`/plan: decisión botón Google (contradicts).
+- [X] T145 [P] Actualizar `frontend-mobile/package.json` y regenerar `frontend-mobile/pnpm-lock.yaml`: eliminar `@react-native-google-signin/google-signin` y añadir `react-native-nitro-google-signin` (~2.3.x) y su peer `react-native-nitro-modules` (^0.37.2) mediante `npx expo install`, per `FR-068`/plan: decisión botón Google (partial).
+- [X] T146 Actualizar `frontend-mobile/app.json`: sustituir el plugin `@react-native-google-signin/google-signin` por `react-native-nitro-google-signin`, configurar el `iosUrlScheme` de iOS y los client IDs de Android/iOS por variables de entorno (`EXPO_PUBLIC_GOOGLE_*`), sin `google-services.json` ni `GoogleService-Info.plist`, conservando `name`/`slug`/`userInterfaceStyle`, per plan: decisión botón Google (partial).
+- [X] T147 Confirmar que la React Native New Architecture está activa por defecto en Expo SDK 58 y que `frontend-mobile/app.json` no declara `newArchEnabled` (el esquema de Expo lo rechaza), requisito de `react-native-nitro-modules`, per plan: restricción Nitro (missing).
+- [X] T148 Reescribir `frontend-mobile/lib/google-signin.ts` contra la API `GoogleOneTapSignIn` (`configure({ webClientId, iosClientId, offlineAccess: false })`, `checkPlayServices()` en Android, `signIn()`/`createAccount()`/`presentExplicitSignIn()`, `isSuccessResponse(response)` → `response.data.idToken`), conservando el export `requestGoogleIdToken`, per `FR-046`/plan: decisión botón Google (contradicts).
 - [X] T149 [P] Actualizar el mock de Google en `frontend-mobile/jest.setup.js` de `@react-native-google-signin/google-signin` a `react-native-nitro-google-signin` (`GoogleOneTapSignIn` con `configure`/`checkPlayServices`/`signIn`, más `isSuccessResponse` e `isNoSavedCredentialFoundResponse`), per `T007` (partial).
 - [X] T150 Verificar que `frontend-mobile/app/(auth)/auth/login.tsx` y `frontend-mobile/components/ui/GoogleSignInButton.tsx` siguen integrando el login nativo con nombre accesible "Continuar con Google", estados loading/disabled y objetivo táctil de 48 dp, per `FR-046`/`T038`/`T082` (partial).
 - [ ] T151 Ejecutar en `frontend-mobile` `npx expo-doctor`, `pnpm run typecheck`, `pnpm run lint`, `pnpm test` y un development build nativo (no Expo Go) para confirmar que el módulo Nitro resuelve, y actualizar `specs/002-ui-styles-and-views/quickstart.md` con los pasos resultantes, per `FR-066`/plan: riesgo Nitro/Expo Go (missing).
@@ -459,3 +484,32 @@ Task: "Actualizar scripts/check-ui.mjs"
 ## Phase 15: Convergence
 
 - [X] T158 Derivar el locale/región del dispositivo por separado del idioma de UI (`expo-localization` en móvil y `navigator.language` en web) y usarlo en `detectCountry`/`createCurrencySelection` y en `format.ts` para el fallback de moneda y formato, manteniendo español por defecto, con pruebas de dispositivo en inglés/región US mientras la UI sigue en español per `FR-029`/`FR-073`/plan: geolocalización opcional/`T021`/`T077`/`T078` (`partial`).
+
+---
+
+## Phase 16: FR-084 — Feedback del login con Google móvil
+
+**Goal**: Eliminar el retorno silencioso al login tras elegir una cuenta de Google. El adaptador
+nativo distingue `success`, `cancelled` y `error`; el login navega según onboarding al completar,
+vuelve a `idle` sin mensaje al cancelar y muestra un error inline traducido al fallar.
+
+**Independent Test**: En un development build Android, elegir una cuenta válida navega a la
+pantalla de onboarding correspondiente; cancelar el selector no muestra banner ni cambia de ruta;
+simular un error nativo o un fallo de canje muestra un `InlineBanner` traducido y rehabilita el
+botón. Las pruebas unitarias del adaptador y del login cubren los tres resultados.
+
+- [X] T159 [P] [US4] Añadir las claves `errors.auth.googlePlayServicesUnavailable`, `errors.auth.googleNoIdToken` y `errors.auth.googleSignInFailed` en `shared/i18n/es.json` y `shared/i18n/en.json`, y regenerar los catálogos y el mapa de errores con `node scripts/generate-shared.mjs` en `frontend-web/lib/i18n/messages.generated.ts`, `frontend-mobile/lib/i18n/messages.generated.ts`, `frontend-web/lib/generated/error-keys.ts` y `frontend-mobile/lib/generated/error-keys.ts`.
+- [X] T160 [P] [US4] Crear pruebas del adaptador nativo en `frontend-mobile/__tests__/google-signin.test.ts`: `success` devuelve `idToken`; cancelación (`isNoSavedCredentialFoundResponse`/`SIGN_IN_CANCELLED`) devuelve `cancelled`; `PLAY_SERVICES_NOT_AVAILABLE` devuelve `error` con `code`; respuesta sin `idToken` devuelve `error`; error inesperado devuelve `error`; ningún fallo devuelve `null`.
+- [X] T161 [P] [US4] Crear/ampliar pruebas del login móvil en `frontend-mobile/__tests__/login.test.tsx`: éxito navega a `/profile/setup`, `/invite`, `/family/select` o `/family/members` según la sesión; cancelación no muestra banner ni navega; error muestra `ErrorMessage`/`InlineBanner` con la clave i18n y el botón se rehabilita.
+- [X] T162 [US4] Refactorizar `frontend-mobile/lib/google-signin.ts` para devolver la unión discriminada `GoogleSignInResult` (`success`/`cancelled`/`error`) definida en `data-model.md`; mapear `PLAY_SERVICES_NOT_AVAILABLE`, ausencia de `idToken` y errores desconocidos a `code`/`message`, sin usar `null` para fallos; ampliar `frontend-mobile/lib/errors.ts` con `source: "native"` si el descriptor actual no lo contempla.
+- [X] T163 [US4] Actualizar `frontend-mobile/app/(auth)/auth/login.tsx` para consumir `GoogleSignInResult`: en `success` canjear con `signInWithGoogle`, guardar sesión y llamar a `redirectFromSession`; en `cancelled` volver a `idle` sin `setError`; en `error` guardar un `ErrorDescriptor` y mostrar `ErrorMessage`/`InlineBanner` traducido; restaurar `loading` en `finally`.
+- [X] T164 [US4] Actualizar el mock de `react-native-nitro-google-signin` en `frontend-mobile/jest.setup.js` para simular `success`, `cancelled`, `PLAY_SERVICES_NOT_AVAILABLE`, ausencia de `idToken` y error inesperado, incluyendo `configure`, `checkPlayServices`, `signIn`, `createAccount`, `presentExplicitSignIn`, `isSuccessResponse` e `isNoSavedCredentialFoundResponse`.
+- [X] T165 [US4] Sincronizar `specs/002-ui-styles-and-views/quickstart.md` (escenario 19, troubleshooting y Definition of Done) con el contrato final del adaptador y el mensaje de error usado en la implementación.
+- [ ] T166 [US4] Ejecutar en `frontend-mobile` `pnpm run typecheck`, `pnpm run lint`, `pnpm test` y `npx expo-doctor`; generar un development build con `eas build --profile development --platform android` y validar manualmente éxito, cancelación y error en Android; registrar el resultado en `specs/002-ui-styles-and-views/quickstart.md` y marcar `T130`/`T138` cuando corresponda.
+  - Automatizado completo: typecheck, lint, 24 suites/118 pruebas y `expo-doctor` 20/20. Validación manual Android del éxito completada con development build vía `--tunnel` (dos cuentas, navegación según onboarding); requiere registrar el SHA-1 `f0ea8c762dc30eb0ea53f6edf04e00b37f44c1e3` en el cliente OAuth Android. Re-verificación manual de cancelación y error nativo pendiente.
+
+---
+
+## Phase 17: Convergence
+
+- [X] T167 Guardar en estado claves i18n/`ErrorDescriptor` en lugar de cadenas ya traducidas para errores y mensajes inline, y traducir en render con `t()`/`errorDescriptorText`, en `frontend-web/app/(app)/settings/page.tsx`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-web/app/(app)/profile/edit/page.tsx`, `frontend-web/app/(onboarding)/family/create/page.tsx`, `frontend-web/app/(onboarding)/invite/page.tsx`, `frontend-web/app/(onboarding)/profile/setup/page.tsx`, `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `frontend-mobile/app/(app)/profile/edit.tsx`, `frontend-mobile/app/(onboarding)/family/create.tsx`, `frontend-mobile/app/(onboarding)/invite/index.tsx` y `frontend-mobile/app/(onboarding)/profile/setup.tsx`; añadir a `frontend-web/lib/errors.ts` el `source` y helpers equivalentes a móvil, actualizar `FamilyActions` de ambos frontends para recibir el descriptor, y añadir pruebas que cambien el idioma con un error/éxito visible en web y móvil per `FR-033`/`SC-005`/`US3/AC3`/plan: decisión de errores/`T026`/`T058`/`T063` (`partial`).

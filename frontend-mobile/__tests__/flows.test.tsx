@@ -38,6 +38,7 @@ jest.mock("../lib/auth", () => ({
   GOOGLE_WEB_CLIENT_ID: "test-web-client",
   GOOGLE_ANDROID_CLIENT_ID: "test-android-client",
   GOOGLE_IOS_CLIENT_ID: "test-ios-client",
+  GOOGLE_REDIRECT_URI: "",
   signInWithGoogle: jest.fn(),
 }));
 

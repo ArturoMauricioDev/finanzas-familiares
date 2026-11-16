@@ -285,6 +285,11 @@
       "422": "Review the entered data and try again.",
       "500": "A server error occurred. Please try again."
     },
+    "auth": {
+      "googlePlayServicesUnavailable": "Google Play services are unavailable or out of date on this device.",
+      "googleNoIdToken": "Google did not return a valid token. Please try again.",
+      "googleSignInFailed": "Google sign-in failed. Please try again."
+    },
     "details": {
       "invalidGoogleToken": "Google sign-in is invalid.",
       "invalidRefreshToken": "Your session expired. Sign in again.",

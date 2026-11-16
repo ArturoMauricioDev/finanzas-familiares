@@ -85,6 +85,7 @@ EXPO_PUBLIC_API_URL=http://localhost:8000
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-google-web-client-id
 EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=your-google-android-client-id
 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=your-google-ios-client-id
+EXPO_PUBLIC_GOOGLE_REDIRECT_URI=https://tu-dominio-estable/auth/login
 ```
 
 Ejecuta:
@@ -118,6 +119,11 @@ que ejecuta el backend, no a `localhost`.
   (`npx expo prebuild --clean && npx expo run:android` o un build EAS); no basta con recargar Metro.
 - Un `redirect_uri` personalizado en Android produce `Error 400: invalid_request`; no lo uses para
   el flujo nativo.
+- **Expo web (`pnpm web`)**: `expo-auth-session` usa `origin + /auth/login` como `redirect_uri`, así
+  que debes registrar esa URL exacta en los *Authorized redirect URIs* de la credencial **Web**.
+  Define `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` con una URL estable (por ejemplo
+  `https://tu-dominio-estable/auth/login`) para evitar el `redirect_uri_mismatch` cuando la URL del
+  preview cambia; en local usa `http://localhost:8081/auth/login`.
 - `react-native-nitro-google-signin` requiere `react-native-nitro-modules`, la New Architecture
   (predeterminada en Expo SDK 58) y un development build nativo (`expo run:android`/`expo run:ios` o
   EAS); no funciona en Expo Go.

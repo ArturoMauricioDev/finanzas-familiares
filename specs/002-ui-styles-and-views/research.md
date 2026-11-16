@@ -1,7 +1,8 @@
 # Research: UI, Estilos y Vistas Web y Móvil (Kitho)
 
-**Feature**: 002-ui-styles-and-views  
+**Feature**: 002-ui-styles-and-views
 **Date**: 2026-11-06
+**Last updated**: 2026-11-12
 
 ## Decisions
 
@@ -259,7 +260,8 @@
   `locale`, `shape="pill"`, `size="large"`, `text="continue_with"`) dentro de un contenedor MD3;
   en móvil, un `Pressable` MD3 con el logo G oficial multicolor como SVG inline y texto traducido,
   cuyo `onPress` delega la autenticación nativa en **`react-native-nitro-google-signin`** (v2.3.x),
-  apoyado en `react-native-nitro-modules` y `google-services.json`.
+  apoyado en `react-native-nitro-modules`. Los IDs de cliente se pasan explícitamente
+  (`webClientId`/`iosClientId`); no se usan `google-services.json` ni `GoogleService-Info.plist`.
   No se recolorea ni se recorta el logo; el único cambio permitido es el tamaño/forma del
   contenedor. En pruebas se usa un mock accesible con el mismo nombre y estados.
 - **Rationale**: Cumple FR-046/SC-015 y las guías de marca de Google. Evita dependencias de
@@ -315,6 +317,28 @@
   (rechazado); reasignar en cliente (no es autoridad y puede desincronizarse); permitir eliminar
   con varios integrantes (borraría historial compartido).
 
+### 23. Feedback y navegación del login nativo de Google
+
+- **Decision**: `requestGoogleIdToken` devuelve un resultado discriminado:
+  `{ status: "success", idToken }`, `{ status: "cancelled" }` o
+  `{ status: "error", code?, message? }`. El login móvil:
+  1. en `success`, canjea el token con `POST /auth/google`, guarda la sesión y navega según
+     onboarding (sin perfil → `/profile/setup`; sin grupo → `/invite` si hay código pendiente o
+     `/family/select`; con grupo → `/family/members`);
+  2. en `cancelled`, vuelve a `idle` sin banner, sin anuncio y sin tratar la cancelación como error;
+  3. en `error`, permanece en login y muestra un `InlineBanner` con un `ErrorDescriptor`: los
+     errores nativos conocidos (`PLAY_SERVICES_NOT_AVAILABLE`, ausencia de `idToken`, fallo de
+     canje) se mapean a claves `errors.auth.*`; cualquier otro usa el fallback traducido
+     `errors.auth.googleSignInFailed`.
+  El botón permanece `loading`/deshabilitado durante el flujo y se restaura en `finally`.
+- **Rationale**: Cumple FR-084, FR-033/FR-054/FR-055 y evita el defecto reportado (volver al login
+  sin feedback). La distinción explícita entre cancelación y error impide que un fallo real se
+  oculte como si el usuario hubiera cancelado.
+- **Alternatives considered**: Mantener `null` para cualquier respuesta no exitosa (rechazado:
+  confunde cancelación con error y produce retorno silencioso); mostrar banner también al cancelar
+  (contradice la clarificación); usar solo el mensaje nativo sin i18n (rompe la localización);
+  navegar siempre a `/family/members` (ignora el onboarding y provoca redirecciones incorrectas).
+
 ## Version Matrix
 
 | Paquete | Versión fijada | Nota |
@@ -327,14 +351,18 @@
 | `recharts` | 3.10.x | Carga diferida, cliente |
 | `react-is` | 19.x | Peer de Recharts |
 | `jest-axe` | 11.x | Accesibilidad web |
+| `expo` | ~58.0.24 | SDK 58; RN 0.88.1 y React 19.3.0 |
+| `expo-dev-client` | ~58.0.19 | Development build para Nitro |
 | `expo-localization` | ~58.0.5 | Versión de Expo SDK 58 |
-| `expo-location` | ~58.0.x | Geolocalización opcional para preseleccionar moneda; solo se solicita al abrir el selector |
+| `expo-location` | ~58.0.21 | Geolocalización opcional para preseleccionar moneda; solo se solicita al abrir el selector |
 | `i18n-js` | 4.5.x | Catálogos móviles |
-| `expo-font` | ~58.0.11 | Carga de Inter |
+| `expo-font` | ~58.0.12 | Carga de Inter |
 | `@expo-google-fonts/inter` | 0.4.x | Fuente Inter |
-| `expo-splash-screen` | ~58.0.13 | Retención hasta hidratar |
-| `expo-status-bar` | ~58.0.4 | Barra de estado por tema |
+| `expo-splash-screen` | ~58.0.14 | Retención hasta hidratar |
+| `expo-status-bar` | ~58.0.5 | Barra de estado por tema |
 | `expo-system-ui` | ~58.0.7 | `userInterfaceStyle` en Android |
+| `react-native-nitro-google-signin` | 2.3.x | Login nativo de Google; sin archivos de Firebase |
+| `react-native-nitro-modules` | 0.37.x | Motor Nitro requerido por Google Sign-In |
 | `react-native-svg` | 15.16.0 | Lucide, avatar y Victory fallback |
 | `victory-native` | 42.0.1 | Compatible con Expo SDK 58; 43 exige Skia >=2.15 |
 | `@shopify/react-native-skia` | 2.14.0 | Versión de Expo SDK 58 |
@@ -347,6 +375,6 @@
 ## Resolved Clarifications
 
 All aspects from `spec.md` are clear; no `NEEDS CLARIFICATION` remain. Las decisiones de
-compatibilidad de Victory Native, formato de avatar, botón de Google, invitación por código de un
-solo uso, selector de moneda y acciones de familia quedan resueltas con las versiones, reglas y
-fallbacks anteriores.
+compatibilidad de Victory Native, formato de avatar, botón de Google, feedback/navegación del login
+nativo (FR-084), invitación por código de un solo uso, selector de moneda y acciones de familia
+quedan resueltas con las versiones, reglas y fallbacks anteriores.

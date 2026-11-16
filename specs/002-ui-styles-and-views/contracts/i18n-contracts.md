@@ -105,9 +105,27 @@ estables para no romper traducciones.
 4. Si no existe, usar el texto del backend como `fallback`.
 5. Si no hay texto, usar `errors.unexpected`.
 
+Para los errores nativos de Google, se aplica primero la tabla **Native Google Sign-In Errors** y
+después, si el fallo proviene del canje con el backend, el orden anterior.
+
 Los errores de configuración del cliente (`ConfigurationError`) no vienen del backend y también
 usan claves i18n (`errors.config.missingApiUrl`, `errors.config.missingGoogleClientId`), sin
 exponer nombres de variables ni detalles técnicos al usuario.
+
+### Native Google Sign-In Errors
+
+Los errores del adaptador nativo no pasan por el mapa de detalles del backend. Se normalizan en el
+adaptador antes de llegar a la UI:
+
+| Native condition | UI key | Notes |
+|------------------|--------|-------|
+| `SIGN_IN_CANCELLED`, `cancelled`, `canceled` | — | No se muestra mensaje; vuelve a `idle` |
+| `PLAY_SERVICES_NOT_AVAILABLE` | `errors.auth.googlePlayServicesUnavailable` | Android sin Play Services |
+| Respuesta sin `idToken` | `errors.auth.googleNoIdToken` | Se trata como error, no como cancelación |
+| Fallo de canje `POST /auth/google` | `errors.auth.googleSignInFailed` | El detalle del backend se mapea primero con `details` |
+| Otro error nativo | `errors.auth.googleSignInFailed` | Fallback traducido genérico |
+
+La cancelación no genera `ErrorDescriptor` ni se anuncia con `role="alert"`.
 
 Si `detail` es un array (por ejemplo, errores de validación 422 de Pydantic) o un objeto sin
 `message` string, no se serializa como texto visible: `fallbackDetail` queda vacío y se usa
@@ -174,3 +192,5 @@ nunca como nombre del producto.
 - [ ] El código de invitación se muestra sin URL y sus errores inválido/usado/expirado tienen clave.
 - [ ] Las 5 sugerencias, la local detectada y **Otros** usan `Intl.DisplayNames`.
 - [ ] Eliminar/Abandonar familia tienen claves, confirmación y errores mapeados.
+- [ ] Los errores nativos de Google usan claves `errors.auth.*` o el fallback
+  `errors.auth.googleSignInFailed`; la cancelación no muestra mensaje.

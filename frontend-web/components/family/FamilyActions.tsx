@@ -4,13 +4,14 @@ import { useState } from "react";
 
 import { useI18n } from "@/components/providers/LocaleProvider";
 import { Button, ConfirmDialog, ErrorMessage } from "@/components/ui";
+import { errorDescriptorText, type ErrorDescriptor } from "@/lib/errors";
 
 export interface FamilyActionsProps {
   memberCount: number;
   onDelete?: () => void | Promise<void>;
   onLeave?: () => void | Promise<void>;
   loadingAction?: "delete" | "leave" | null;
-  error?: string | null;
+  error?: ErrorDescriptor | null;
 }
 
 export function FamilyActions({
@@ -33,6 +34,9 @@ export function FamilyActions({
     ? t("family.deleteFamilyConfirmBody")
     : t("family.leaveFamilyConfirmBody");
   const label = canDelete ? t("family.deleteFamily") : t("family.leaveFamily");
+  const errorFallback = canDelete
+    ? t("family.deleteFamilyFailed")
+    : t("family.leaveFamilyFailed");
 
   return (
     <div className="space-y-3">
@@ -43,7 +47,9 @@ export function FamilyActions({
       >
         {label}
       </Button>
-      <ErrorMessage message={error} />
+      <ErrorMessage
+        message={error ? errorDescriptorText(error, t, errorFallback) : null}
+      />
       <ConfirmDialog
         open={confirming !== null}
         title={title}

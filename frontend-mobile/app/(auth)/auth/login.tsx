@@ -17,10 +17,16 @@ import {
 import {
   GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_REDIRECT_URI,
   GOOGLE_WEB_CLIENT_ID,
   signInWithGoogle,
 } from "../../../lib/auth";
-import { errorText } from "../../../lib/errors";
+import {
+  errorDescriptorText,
+  nativeGoogleErrorDescriptor,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "../../../lib/errors";
 import { requestGoogleIdToken } from "../../../lib/google-signin";
 import {
   applyTokenResponse,
@@ -34,8 +40,10 @@ WebBrowser.maybeCompleteAuthSession();
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useI18n();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [loading, setLoading] = useState(false);
+  const isOAuthPopup =
+    Platform.OS === "web" && typeof window !== "undefined" && Boolean(window.opener);
 
   const redirectFromSession = useCallback(
     async (session: SessionState) => {
@@ -58,23 +66,26 @@ export default function LoginScreen() {
       setLoading(true);
       setError(null);
 
-      try {
-        const data = await signInWithGoogle(idToken);
-        const session = await applyTokenResponse(data);
-        await redirectFromSession(session);
-      } catch (err) {
-        setError(errorText(err, t, t("auth.signInFailed")));
-      } finally {
-        setLoading(false);
-      }
+    try {
+      const data = await signInWithGoogle(idToken);
+      const session = await applyTokenResponse(data);
+      await redirectFromSession(session);
+    } catch (err) {
+      setError(toErrorDescriptor(err));
+    } finally {
+      setLoading(false);
+    }
     },
-    [redirectFromSession, t],
+    [redirectFromSession],
   );
 
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "finanzasfamiliares",
-    path: "auth/login",
-  });
+  const redirectUri =
+    Platform.OS === "web" && GOOGLE_REDIRECT_URI
+      ? GOOGLE_REDIRECT_URI
+      : AuthSession.makeRedirectUri({
+          scheme: "finanzasfamiliares",
+          path: "auth/login",
+        });
 
   const [request, response, promptAsync] = useIdTokenAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
@@ -93,17 +104,22 @@ export default function LoginScreen() {
     setError(null);
 
     try {
-      const idToken = await requestGoogleIdToken();
-      if (!idToken) {
+      const result = await requestGoogleIdToken();
+      if (result.status === "cancelled") {
         setLoading(false);
         return;
       }
-      await exchangeIdToken(idToken);
+      if (result.status === "error") {
+        setError(nativeGoogleErrorDescriptor(result.code));
+        setLoading(false);
+        return;
+      }
+      await exchangeIdToken(result.idToken);
     } catch (err) {
-      setError(errorText(err, t, t("auth.googleFailed")));
+      setError(toErrorDescriptor(err));
       setLoading(false);
     }
-  }, [exchangeIdToken, promptAsync, t]);
+  }, [exchangeIdToken, promptAsync]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -114,10 +130,10 @@ export default function LoginScreen() {
   }, [redirectFromSession]);
 
   useEffect(() => {
-    if (!response) return;
+    if (isOAuthPopup || !response) return;
 
     if (response.type === "error") {
-      setError(t("auth.googleFailed"));
+      setError({ status: 0, key: "auth.googleFailed", fallback: "", source: "api" });
       return;
     }
 
@@ -125,12 +141,20 @@ export default function LoginScreen() {
 
     const idToken = response.params.id_token || response.authentication?.idToken;
     if (!idToken) {
-      setError(t("auth.invalidGoogleToken"));
+      setError({ status: 0, key: "auth.invalidGoogleToken", fallback: "", source: "api" });
       return;
     }
 
     void exchangeIdToken(idToken);
-  }, [response, exchangeIdToken, t]);
+  }, [isOAuthPopup, response, exchangeIdToken]);
+
+  if (isOAuthPopup) {
+    return (
+      <Page title={t("auth.title")}>
+        <Loading message={t("common.validating")} />
+      </Page>
+    );
+  }
 
   if (!GOOGLE_WEB_CLIENT_ID) {
     return (
@@ -144,7 +168,9 @@ export default function LoginScreen() {
     <Page title={t("auth.title")} subtitle={t("auth.subtitle")}>
       <Card>
         <Wordmark size="lg" />
-        <ErrorMessage message={error} />
+        <ErrorMessage
+          message={error ? errorDescriptorText(error, t, t("auth.signInFailed")) : null}
+        />
         {loading ? <Loading message={t("common.validating")} /> : null}
         <GoogleSignInButton
           onPress={() => void handleGooglePress()}

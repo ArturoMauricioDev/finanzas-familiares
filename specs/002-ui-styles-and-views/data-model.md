@@ -1,7 +1,8 @@
 # Data Model: UI, Estilos y Vistas Web y Móvil (Kitho)
 
-**Feature**: 002-ui-styles-and-views  
+**Feature**: 002-ui-styles-and-views
 **Date**: 2026-11-06
+**Last updated**: 2026-11-12
 
 ## Alcance
 
@@ -18,6 +19,7 @@ de UI y las dependencias de datos que web y móvil necesitan.
 | `Membership` | `rol_familiar` (Padre/Madre/Hijo/Otro), `rol_permiso` (Administrador/Miembro), `created_at` | Mostrar roles y respetar la reasignación de administrador al miembro más antiguo |
 | `Invitation` | `codigo` único, `expira_en` (7 días), `usado`, `fecha_uso` | Mostrar solo el código, validar unión y mapear inválido/usado/expirado |
 | Endpoints de spec 001 | Crear invitación, unirse por código, abandonar familia, eliminar familia y listar miembros | `InviteCode`, `FamilyActions` y pantallas de invitación/Miembros |
+| `POST /auth/google` (spec 001) | Recibe el `id_token` de Google y devuelve `access_token`, `refresh_token` y claims de onboarding (`needs_profile_setup`, `needs_family_setup`) | Canjear el token nativo, guardar la sesión y decidir la navegación posterior (FR-084) |
 
 La UI no calcula soft delete, autorización ni reasignación: solo presenta las acciones posibles y
 mapea los errores que devuelve el backend.
@@ -308,13 +310,16 @@ guardan las pantallas para traducir en render.
 |-------|------|-------------|-------------|
 | key | string \| null | clave i18n `errors.*` | Clave conocida |
 | fallback | string | puede estar vacío | Detalle string del backend; si falta, se usa la clave de estado |
-| status | number | 0–599 | Código HTTP; `0` = red |
+| status | number | 0–599 | Código HTTP; `0` = red o error nativo |
+| source | `"api" \| "native"` | default `api` | Origen del error; los nativos de Google usan `native` |
 
 **Validation**:
 - Si `key` existe, la UI usa `t(key)`.
 - Si no hay clave, usa `fallback`; si también falta, usa `errors.status.<status>` y, en último
   caso, `errors.unexpected`.
 - `status` conserva el código para decisiones de guard/redirect.
+- Los errores nativos de Google usan `source: "native"`, `status: 0` y claves `errors.auth.*`; la
+  cancelación no genera `ErrorDescriptor`.
 - El mapa se genera en ambos frontends desde la fuente compartida.
 
 ### NavigationItem y RouteDefinition
@@ -423,6 +428,40 @@ por plataforma, pero la API y los estados son equivalentes.
 | `error` | Error conocido o fallback | Banner `role="alert"` + reintento si aplica |
 | `empty` | Lista/vista sin datos | `EmptyState` con explicación y acción sugerida |
 
+### GoogleSignInResult y AuthFlowState
+
+Resultado del adaptador nativo y estado de presentación del login móvil. La cancelación no es un
+error y no produce mensaje; el éxito navega según onboarding.
+
+**GoogleSignInResult** (unión discriminada, nunca `null` para un fallo):
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| status | `"success" \| "cancelled" \| "error"` | requerido | Resultado del flujo nativo |
+| idToken | string | requerido si `success`; no vacío | Token de Google para canjear en `POST /auth/google` |
+| code | string | opcional si `error` | Código nativo, p. ej. `PLAY_SERVICES_NOT_AVAILABLE` |
+| message | string | opcional si `error` | Detalle técnico solo para mapeo; no se muestra sin traducir |
+
+**AuthFlowState**:
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| status | `"idle" \| "loading" \| "error" \| "success"` | default `idle` | Estado visible del login |
+| provider | `"google"` | constante | Proveedor activo |
+| error | `ErrorDescriptor \| null` | requerido si `status = "error"` | Error inline traducido en render |
+| redirectTo | `"/profile/setup" \| "/invite" \| "/family/select" \| "/family/members" \| null` | derivado de la sesión | Destino tras éxito |
+| cancelledAt | number \| null | timestamp | Solo para instrumentación/pruebas; no se muestra |
+
+**Validation**:
+- `success` requiere `idToken` no vacío y sesión válida tras el canje; navega a `redirectTo` sin
+  banner transitorio.
+- `cancelled` vuelve a `idle` sin `error`, sin `role="alert"` y sin cambiar de ruta.
+- `error` permanece en `/auth/login`, guarda un `ErrorDescriptor` y muestra `InlineBanner` con
+  `role="alert"`/`accessibilityLiveRegion`; el botón se rehabilita al terminar.
+- Un `idToken` ausente o un fallo de canje se trata como `error`, nunca como cancelación.
+- Los errores conocidos se mapean a `errors.auth.*`; el fallback es
+  `errors.auth.googleSignInFailed`.
+
 ### ChartContainerProps (base futura)
 
 | Field | Type | Constraints | Description |
@@ -450,6 +489,8 @@ TranslationCatalog 1 ──< ErrorKeyMap
 AvatarOptionCatalog 1 ──< AvatarConfig
 NavigationItem 1 ── 1 RouteDefinition
 ComponentSpec 1 ──< ScreenState
+GoogleSignInResult 1 ── 1 AuthFlowState
+AuthFlowState 1 ── 0..1 ErrorDescriptor
 ChartContainerProps 1 ── 1 DesignTokenSet (colores)
 CurrencyOption 1 ──< CurrencySelection
 Family 1 ──< Membership (spec 001)
@@ -468,6 +509,7 @@ Invitation 1 ── 1 InvitationCodeView (spec 001)
 | Family currency | Estado de la pantalla | Estado de la pantalla | `Family.moneda_local` |
 | Invitation code view | No persiste | No persiste | `Invitation.codigo` |
 | Family action state | No persiste | No persiste | `Family`/`Membership` de spec 001 |
+| Google auth flow state | Estado local (no persiste) | Estado local (no persiste) | No; solo el canje `POST /auth/google` produce sesión |
 | Avatar default | `foto_avatar` en sesión y backend | `foto_avatar` en sesión y backend | Campo existente |
 | Avatar editor | Estado local (no persiste) | Estado local (no persiste) | No (spec 003) |
 | Tokens | Archivos generados versionados | Archivos generados versionados | No |

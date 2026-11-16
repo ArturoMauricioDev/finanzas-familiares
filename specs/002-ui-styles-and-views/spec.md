@@ -58,6 +58,12 @@
 
 - Q: ¿Con qué librería se realiza la autenticación con Google en la app móvil? → A: **`react-native-nitro-google-signin`**; la web mantiene Google Identity Services y el botón oficial de Google.
 
+### Session 2026-11-12
+
+- Q: ¿Qué debe hacer la app móvil tras elegir una cuenta de Google y validar la sesión? → A: Navegar automáticamente según el estado de onboarding (perfil, grupo o Miembros) y mostrar un error inline solo si la validación falla.
+- Q: ¿Qué debe mostrar el login si el usuario cancela el selector de cuentas de Google? → A: Volver al estado inicial sin mensaje; la cancelación no se trata como error.
+- Q: ¿Cómo deben presentarse los errores nativos de Google Sign-In en móvil? → A: Mapear los errores conocidos a claves i18n y usar un mensaje genérico traducido como fallback.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Sistema visual coherente y accesible (Priority: P1)
@@ -187,6 +193,7 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - **Pantallas compactas y zoom**: con viewport de `320px` o zoom de texto al `200%`, el contenido debe seguir siendo usable y legible.
 - **Teclado y foco**: los diálogos deben atrapar el foco, cerrarse con Escape en web y devolver el foco al elemento de origen.
 - **Sesión expirada**: al recibir `401`, la app debe redirigir al login conservando tema e idioma elegidos.
+- **Google Sign-In sin sesión válida en móvil**: si el usuario cancela el selector de cuentas, el login vuelve al estado inicial sin mensaje; si el flujo falla (sin token por error, Play Services no disponible o validación con backend fallida), el login debe mostrar un error inline traducido y permitir reintentar, mapeando los errores conocidos a claves i18n y usando un mensaje genérico traducido como fallback. Nunca debe volver silenciosamente a la pantalla de login ante un fallo.
 - **Error de backend sin traducción**: si no existe clave i18n para un mensaje, se muestra el texto del backend como fallback sin romper la interfaz.
 - **Logo ausente**: si no existe el asset definitivo, se muestra el wordmark Kitho sin imágenes rotas ni espacios vacíos.
 - **Avatar sin persistencia**: el editor no debe hacer creer al usuario que sus cambios se guardaron en esta versión.
@@ -275,6 +282,7 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - **FR-046**: El botón de inicio de sesión con Google DEBE usar el estilo oficial de Google (fondo blanco u outline, logo G multicolor y texto traducido "Continuar con Google"), manteniendo forma y estados MD3, nombre accesible y foco visible.
 - **FR-047**: Las acciones destructivas (expulsar miembro, cerrar sesión, abandonar flujo) DEBEN solicitar confirmación.
 - **FR-048**: La pantalla de miembros DEBE mostrar el límite máximo de 10 integrantes y el estado de rol de cada miembro de forma visualmente clara.
+- **FR-084**: Tras una autenticación exitosa con Google en móvil, la app DEBE navegar automáticamente según el estado de onboarding (configuración de perfil, selección de grupo o Miembros); si la validación falla, DEBE permanecer en login y mostrar un error inline traducido, mapeando los errores conocidos a claves i18n y usando un mensaje genérico traducido como fallback. La cancelación del selector de cuentas NO se considera un fallo y no muestra mensaje.
 
 #### Moneda local
 

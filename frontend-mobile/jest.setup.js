@@ -9,15 +9,22 @@ jest.mock("expo-system-ui", () => ({
 jest.mock("react-native-nitro-google-signin", () => ({
   GoogleOneTapSignIn: {
     configure: jest.fn(),
-    checkPlayServices: jest.fn(async () => true),
+    checkPlayServices: jest.fn(async () => undefined),
     signIn: jest.fn(async () => ({ type: "noSavedCredentialFound", data: null })),
     createAccount: jest.fn(async () => ({ type: "cancelled", data: null })),
     presentExplicitSignIn: jest.fn(async () => ({ type: "cancelled", data: null })),
+  },
+  statusCodes: {
+    PLAY_SERVICES_NOT_AVAILABLE: "PLAY_SERVICES_NOT_AVAILABLE",
+    SIGN_IN_CANCELLED: "SIGN_IN_CANCELLED",
+    DEVELOPER_ERROR: "DEVELOPER_ERROR",
+    ONE_TAP_START_FAILED: "ONE_TAP_START_FAILED",
   },
   isSuccessResponse: (response) => response?.type === "success",
   isNoSavedCredentialFoundResponse: (response) =>
     response?.type === "noSavedCredentialFound",
   isCancelledResponse: (response) => response?.type === "cancelled",
+  isErrorWithCode: (error) => typeof error?.code === "string",
 }));
 
 jest.mock("react-native-safe-area-context", () => {

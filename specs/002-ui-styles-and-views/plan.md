@@ -1,6 +1,6 @@
 # Implementation Plan: UI, Estilos y Vistas Web y Móvil (Kitho)
 
-**Branch**: `002-ui-styles-and-views` | **Date**: 2026-11-06 | **Spec**: [spec.md](./spec.md)
+**Branch**: `002-ui-styles-and-views` | **Date**: 2026-11-06 | **Last updated**: 2026-11-12 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/002-ui-styles-and-views/spec.md`
 
@@ -22,7 +22,9 @@ La entrega incluye:
 4. **Pantallas y estados**: refactor de login, perfil, grupo, invitación y miembros; nuevas vistas
    Inicio, Perfil, Ajustes, edición de perfil y editor de avatar con vista previa; unión por
    **código** de un solo uso, invitación que muestra solo el código, selector de moneda por
-   geolocalización y acciones de **Eliminar/Abandonar familia**.
+   geolocalización y acciones de **Eliminar/Abandonar familia**. El login móvil con Google
+   distingue éxito, cancelación y error: navega automáticamente según el onboarding al completar,
+   vuelve al estado inicial sin mensaje al cancelar y muestra un error inline traducido al fallar.
 5. **Calidad**: WCAG 2.1 AA, foco visible, navegación por teclado, regiones live, movimiento
    reducido, objetivos táctiles de 48 dp, sin scroll horizontal desde 320 px, y pruebas de flujo,
    componentes, accesibilidad, tokens e i18n.
@@ -38,21 +40,21 @@ editor solo se previsualiza y su persistencia queda para la spec 003.
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x en web y TypeScript 6.x en móvil. Web: Next.js 15.0.3 con
-React 19.0.0 RC y React DOM 19.0.0 RC. Móvil: Expo SDK 58 (`expo 58.0.23`), React Native 0.88.1,
-React 19.3.0 y `expo-router` 58.
+React 19.0.0 RC y React DOM 19.0.0 RC. Móvil: Expo SDK 58 (`expo 58.0.24`), React Native 0.88.1,
+React 19.3.0, `expo-router` 58 y `expo-dev-client` ~58.0.19 para el development build nativo.
 
 **Primary Dependencies**:
 
 - Web: `next-intl` 4.14.x, `tailwindcss` 4.3.x, `@tailwindcss/postcss` 4.3.x, `lucide-react`
   1.68.x, `recharts` 3.10.x, `react-is` 19.x, `jest-axe` 11.x.
-- Móvil: `expo-localization` ~58.0.5, `i18n-js` 4.5.x, `expo-font` ~58.0.11,
-  `@expo-google-fonts/inter` 0.4.x, `expo-splash-screen` ~58.0.13, `expo-status-bar` ~58.0.4,
+- Móvil: `expo-localization` ~58.0.5, `i18n-js` 4.5.x, `expo-font` ~58.0.12,
+  `@expo-google-fonts/inter` 0.4.x, `expo-splash-screen` ~58.0.14, `expo-status-bar` ~58.0.5,
   `expo-system-ui` ~58.0.7,
   `lucide-react-native` 1.68.x, `react-native-svg` 15.16.0, `victory-native` 42.0.1,
   `@shopify/react-native-skia` 2.14.0, `react-native-reanimated` 4.7.1,
   `react-native-worklets` 0.13.0, `react-native-gesture-handler` 3.3.0,
   `react-native-safe-area-context` 5.11.1, `react-native-nitro-google-signin` 2.3.x y
-  `react-native-nitro-modules` >=0.36.0 (motor de Nitro para la autenticación nativa de Google).
+  `react-native-nitro-modules` 0.37.x (motor de Nitro para la autenticación nativa de Google).
 - Pruebas: Jest 29/30, Testing Library web 16.x, React Native Testing Library 14.1.0 (con
   `render`/`fireEvent` asíncronos), `jest-axe` y `@types/jest-axe`.
 
@@ -89,13 +91,19 @@ Recharts y Victory Native fuera del bundle inicial de las rutas actuales.
   se fija la línea 42.0.1, compatible con Skia 2.14.0 y Reanimated 4.7.1.
 - La autenticación nativa con Google en móvil se realiza con `react-native-nitro-google-signin`
   (depende de `react-native-nitro-modules`, exige la New Architecture de React Native y un
-  development build; no se ejecuta en Expo Go).
+  development build; no se ejecuta en Expo Go). Los IDs de cliente se pasan explícitamente
+  (`webClientId`/`iosClientId`); no se requieren `google-services.json` ni
+  `GoogleService-Info.plist`.
+- El resultado del flujo nativo de Google es un discriminante explícito entre `success`,
+  `cancelled` y `error`: el éxito navega según el onboarding, la cancelación vuelve a `idle` sin
+  mensaje y solo el error muestra un banner inline traducido. Nunca se devuelve `null` para
+  ocultar un fallo.
 - No se usan shadcn/ui ni kits de UI externos.
 - WCAG 2.1 AA, objetivos táctiles de 48x48 dp, foco visible y `prefers-reduced-motion`.
 - La marca canónica es **Kitho**; los títulos de ficha son **Kitho: Tareas y Finanzas Familiares**
   (España/Latam) y **Kitho Family** (EE.UU./Global).
 
-**Scale/Scope**: 83 requisitos funcionales, 19 criterios de éxito, 7 historias de usuario, 6
+**Scale/Scope**: 84 requisitos funcionales, 19 criterios de éxito, 7 historias de usuario, 6
 pantallas existentes refactorizadas y 5 vistas nuevas por plataforma (Inicio, Perfil, Ajustes,
 edición de perfil y editor de avatar). Aproximadamente 33 componentes base compartidos por nombre,
 incluidos selector de moneda, código de invitación y acciones de familia.
@@ -118,8 +126,8 @@ incluidos selector de moneda, código de invitación y acciones de familia.
 - [x] **IV. No-Objetivos**: sin Open Banking, scraping, captura de SMS/correo, pasarelas de pago ni
   exportación PDF.
 - [x] **V. Estructura y Errores**: se conserva la separación `backend/`, `frontend-web/` y
-  `frontend-mobile/`; los errores del backend se mapean a claves i18n con fallback, sin duplicar
-  autoridad de validación.
+  `frontend-mobile/`; los errores del backend y los errores nativos de Google se mapean a claves
+  i18n con fallback, sin duplicar autoridad de validación.
 - [x] **VI. Comportamiento SDD**: cada decisión y componente traza a un FR, SC, caso límite o
   principio constitucional; no se añade código sombra.
 - [x] **Identidad de Marca**: se usa **Kitho** en UI y metadatos; los títulos de tienda coinciden
@@ -148,7 +156,8 @@ incluidos selector de moneda, código de invitación y acciones de familia.
 | i18n móvil | `expo-localization` para región/formato e `i18n-js` para catálogos; español por defecto y preferencia en SecureStore | Cumple FR-028/FR-029/FR-031/FR-032 |
 | Errores | `ApiError` transporta `status`, `messageKey` y `fallbackDetail`; la UI traduce en render con `t()` y usa el detalle del backend como fallback | Cumple FR-033 y permite que un cambio de idioma actualice errores ya visibles |
 | Formato | Utilidades `formatCurrency`/`formatDate`/`formatNumber` con `Intl` y la moneda del grupo | Cumple FR-032 y respeta la moneda única del grupo |
-| Botón Google | Web: botón oficial de Google Identity Services (`GoogleLogin`) con forma y estados MD3. Móvil: `Pressable` MD3 con logo G oficial inline y autenticación nativa vía `react-native-nitro-google-signin`; texto traducido y sin recolorear el logo | Cumple FR-046/SC-015 y las guías de marca de Google; el login nativo usa `google-services.json` |
+| Botón Google | Web: botón oficial de Google Identity Services (`GoogleLogin`) con forma y estados MD3. Móvil: `Pressable` MD3 con logo G oficial inline y autenticación nativa vía `react-native-nitro-google-signin`; texto traducido y sin recolorear el logo. Los IDs de cliente se pasan explícitamente; no se usan archivos de Firebase | Cumple FR-046/SC-015 y las guías de marca de Google; el flujo nativo no depende de `google-services.json` |
+| Feedback de Google móvil | `requestGoogleIdToken` devuelve un resultado discriminado (`success` con `idToken`, `cancelled` o `error`); el login navega según onboarding al completar, ignora la cancelación y muestra un `InlineBanner` con `ErrorDescriptor` al fallar; los errores nativos conocidos se mapean a claves `errors.auth.*` y el resto usa `errors.auth.googleSignInFailed` | Cumple FR-084 y FR-033/FR-054/FR-055: elimina el retorno silencioso al login y mantiene la traducción en render |
 | Invitación por código | Código único de un solo uso y caducidad de 7 días; la pantalla de invitación muestra solo el código y la unión se hace introduciéndolo | Cumple FR-006/FR-076/FR-077/FR-083; elimina enlaces y reduce exposición |
 | Moneda local | Selector único con 5 sugerencias regionales, moneda local detectada primero, geolocalización con fallback a locale/USD y opción **Otros** sobre ISO 4217 | Cumple FR-072–FR-075 y SC-017; evita listas incompletas o dependencia de red |
 | Acciones de familia | **Eliminar familia** solo con 1 integrante; **Abandonar familia** con más de 1; confirmación, estado de carga y redirección al flujo principal | Cumple FR-079–FR-082; la autorización y el soft delete los valida la spec 001 |
@@ -295,12 +304,13 @@ extensiones de la spec 001 y no modifica Docker Compose.
 
 - `research.md`: decisiones resueltas sobre Tailwind 4, `next-intl` sin rutas de locale, tema sin
   flash, i18n móvil, Expo Router, Victory Native compatible con Expo SDK 58, generación compartida,
-  errores i18n, botón oficial de Google, invitación por código de un solo uso, selector de moneda por
-  geolocalización, acciones de familia, accesibilidad y pruebas.
-- `data-model.md`: modelo de tokens, preferencias, catálogos, descriptores de error, configuración
-  de avatar, rutas/navegación y contratos de componentes; incluye `CurrencyOption`,
-  `InvitationCodeView`, `FamilyAction` y las dependencias de datos de la spec 001. Confirma que la
-  spec 002 no añade cambios de backend propios.
+  errores i18n, botón oficial de Google, feedback y navegación del login nativo, invitación por
+  código de un solo uso, selector de moneda por geolocalización, acciones de familia, accesibilidad
+  y pruebas.
+- `data-model.md`: modelo de tokens, preferencias, catálogos, descriptores de error,
+  `GoogleSignInResult`/`AuthFlowState`, configuración de avatar, rutas/navegación y contratos de
+  componentes; incluye `CurrencyOption`, `InvitationCodeView`, `FamilyAction` y las dependencias de
+  datos de la spec 001. Confirma que la spec 002 no añade cambios de backend propios.
 - `contracts/token-contract.md`: esquema de `tokens.json`, salidas generadas y reglas de deriva.
 - `contracts/ui-contracts.md`: API de componentes compartidos, variantes, estados y requisitos de
   accesibilidad por plataforma, incluidos `CurrencySelect`, `InviteCode` y `FamilyActions`.
@@ -362,7 +372,9 @@ extensiones de la spec 001 y no modifica Docker Compose.
    Inter, splash y Stack raíz.
 3. Reorganizar rutas en `(auth)`, `(onboarding)` y `(app)/(tabs)` conservando URLs; login con
    `GoogleSignInButton` como Pressable MD3 con icono oficial inline y texto traducido, y
-   autenticación nativa de Google mediante `react-native-nitro-google-signin`.
+   autenticación nativa de Google mediante `react-native-nitro-google-signin`. El adaptador nativo
+   devuelve `success`/`cancelled`/`error`; el login canjea el token, navega según onboarding y
+   muestra el error inline sin perder el estado de carga.
 4. Implementar tabs inferiores, `SessionProvider`, header de pantalla y navegación a Ajustes/Perfil.
 5. Refactorizar las pantallas existentes y añadir Inicio, Perfil, edición de perfil, Ajustes
    (idioma, tema, logout, acerca de/versión/legal, editar perfil) y editor de avatar. La creación de
@@ -377,6 +389,8 @@ extensiones de la spec 001 y no modifica Docker Compose.
    destructiva, foco atrapado, Escape y retorno de foco; aplicarlo a Eliminar/Abandonar familia.
 3. Implementar spinners con texto, banners inline, estados vacíos, errores de código
    inválido/usado/expirado, fallback de geolocalización y `aria-live`/`accessibilityLiveRegion`.
+   Incluir el mapeo de errores nativos de Google (`errors.auth.*`) y el fallback genérico
+   `errors.auth.googleSignInFailed`, sin mostrar mensaje cuando el usuario cancela.
 4. Verificar foco, teclado, contraste, zoom 200%, 320 px, movimiento reducido y objetivos táctiles
    de 48 dp.
 
@@ -399,9 +413,9 @@ extensiones de la spec 001 y no modifica Docker Compose.
 | FR-024–FR-027 | `ThemePreference`, decisiones de tema web/móvil y `ThemeProvider` |
 | FR-028–FR-034 | `contracts/i18n-contracts.md`, `TranslationCatalog` y `LocaleProvider` |
 | FR-035–FR-040 | Contratos de accesibilidad de UI/navegación, Fase E y pruebas `jest-axe` |
-| FR-041–FR-048 | Mapa de rutas, Fases C/D y `ConfirmDialog` |
+| FR-041–FR-048, FR-084 | Mapa de rutas, Fases C/D, `ConfirmDialog` y feedback del login nativo de Google |
 | FR-049–FR-053 | `AvatarConfig`, `AvatarEditor` y Fases B/C/D |
-| FR-054–FR-057 | `ScreenState`, contrato de feedback y Fase E |
+| FR-054–FR-057 | `ScreenState`, `AuthFlowState`, contrato de feedback y Fase E |
 | FR-058–FR-060 | Decisiones de gráficos, `ChartContainer` y Fase F |
 | FR-061–FR-063 | `BrandIdentity`, `Wordmark` y `lib/branding.ts` |
 | FR-064–FR-068 | Restricciones, Constitution Check y Quality Gates |
@@ -430,7 +444,10 @@ extensiones de la spec 001 y no modifica Docker Compose.
   denegada, fallback a locale/USD y búsqueda **Otros** sobre ISO 4217.
 - **Familia**: pruebas de visibilidad de Eliminar/Abandonar según integrantes, confirmación
   destructiva, soft delete, redirección y reasignación de administrador.
-- **Google**: prueba de estilo oficial, texto traducido, nombre accesible y estados disabled/loading.
+- **Google**: prueba de estilo oficial, texto traducido, nombre accesible y estados
+  disabled/loading; pruebas del adaptador nativo para éxito (navega según onboarding),
+  cancelación (vuelve a `idle` sin banner) y error (banner inline con clave i18n o fallback
+  `errors.auth.googleSignInFailed`).
 - **Build**: `pnpm run typecheck`, `pnpm run lint`, `pnpm run build` en web; `pnpm run typecheck`,
   `pnpm run lint` y `npx expo-doctor` en móvil.
 - **Manual**: escenarios de `quickstart.md` en web y móvil, incluyendo cambio de tema/idioma en
@@ -455,7 +472,8 @@ extensiones de la spec 001 y no modifica Docker Compose.
 | Listas regionales de moneda desactualizadas | Bajo | `shared/currencies/regions.json` versionado y generado a ambos frontends; el buscador **Otros** cubre todo ISO 4217 |
 | Fuerza bruta o reutilización de códigos de invitación | Medio | Código de un solo uso con caducidad de 7 días y validación/autorización en backend spec 001; la UI no decide validez |
 | Acciones de familia ejecutadas sin permisos | Alto | Eliminar/Abandonar consumen endpoints de spec 001; el backend valida integrantes y soft delete; la UI solo muestra acciones posibles y confirma |
-| `react-native-nitro-google-signin` no funciona en Expo Go o exige New Architecture | Medio | La librería requiere `react-native-nitro-modules` y un development build nativo; validar con `npx expo-doctor` y build nativo; el login real no se prueba en Expo Go |
+| `react-native-nitro-google-signin` no funciona en Expo Go o exige New Architecture | Medio | La librería requiere `react-native-nitro-modules` y un development build nativo; validar con `npx expo-doctor` y build nativo; el login real no se prueba en Expo Go. No se requieren archivos de Firebase: los client IDs se configuran por entorno |
+| El login móvil vuelve silenciosamente tras elegir cuenta | Alto | El adaptador devuelve un resultado discriminado y nunca `null` para errores; pruebas de éxito/cancelación/error y verificación de que un `idToken` ausente o un fallo de canje produce banner inline (FR-084) |
 
 ## Post-Design Constitution Check
 
@@ -469,8 +487,8 @@ extensiones de la spec 001 y no modifica Docker Compose.
 - [x] **III**: la UI refleja las reglas de roles, moneda, soft delete y abandono de la spec 001;
   no las redefine ni toca precisión o ciclos. El formato usa la moneda única del grupo.
 - [x] **IV**: no se introducen integraciones prohibidas.
-- [x] **V**: la autoridad de validación sigue en FastAPI; la UI solo traduce errores y presenta
-  estados.
+- [x] **V**: la autoridad de validación sigue en FastAPI; la UI solo traduce errores (incluidos los
+  nativos de Google) y presenta estados.
 - [x] **VI**: cada decisión traza a FR/SC y no se implementa comportamiento no especificado.
 - [x] **Marca**: Kitho, títulos de tienda y wordmark provisional cumplen la constitución.
 

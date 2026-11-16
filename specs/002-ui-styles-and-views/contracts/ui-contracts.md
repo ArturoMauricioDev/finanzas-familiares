@@ -131,6 +131,11 @@ MD3 con el icono oficial como SVG inline y la autenticación nativa delegada en
 **`react-native-nitro-google-signin`**. Ninguna plataforma depende de assets externos ni muestra
 una imagen rota.
 
+**Behavior**: el componente solo inicia el flujo y refleja `loading`/`disabled`. La pantalla de
+Login es la dueña del resultado: éxito → navegar según onboarding; cancelación → volver a `idle`
+sin mensaje; error → `InlineBanner` traducido. El botón se rehabilita al terminar en todos los
+casos.
+
 ### SearchField
 
 | Prop | Type | Default | Notes |
@@ -356,7 +361,7 @@ renderiza navegación en `(auth)`/`(onboarding)`.
 
 | Screen | Required composition | States |
 |--------|----------------------|--------|
-| Login | Wordmark, `GoogleSignInButton`, InlineBanner | Loading, config error, auth error |
+| Login | Wordmark, `GoogleSignInButton`, InlineBanner | Loading, config error, auth error, cancelled (idle) |
 | Profile setup | TextField, `Avatar`/preview, default avatar, submit | Loading, validation, error, success redirect |
 | Family select/create | Card, form, `CurrencySelect`, primary/secondary actions | Loading (detectando región), validation, conflict, error de moneda |
 | Invite | Invitation summary with `InviteCode`, join-by-code field, join/back actions | Loading, invalid/used/expired empty/error, success |
@@ -378,6 +383,9 @@ repetible.
 | Loading | Spinner con texto y control deshabilitado |
 | Error | InlineBanner `error` con clave i18n o fallback; reintento si aplica |
 | Success | InlineBanner `success` anunciado |
+| Auth success | Navegación automática según onboarding; sin banner transitorio obligatorio |
+| Auth cancelled | Vuelta a `idle`; sin banner, sin anuncio y sin cambiar de ruta |
+| Auth error | InlineBanner `error` traducido; el botón se rehabilita |
 | Empty | EmptyState con explicación y acción sugerida |
 | Disabled | Opacidad y `disabled`, sin foco |
 | Focus | Anillo visible de 2 px |

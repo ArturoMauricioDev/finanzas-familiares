@@ -11,7 +11,12 @@ import {
   createDefaultAvatar,
   isAvatarDataUri,
 } from "@/lib/avatar-engine.generated";
-import { errorText } from "@/lib/errors";
+import {
+  errorDescriptorFromKey,
+  errorDescriptorText,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "@/lib/errors";
 import { getPendingInviteCode, updateSession } from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
@@ -20,7 +25,7 @@ export default function ProfileSetupPage() {
   const { t } = useI18n();
   const { session, ready } = useAuthGuard();
   const [nombre, setNombre] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [saving, setSaving] = useState(false);
 
   const seed = session?.user.email || session?.user.id || "kitho";
@@ -57,7 +62,7 @@ export default function ProfileSetupPage() {
 
     try {
       if (avatar.length > AVATAR_MAX_LENGTH) {
-        setError(t("avatar.svgUnsupported"));
+        setError(errorDescriptorFromKey("avatar.svgUnsupported"));
         return;
       }
 
@@ -81,7 +86,7 @@ export default function ProfileSetupPage() {
         : "/family/members";
       router.replace(destination);
     } catch (err) {
-      setError(errorText(err, t, t("profile.saveFailed")));
+      setError(toErrorDescriptor(err));
     } finally {
       setSaving(false);
     }
@@ -93,7 +98,9 @@ export default function ProfileSetupPage() {
     <Page title={t("profile.setupTitle")} subtitle={t("profile.setupSubtitle")}>
       <Card variant="elevated">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <ErrorMessage message={error} />
+          <ErrorMessage
+            message={error ? errorDescriptorText(error, t, t("profile.saveFailed")) : null}
+          />
           <div className="flex items-center gap-4">
             <Avatar
               name={nombre || session.user.email}

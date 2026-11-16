@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import * as storage from "./storage";
 
 import type { ThemeMode } from "./generated/tokens";
 import { defaultLocale, supportedLocales, type Locale } from "./i18n/messages.generated";
@@ -22,7 +22,7 @@ export function normalizeLocale(value: unknown): Locale {
 
 export async function getThemePreference(): Promise<ThemePreference> {
   try {
-    const value = await SecureStore.getItemAsync(THEME_STORAGE_KEY);
+    const value = await storage.getItemAsync(THEME_STORAGE_KEY);
     return isThemePreference(value) ? value : "system";
   } catch {
     return "system";
@@ -31,7 +31,7 @@ export async function getThemePreference(): Promise<ThemePreference> {
 
 export async function setThemePreference(value: ThemePreference): Promise<void> {
   try {
-    await SecureStore.setItemAsync(THEME_STORAGE_KEY, value);
+    await storage.setItemAsync(THEME_STORAGE_KEY, value);
   } catch {
     return;
   }
@@ -39,7 +39,7 @@ export async function setThemePreference(value: ThemePreference): Promise<void> 
 
 export async function getLocalePreference(): Promise<Locale | null> {
   try {
-    const value = await SecureStore.getItemAsync(LOCALE_STORAGE_KEY);
+    const value = await storage.getItemAsync(LOCALE_STORAGE_KEY);
     return isLocale(value) ? value : null;
   } catch {
     return null;
@@ -48,7 +48,7 @@ export async function getLocalePreference(): Promise<Locale | null> {
 
 export async function setLocalePreference(value: Locale): Promise<void> {
   try {
-    await SecureStore.setItemAsync(LOCALE_STORAGE_KEY, normalizeLocale(value));
+    await storage.setItemAsync(LOCALE_STORAGE_KEY, normalizeLocale(value));
   } catch {
     return;
   }

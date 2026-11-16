@@ -2,7 +2,8 @@ const { withGradleProperties } = require('@expo/config-plugins');
 
 const GRADLE_PROPERTIES = {
   'org.gradle.parallel': 'false',
-  'org.gradle.workers.max': '2',
+  'org.gradle.workers.max': '1',
+  'org.gradle.jvmargs': '-Xmx4g -XX:MaxMetaspaceSize=1g',
   reactNativeArchitectures: 'arm64-v8a',
 };
 

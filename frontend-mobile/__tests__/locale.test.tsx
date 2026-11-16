@@ -19,6 +19,7 @@ function Probe() {
       <Text testID="formatLocale">{formatLocale}</Text>
       <Text testID="home">{t("nav.home")}</Text>
       <Text testID="error">{t("errors.details.invitationExpired")}</Text>
+      <Text testID="success">{t("profile.updated")}</Text>
       <Pressable accessibilityRole="button" onPress={() => setLocale("en")}>
         <Text>English</Text>
       </Pressable>
@@ -43,6 +44,7 @@ describe("mobile locale provider", () => {
 
     await waitFor(() => expect(screen.getByTestId("home").props.children).toBe("Inicio"));
     expect(screen.getByTestId("locale").props.children).toBe("es");
+    expect(screen.getByTestId("success").props.children).toBe("Perfil actualizado.");
     expect(screen.getByTestId("formatLocale").props.children).toBe("es-US");
   });
 
@@ -73,6 +75,7 @@ describe("mobile locale provider", () => {
 
     await waitFor(() => expect(screen.getByTestId("home").props.children).toBe("Home"));
     expect(screen.getByTestId("error").props.children).toBe("This invitation expired.");
+    expect(screen.getByTestId("success").props.children).toBe("Profile updated.");
     expect(await SecureStore.getItemAsync("kitho_locale")).toBe("en");
   });
 });

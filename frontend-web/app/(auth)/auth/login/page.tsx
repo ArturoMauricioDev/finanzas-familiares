@@ -6,7 +6,12 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/components/providers/LocaleProvider";
 import { Card, ErrorMessage, GoogleSignInButton, Loading, Page } from "@/components/ui";
 import { signInWithGoogle } from "@/lib/auth";
-import { errorText } from "@/lib/errors";
+import {
+  errorDescriptorFromKey,
+  errorDescriptorText,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "@/lib/errors";
 import { applyTokenResponse, getPendingInviteCode, getSession } from "@/lib/session";
 
 function nextPath(current: { needs_profile_setup: boolean; needs_family_setup: boolean }): string {
@@ -20,7 +25,7 @@ function nextPath(current: { needs_profile_setup: boolean; needs_family_setup: b
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,7 +36,7 @@ export default function LoginPage() {
 
   const handleSuccess = async (credential: string) => {
     if (!credential) {
-      setError(t("auth.invalidGoogleToken"));
+      setError(errorDescriptorFromKey("auth.invalidGoogleToken"));
       return;
     }
 
@@ -43,7 +48,7 @@ export default function LoginPage() {
       const session = applyTokenResponse(data);
       router.push(nextPath(session));
     } catch (err) {
-      setError(errorText(err, t, t("auth.signInFailed")));
+      setError(toErrorDescriptor(err));
     } finally {
       setLoading(false);
     }
@@ -53,12 +58,14 @@ export default function LoginPage() {
     <Page title={t("auth.title")} subtitle={t("auth.subtitle")}>
       <Card variant="elevated">
         <div className="space-y-4">
-          <ErrorMessage message={error} />
+          <ErrorMessage
+            message={error ? errorDescriptorText(error, t, t("auth.signInFailed")) : null}
+          />
           {loading ? <Loading message={t("common.validating")} /> : null}
           <div className="flex justify-center py-2">
             <GoogleSignInButton
               onSuccess={handleSuccess}
-              onError={() => setError(t("auth.googleFailed"))}
+              onError={() => setError(errorDescriptorFromKey("auth.googleFailed"))}
             />
           </div>
         </div>

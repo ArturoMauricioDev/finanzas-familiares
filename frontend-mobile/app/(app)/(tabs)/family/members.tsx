@@ -19,7 +19,11 @@ import {
 import { useI18n } from "../../../../components/providers/LocaleProvider";
 import { useTheme } from "../../../../components/providers/ThemeProvider";
 import { api, ApiError, refreshSession } from "../../../../lib/api";
-import { errorText } from "../../../../lib/errors";
+import {
+  errorDescriptorText,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "../../../../lib/errors";
 import {
   invitationCode,
   invitationDaysRemaining,
@@ -38,12 +42,12 @@ export default function FamilyMembersScreen() {
   const { session, ready } = useAuthGuard(true);
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
+  const [messageKey, setMessageKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<ErrorDescriptor | null>(null);
   const [loadingAction, setLoadingAction] = useState<"delete" | "leave" | null>(null);
 
   const handleError = useCallback(
@@ -64,12 +68,12 @@ export default function FamilyMembersScreen() {
           router.replace("/family/select");
           return;
         }
-        setError(errorText(err, t, t("family.loadFailed")));
+        setError(toErrorDescriptor(err));
         return;
       }
-      setError(errorText(err, t, t("family.loadFailed")));
+      setError(toErrorDescriptor(err));
     },
-    [router, t],
+    [router],
   );
 
   const loadFamily = useCallback(async () => {
@@ -94,11 +98,11 @@ export default function FamilyMembersScreen() {
   const generateInvitation = async () => {
     setGenerating(true);
     setError(null);
-    setMessage(null);
+    setMessageKey(null);
     try {
       const data = await api.createInvitation();
       setInvitation(data);
-      setMessage(t("family.invitationGenerated"));
+      setMessageKey("family.invitationGenerated");
     } catch (err) {
       await handleError(err);
     } finally {
@@ -109,7 +113,7 @@ export default function FamilyMembersScreen() {
   const copyCode = async () => {
     if (!invitation) return;
     await Clipboard.setStringAsync(invitationCode(invitation));
-    setMessage(t("common.copiedCode"));
+    setMessageKey("common.copiedCode");
   };
 
   const shareInvitation = async () => {
@@ -132,7 +136,7 @@ export default function FamilyMembersScreen() {
       if (err instanceof ApiError && err.status === 401) {
         await handleError(err);
       } else {
-        setActionError(errorText(err, t, t("family.leaveFamilyFailed")));
+        setActionError(toErrorDescriptor(err));
       }
     } finally {
       setLoadingAction(null);
@@ -150,7 +154,7 @@ export default function FamilyMembersScreen() {
       if (err instanceof ApiError && err.status === 401) {
         await handleError(err);
       } else {
-        setActionError(errorText(err, t, t("family.deleteFamilyFailed")));
+        setActionError(toErrorDescriptor(err));
       }
     } finally {
       setLoadingAction(null);
@@ -159,10 +163,10 @@ export default function FamilyMembersScreen() {
 
   const promote = async (userId: string) => {
     setError(null);
-    setMessage(null);
+    setMessageKey(null);
     try {
       await api.promoteMember(userId);
-      setMessage(t("family.promoteSuccess"));
+      setMessageKey("family.promoteSuccess");
       await loadFamily();
     } catch (err) {
       await handleError(err);
@@ -172,10 +176,10 @@ export default function FamilyMembersScreen() {
   const remove = async (userId: string) => {
     setPendingRemoval(null);
     setError(null);
-    setMessage(null);
+    setMessageKey(null);
     try {
       await api.removeMember(userId);
-      setMessage(t("family.removeSuccess"));
+      setMessageKey("family.removeSuccess");
       await loadFamily();
     } catch (err) {
       await handleError(err);
@@ -205,8 +209,10 @@ export default function FamilyMembersScreen() {
           : t("family.membersLoading")
       }
     >
-      <ErrorMessage message={error} />
-      <SuccessMessage message={message} />
+      <ErrorMessage
+        message={error ? errorDescriptorText(error, t, t("family.loadFailed")) : null}
+      />
+      <SuccessMessage message={messageKey ? t(messageKey) : null} />
 
       {loading ? <Loading /> : null}
 

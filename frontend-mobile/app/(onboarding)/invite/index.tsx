@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useI18n } from "../../../components/providers/LocaleProvider";
 import { Button, Card, ErrorMessage, Field, Loading, Page } from "../../../components/ui";
 import { ApiError, api } from "../../../lib/api";
-import { errorText } from "../../../lib/errors";
+import {
+  errorDescriptorText,
+  toErrorDescriptor,
+  type ErrorDescriptor,
+} from "../../../lib/errors";
 import { normalizeInvitationCode } from "../../../lib/invitation";
 import {
   applyInvitationJoined,
@@ -19,8 +23,8 @@ export default function InviteScreen() {
   const { t } = useI18n();
   const [code, setCode] = useState("");
   const [parentesco, setParentesco] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [codeError, setCodeError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorDescriptor | null>(null);
+  const [codeError, setCodeError] = useState<ErrorDescriptor | null>(null);
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
@@ -55,17 +59,17 @@ export default function InviteScreen() {
       await clearPendingInviteCode();
       router.replace("/family/members");
     } catch (err) {
-      const message = errorText(err, t, t("invite.joinFailed"));
       if (err instanceof ApiError && err.status === 400) {
         await clearPendingInviteCode();
       }
+      const descriptor = toErrorDescriptor(err);
       if (
         err instanceof ApiError &&
         (err.messageKey?.includes("invitation") || err.status === 400)
       ) {
-        setCodeError(message);
+        setCodeError(descriptor);
       } else {
-        setError(message);
+        setError(descriptor);
       }
     } finally {
       setJoining(false);
@@ -83,7 +87,9 @@ export default function InviteScreen() {
   return (
     <Page title={t("invite.title")} subtitle={t("invite.subtitle")}>
       <Card>
-        <ErrorMessage message={error} />
+        <ErrorMessage
+          message={error ? errorDescriptorText(error, t, t("invite.joinFailed")) : null}
+        />
         <Field
           label={t("invite.codeLabel")}
           value={code}
@@ -94,7 +100,11 @@ export default function InviteScreen() {
             void savePendingInviteCode(normalizeInvitationCode(next));
           }}
           placeholder={t("invite.codePlaceholder")}
-          error={codeError ?? undefined}
+          error={
+            codeError
+              ? errorDescriptorText(codeError, t, t("invite.joinFailed"))
+              : undefined
+          }
           hint={t("invite.codeNotice")}
           autoCapitalize="characters"
           autoCorrect={false}

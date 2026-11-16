@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import * as storage from "./storage";
 
 import type {
   FamilyCreateResponse,
@@ -21,7 +21,7 @@ const PENDING_INVITE_KEY = "finanzas_familiares_pending_invite";
 
 export async function getSession(): Promise<SessionState | null> {
   try {
-    const raw = await SecureStore.getItemAsync(SESSION_KEY);
+    const raw = await storage.getItemAsync(SESSION_KEY);
     return raw ? (JSON.parse(raw) as SessionState) : null;
   } catch {
     return null;
@@ -29,7 +29,7 @@ export async function getSession(): Promise<SessionState | null> {
 }
 
 export async function saveSession(session: SessionState): Promise<void> {
-  await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session));
+  await storage.setItemAsync(SESSION_KEY, JSON.stringify(session));
 }
 
 export async function updateSession(patch: Partial<SessionState>): Promise<SessionState | null> {
@@ -41,24 +41,24 @@ export async function updateSession(patch: Partial<SessionState>): Promise<Sessi
 }
 
 export async function clearSession(): Promise<void> {
-  await SecureStore.deleteItemAsync(SESSION_KEY);
+  await storage.deleteItemAsync(SESSION_KEY);
 }
 
 export async function savePendingInviteCode(code: string): Promise<void> {
   if (!code) return;
-  await SecureStore.setItemAsync(PENDING_INVITE_KEY, code);
+  await storage.setItemAsync(PENDING_INVITE_KEY, code);
 }
 
 export async function getPendingInviteCode(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(PENDING_INVITE_KEY);
+    return await storage.getItemAsync(PENDING_INVITE_KEY);
   } catch {
     return null;
   }
 }
 
 export async function clearPendingInviteCode(): Promise<void> {
-  await SecureStore.deleteItemAsync(PENDING_INVITE_KEY);
+  await storage.deleteItemAsync(PENDING_INVITE_KEY);
 }
 
 export const savePendingInviteToken = savePendingInviteCode;

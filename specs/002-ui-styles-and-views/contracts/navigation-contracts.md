@@ -44,6 +44,9 @@ mediante código; no existe una ruta de invitación por enlace.
 | `401` en una petición autenticada | Limpiar sesión y `/auth/login` |
 | `403` por inconsistencia de grupo | Refrescar sesión; si sigue sin grupo, `/family/select`; si no, mostrar error |
 | Logout confirmado | Limpiar sesión y `/auth/login`; conservar tema e idioma |
+| Google Sign-In completado en móvil | Según onboarding: sin perfil → `/profile/setup`; sin grupo → `/invite` si hay código pendiente, si no `/family/select`; con grupo → `/family/members` |
+| Google Sign-In cancelado en móvil | Permanecer en `/auth/login` en estado inicial, sin mensaje |
+| Google Sign-In con error en móvil | Permanecer en `/auth/login` y mostrar error inline traducido |
 | Código de invitación inválido/usado/expirado | Mostrar error, limpiar código pendiente y quedarse en `/invite` |
 | Eliminar familia (1 integrante) confirmado | `/family/select`; el usuario conserva perfil individual |
 | Abandonar familia (>1 integrante) confirmado | `/family/select`; si no quedan admins, el backend reasigna al miembro más antiguo |
@@ -127,3 +130,5 @@ mediante código; no existe una ruta de invitación por enlace.
 - [ ] El foco y `aria-current`/estado seleccionado son correctos.
 - [ ] `/invite` acepta solo código y no existe ruta/enlace de invitación.
 - [ ] Eliminar/Abandonar redirige a `/family/select` y no deja al usuario en un grupo eliminado.
+- [ ] Tras Google Sign-In móvil, el éxito navega según onboarding; la cancelación no cambia de ruta
+  ni muestra mensaje; el error permanece en login con banner inline.
