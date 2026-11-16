@@ -100,6 +100,23 @@ esquema `finanzasfamiliares` sigue usándose para el enrutado interno, pero ya n
 como redirect. En un dispositivo físico, `EXPO_PUBLIC_API_URL` debe apuntar a la IP de la máquina
 que ejecuta el backend, no a `localhost`.
 
+### Túnel para dispositivo físico
+
+Si el dispositivo no está en la misma red, `scripts/dev-tunnel.sh` levanta Docker Compose y un
+quick tunnel de Cloudflare, y reescribe `EXPO_PUBLIC_API_URL` en `frontend-mobile/.env` con la URL
+nueva:
+
+```bash
+./scripts/dev-tunnel.sh          # deja el túnel activo en primer plano
+./scripts/dev-tunnel.sh --expo   # además inicia Metro/Expo
+./scripts/dev-tunnel.sh --stop   # detiene un túnel que quedó en ejecución
+```
+
+La URL `*.trycloudflare.com` cambia en cada arranque; el script se encarga de actualizarla. Si
+`cloudflared` no está instalado lo descarga en `~/.cache/kitho`. Con `--expo` se ejecuta
+`pnpm exec expo start --dev-client --tunnel`; puedes cambiarlo con `EXPO_CMD`. Como los
+`EXPO_PUBLIC_*` se inyectan al empaquetar, reinicia Metro después de cambiar de URL.
+
 ## Google OAuth
 
 - Habilita la API de Google Identity en Google Cloud Console.
