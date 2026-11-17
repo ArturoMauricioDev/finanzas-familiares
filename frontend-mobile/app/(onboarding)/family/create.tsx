@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import { CurrencySelect } from "../../../components/family/CurrencySelect";
 import { useI18n } from "../../../components/providers/LocaleProvider";
-import { Button, Card, ErrorMessage, Field, Loading, Page } from "../../../components/ui";
+import { Button, Card, ErrorMessage, Field, Loading, Page, Select } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import { createCurrencySelection, isValidCurrencyCode } from "../../../lib/currency";
 import {
@@ -23,6 +23,7 @@ export default function FamilyCreateScreen() {
   const [nombre, setNombre] = useState("");
   const [selection, setSelection] = useState(() => createCurrencySelection({ locale: formatLocale }));
   const [moneda, setMoneda] = useState(() => createCurrencySelection({ locale: formatLocale }).selectedCode);
+  const [rolFamiliar, setRolFamiliar] = useState("padre");
   const [detecting, setDetecting] = useState(true);
   const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [saving, setSaving] = useState(false);
@@ -65,6 +66,7 @@ export default function FamilyCreateScreen() {
       const data = await api.createFamily({
         nombre,
         moneda_local: moneda,
+        rol_familiar: rolFamiliar,
       });
       await applyFamilyCreated(data);
       await clearPendingInviteCode();
@@ -100,6 +102,15 @@ export default function FamilyCreateScreen() {
           loading={detecting}
           disabled={saving}
           onChange={setMoneda}
+        />
+        <Select
+          label={t("family.creatorRoleLabel")}
+          value={rolFamiliar}
+          options={[
+            { value: "padre", label: t("family.familyRolePadre") },
+            { value: "madre", label: t("family.familyRoleMadre") },
+          ]}
+          onChange={setRolFamiliar}
         />
         <Button
           title={saving ? t("common.creating") : t("family.createFamily")}

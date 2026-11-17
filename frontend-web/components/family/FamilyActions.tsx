@@ -29,27 +29,26 @@ export function FamilyActions({
   if (!canDelete && !canLeave) return null;
 
   const action = canDelete ? "delete" : "leave";
-  const title = canDelete ? t("family.deleteFamilyConfirmTitle") : t("family.leaveFamilyConfirmTitle");
+  const title = canDelete
+    ? t("family.deleteFamilyConfirmTitle")
+    : t("family.leaveFamilyConfirmTitle");
   const description = canDelete
     ? t("family.deleteFamilyConfirmBody")
     : t("family.leaveFamilyConfirmBody");
   const label = canDelete ? t("family.deleteFamily") : t("family.leaveFamily");
-  const errorFallback = canDelete
-    ? t("family.deleteFamilyFailed")
-    : t("family.leaveFamilyFailed");
+  const errorFallback = canDelete ? t("family.deleteFamilyFailed") : t("family.leaveFamilyFailed");
 
   return (
     <div className="space-y-3">
       <Button
         variant="danger"
         loading={loadingAction === action}
+        disabled={Boolean(loadingAction)}
         onClick={() => setConfirming(action)}
       >
         {label}
       </Button>
-      <ErrorMessage
-        message={error ? errorDescriptorText(error, t, errorFallback) : null}
-      />
+      <ErrorMessage message={error ? errorDescriptorText(error, t, errorFallback) : null} />
       <ConfirmDialog
         open={confirming !== null}
         title={title}
@@ -57,6 +56,8 @@ export function FamilyActions({
         confirmLabel={label}
         cancelLabel={t("common.cancel")}
         destructive
+        loading={loadingAction === action}
+        disabled={Boolean(loadingAction)}
         onCancel={() => {
           if (!loadingAction) setConfirming(null);
         }}

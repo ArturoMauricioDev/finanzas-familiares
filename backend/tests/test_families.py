@@ -1,7 +1,7 @@
 import uuid
 
 from app.models.family import Family, FamilyStatusEnum
-from app.models.membership import Membership, RoleEnum, StatusEnum
+from app.models.membership import FamilyRoleEnum, Membership, RoleEnum, StatusEnum
 from tests.conftest import auth_headers, create_user
 
 
@@ -22,6 +22,58 @@ def test_create_family_assigns_admin_role(client, db):
     assert body["family"]["moneda_local"] == "MXN"
     assert body["membership"]["role"] == "admin"
     assert body["tokens"]["access_token"]
+
+
+def test_create_family_records_family_role(client, db):
+    user = create_user(db)
+    response = client.post(
+        "/api/v1/families",
+        json={"nombre": "Familia", "moneda_local": "MXN", "rol_familiar": "madre"},
+        headers=auth_headers(user),
+    )
+
+    assert response.status_code == 201
+    membership = db.query(Membership).filter(Membership.user_id == user.id).first()
+    assert membership is not None
+    assert membership.role == RoleEnum.admin
+    assert membership.rol_familiar == FamilyRoleEnum.madre
+
+
+def test_create_family_defaults_creator_to_parent_role(client, db):
+    user = create_user(db)
+    response = _create_family(client, user)
+
+    assert response.status_code == 201
+    membership = db.query(Membership).filter(Membership.user_id == user.id).first()
+    assert membership is not None
+    assert membership.rol_familiar == FamilyRoleEnum.padre
+
+
+def test_create_family_rejects_child_role_for_creator(client, db):
+    user = create_user(db)
+    response = client.post(
+        "/api/v1/families",
+        json={"nombre": "Familia", "moneda_local": "MXN", "rol_familiar": "hijo"},
+        headers=auth_headers(user),
+    )
+
+    assert response.status_code == 422
+
+
+def test_family_detail_exposes_family_role(client, db):
+    admin = create_user(db, email="admin@example.com")
+    response = client.post(
+        "/api/v1/families",
+        json={"nombre": "Familia", "moneda_local": "MXN", "rol_familiar": "madre"},
+        headers=auth_headers(admin),
+    )
+    assert response.status_code == 201
+
+    detail = client.get("/api/v1/families/me", headers=auth_headers(admin))
+    assert detail.status_code == 200
+    member = detail.json()["members"][0]
+    assert member["rol_familiar"] == "madre"
+    assert member["rol_permiso"] == "admin"
 
 
 def test_second_family_is_rejected(client, db):

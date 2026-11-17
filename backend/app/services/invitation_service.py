@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.security import create_access_token, create_refresh_token
 from app.models.family import Family, FamilyStatusEnum
 from app.models.invitation import Invitation
-from app.models.membership import Membership, RoleEnum, StatusEnum
+from app.models.membership import FamilyRoleEnum, Membership, RoleEnum, StatusEnum
 
 INVITATION_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 INVITATION_CODE_LENGTH = 8
@@ -48,6 +49,16 @@ def _active_membership(db: Session, user_id):
         )
         .first()
     )
+
+
+def _resolve_family_role(request) -> Optional[FamilyRoleEnum]:
+    if request.rol_familiar:
+        return request.rol_familiar
+    if request.parentesco:
+        normalized = request.parentesco.strip().lower()
+        if normalized in (FamilyRoleEnum.padre.value, FamilyRoleEnum.madre.value):
+            return FamilyRoleEnum(normalized)
+    return None
 
 
 def create_invitation(db: Session, user_id, request):
@@ -143,10 +154,17 @@ def join_invitation(db: Session, user_id, request):
         )
 
     try:
+        rol_familiar = _resolve_family_role(request)
+        membership_role = (
+            RoleEnum.admin
+            if rol_familiar in (FamilyRoleEnum.padre, FamilyRoleEnum.madre)
+            else RoleEnum.member
+        )
         membership = Membership(
             user_id=user_id,
             family_id=invitation.family_id,
-            role=RoleEnum.member,
+            role=membership_role,
+            rol_familiar=rol_familiar,
             parentesco=request.parentesco,
             estado=StatusEnum.activo,
         )
@@ -173,7 +191,7 @@ def join_invitation(db: Session, user_id, request):
     token_data = {
         "user_id": str(user_id),
         "family_id": str(invitation.family_id),
-        "role": "member",
+        "role": membership_role.value,
     }
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
@@ -182,7 +200,7 @@ def join_invitation(db: Session, user_id, request):
 
     return JoinInvitationResponse(
         family_id=str(invitation.family_id),
-        role="member",
+        role=membership_role.value,
         estado="activo",
         tokens=TokensResponse(access_token=access_token, refresh_token=refresh_token),
     )

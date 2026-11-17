@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from app.models.invitation import Invitation
-from app.models.membership import Membership, RoleEnum, StatusEnum
+from app.models.membership import FamilyRoleEnum, Membership, RoleEnum, StatusEnum
 from tests.conftest import auth_headers, create_user
 
 
@@ -203,3 +203,70 @@ def test_inactive_members_do_not_count_towards_limit(client, db):
         headers=auth_headers(extra),
     )
     assert response.status_code == 200
+
+
+def test_join_as_parent_grants_admin_role(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+    invitation = _create_invitation(client, admin)
+
+    invited = create_user(db, email="mother@example.com")
+    response = client.post(
+        "/api/v1/invitations/join",
+        json={
+            "codigo": invitation["codigo"],
+            "rol_familiar": "madre",
+            "parentesco": "madre",
+        },
+        headers=auth_headers(invited),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
+    membership = db.query(Membership).filter(Membership.user_id == invited.id).first()
+    assert membership is not None
+    assert membership.role == RoleEnum.admin
+    assert membership.rol_familiar == FamilyRoleEnum.madre
+
+
+def test_join_infers_parent_role_from_parentesco(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+    invitation = _create_invitation(client, admin)
+
+    invited = create_user(db, email="father@example.com")
+    response = client.post(
+        "/api/v1/invitations/join",
+        json={"codigo": invitation["codigo"], "parentesco": "Padre"},
+        headers=auth_headers(invited),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
+    membership = db.query(Membership).filter(Membership.user_id == invited.id).first()
+    assert membership is not None
+    assert membership.rol_familiar == FamilyRoleEnum.padre
+
+
+def test_join_as_child_stays_member(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+    invitation = _create_invitation(client, admin)
+
+    invited = create_user(db, email="son@example.com")
+    response = client.post(
+        "/api/v1/invitations/join",
+        json={
+            "codigo": invitation["codigo"],
+            "rol_familiar": "hijo",
+            "parentesco": "hijo",
+        },
+        headers=auth_headers(invited),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "member"
+    membership = db.query(Membership).filter(Membership.user_id == invited.id).first()
+    assert membership is not None
+    assert membership.role == RoleEnum.member
+    assert membership.rol_familiar == FamilyRoleEnum.hijo

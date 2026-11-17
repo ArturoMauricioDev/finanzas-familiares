@@ -18,8 +18,8 @@
 
 ### 2. Modelo de datos para grupos y membresías
 
-- **Decision**: Entidades `User`, `Family`, `Membership` (user_id, family_id, role, parentesco,
-  estado activo/inactivo). `Invitation` con token único, `expira_en` y `usado`.
+- **Decision**: Entidades `User`, `Family`, `Membership` (user_id, family_id, role, rol_familiar,
+  parentesco, estado activo/inactivo). `Invitation` con `codigo` único, `expira_en` y `usado`.
 - **Rationale**: Permite la restricción "un usuario solo puede pertenecer a 1 grupo activo"
   (FR-007), el conteo de miembros activos (FR-008), roles y permisos (FR-009/FR-010).
 - **Alternatives considered**: Almacenar `family_id` directamente en `User` (más simple) pero
@@ -35,13 +35,14 @@
 
 ### 4. Invitaciones
 
-- **Decision**: Generar un token aleatorio seguro (`secrets.token_urlsafe(32)`), almacenarlo con
-  `family_id`, `generado_por`, `expira_en` (configurable, por defecto 72 h) y `usado`. Validar
-  token, expiración y uso al unirse; marcar `usado` en la misma transacción que crea la membresía.
-- **Rationale**: Cumple FR-006 y el caso límite de enlace inválido/expirado; permite expiración y
+- **Decision**: Generar un código alfanumérico de 8 caracteres (`secrets.choice` sobre un alfabeto
+  sin caracteres ambiguos), almacenarlo con `family_id`, `generado_por`, `expira_en` (fijo a 7
+  días) y `usado`. Validar código, expiración y uso al unirse; marcar `usado` en la misma
+  transacción que crea la membresía.
+- **Rationale**: Cumple FR-006 y el caso límite de código inválido/expirado; permite expiración y
   revocación por uso.
-- **Alternatives considered**: JWT firmado como invitación (más difícil de invalidar y de auditar
-  el uso); token sin expiración (rechazado por seguridad).
+- **Alternatives considered**: Enlaces con token largo (rechazado: la UI solo expone códigos);
+  token sin expiración (rechazado por seguridad).
 
 ### 5. Autorización
 
@@ -83,10 +84,10 @@
 ### 9. Validación de entrada y errores semánticos
 
 - **Decision**: Validar con Pydantic: `moneda_local` como código ISO 4217 de 3 letras,
-  `nombre_visualizacion`/`foto_avatar` no vacíos, `expira_en_horas` en un rango razonable
-  (1–720). Mapear errores a `400/401/403/404/422` y mensajes claros en la UI.
-- **Rationale**: Cumple FR-003/FR-005, la constitución (errores semánticos y UI amigable) y evita
-  datos inválidos persistidos.
+  `nombre_visualizacion`/`foto_avatar` no vacíos, `rol_familiar` permitido al crear o unirse.
+  Mapear errores a `400/401/403/404/422` y mensajes claros en la UI.
+- **Rationale**: Cumple FR-003/FR-005/FR-009, la constitución (errores semánticos y UI amigable) y
+  evita datos inválidos persistidos.
 - **Alternatives considered**: Validación sólo en frontend (prohibido); aceptar cualquier string y
   corregir después (genera datos inconsistentes).
 
@@ -105,7 +106,7 @@
 - **Decision**: Usar `NEXT_PUBLIC_API_URL` y `EXPO_PUBLIC_API_URL` para la base de la API;
   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` en web y `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` /
   `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` en móvil. Restringir
-  CORS a orígenes permitidos y construir el enlace de invitación desde una URL base configurable.
+  CORS a orígenes permitidos. La UI solo comparte códigos de invitación, sin URL base.
 - **Rationale**: Paridad entre entornos y menor superficie de riesgo; evita fallos por variables
   inexistentes o URLs hardcodeadas.
 - **Alternatives considered**: Hardcodear `localhost` (rompe en dispositivos/dispositivos reales);

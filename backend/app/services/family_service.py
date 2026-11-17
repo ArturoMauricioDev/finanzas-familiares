@@ -45,6 +45,7 @@ def create_family(db: Session, user_id, request):
             user_id=user_id,
             family_id=family.id,
             role=RoleEnum.admin,
+            rol_familiar=request.rol_familiar,
             estado=StatusEnum.activo,
         )
         db.add(membership)
@@ -86,7 +87,11 @@ def create_family(db: Session, user_id, request):
             fecha_creacion=family.fecha_creacion,
             estado=family.estado.value,
         ),
-        membership=MembershipInfo(role="admin", estado="activo"),
+        membership=MembershipInfo(
+            role="admin",
+            rol_familiar=membership.rol_familiar.value if membership.rol_familiar else None,
+            estado="activo",
+        ),
         tokens=TokensResponse(access_token=access_token, refresh_token=refresh_token),
     )
 
@@ -128,7 +133,7 @@ def get_family_detail(db: Session, user_id):
             nombre_visualizacion=user.nombre_visualizacion,
             foto_avatar=user.foto_avatar,
             role=member.role.value,
-            rol_familiar=member.parentesco,
+            rol_familiar=member.rol_familiar.value if member.rol_familiar else None,
             rol_permiso=member.role.value,
             parentesco=member.parentesco,
             estado=member.estado.value,
@@ -267,7 +272,7 @@ def _active_members_ordered(db: Session, family_id):
             Membership.family_id == family_id,
             Membership.estado == StatusEnum.activo,
         )
-        .order_by(Membership.fecha_union.asc())
+        .order_by(Membership.fecha_union.asc(), Membership.id.asc())
         .all()
     )
 

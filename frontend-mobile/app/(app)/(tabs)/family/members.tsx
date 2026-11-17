@@ -47,6 +47,10 @@ export default function FamilyMembersScreen() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
+  const [memberAction, setMemberAction] = useState<{
+    type: "promote" | "remove";
+    userId: string;
+  } | null>(null);
   const [actionError, setActionError] = useState<ErrorDescriptor | null>(null);
   const [loadingAction, setLoadingAction] = useState<"delete" | "leave" | null>(null);
 
@@ -162,6 +166,7 @@ export default function FamilyMembersScreen() {
   };
 
   const promote = async (userId: string) => {
+    setMemberAction({ type: "promote", userId });
     setError(null);
     setMessageKey(null);
     try {
@@ -170,11 +175,13 @@ export default function FamilyMembersScreen() {
       await loadFamily();
     } catch (err) {
       await handleError(err);
+    } finally {
+      setMemberAction(null);
     }
   };
 
   const remove = async (userId: string) => {
-    setPendingRemoval(null);
+    setMemberAction({ type: "remove", userId });
     setError(null);
     setMessageKey(null);
     try {
@@ -183,6 +190,9 @@ export default function FamilyMembersScreen() {
       await loadFamily();
     } catch (err) {
       await handleError(err);
+    } finally {
+      setMemberAction(null);
+      setPendingRemoval(null);
     }
   };
 
@@ -194,8 +204,16 @@ export default function FamilyMembersScreen() {
     const role = member.rol_permiso ?? member.role;
     return role === "admin" ? t("family.adminRole") : t("family.memberRole");
   };
+  const familyRoleLabels: Record<string, string> = {
+    padre: t("family.familyRolePadre"),
+    madre: t("family.familyRoleMadre"),
+    hijo: t("family.familyRoleHijo"),
+    hija: t("family.familyRoleHija"),
+  };
   const familyRoleLabel = (member: Member) =>
-    member.rol_familiar ?? member.parentesco ?? t("family.memberRole");
+    (member.rol_familiar && familyRoleLabels[member.rol_familiar]) ||
+    member.parentesco ||
+    t("family.memberRole");
 
   return (
     <Page
@@ -225,10 +243,7 @@ export default function FamilyMembersScreen() {
             {t("family.memberLimit")}
           </Text>
           {family.members.length === 0 ? (
-            <EmptyState
-              title={t("family.membersHeading")}
-              description={t("family.membersEmpty")}
-            />
+            <EmptyState title={t("family.membersHeading")} description={t("family.membersEmpty")} />
           ) : (
             family.members.map((member) => (
               <View
@@ -252,9 +267,7 @@ export default function FamilyMembersScreen() {
                       {member.user_id === session.user.id ? ` · ${t("common.you")}` : ""}
                     </Text>
                     <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
-                      {member.estado === "activo"
-                        ? t("family.memberStatusActive")
-                        : member.estado}
+                      {member.estado === "activo" ? t("family.memberStatusActive") : member.estado}
                     </Text>
                   </View>
                 </View>
@@ -265,12 +278,17 @@ export default function FamilyMembersScreen() {
                       <Button
                         title={t("family.promote")}
                         variant="tonal"
+                        loading={
+                          memberAction?.type === "promote" && memberAction.userId === member.user_id
+                        }
+                        disabled={Boolean(memberAction)}
                         onPress={() => void promote(member.user_id)}
                       />
                     ) : null}
                     <Button
                       title={t("family.remove")}
                       variant="danger"
+                      disabled={Boolean(memberAction)}
                       onPress={() => setPendingRemoval(member.user_id)}
                     />
                   </View>
@@ -330,7 +348,9 @@ export default function FamilyMembersScreen() {
       <Dialog
         open={pendingRemoval !== null}
         title={t("family.removeConfirmTitle")}
-        onClose={() => setPendingRemoval(null)}
+        onClose={() => {
+          if (!memberAction) setPendingRemoval(null);
+        }}
         closeLabel={t("common.cancel")}
       >
         <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
@@ -339,6 +359,8 @@ export default function FamilyMembersScreen() {
         <Button
           title={t("family.removeConfirm")}
           variant="danger"
+          loading={memberAction?.type === "remove" && memberAction.userId === pendingRemoval}
+          disabled={Boolean(memberAction)}
           onPress={() => {
             if (pendingRemoval) void remove(pendingRemoval);
           }}

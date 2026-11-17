@@ -247,6 +247,7 @@ describe("web onboarding flows", () => {
       expect(mockApi.createFamily).toHaveBeenCalledWith({
         nombre: "Familia Pérez",
         moneda_local: "EUR",
+        rol_familiar: "padre",
       }),
     );
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
@@ -278,6 +279,7 @@ describe("web onboarding flows", () => {
     await waitFor(() =>
       expect(mockApi.joinFamilyByCode).toHaveBeenCalledWith({
         codigo: "ABCD1234",
+        rol_familiar: "hijo",
         parentesco: "hija",
       }),
     );

@@ -96,7 +96,8 @@ Crea un grupo familiar (sólo si el usuario no tiene membresía activa).
 ```json
 {
   "nombre": "string",
-  "moneda_local": "string"
+  "moneda_local": "string",
+  "rol_familiar": "padre|madre"
 }
 ```
 
@@ -112,6 +113,7 @@ Crea un grupo familiar (sólo si el usuario no tiene membresía activa).
   },
   "membership": {
     "role": "admin",
+    "rol_familiar": "padre|madre",
     "estado": "activo"
   },
   "tokens": {
@@ -122,11 +124,12 @@ Crea un grupo familiar (sólo si el usuario no tiene membresía activa).
 }
 ```
 
-**Behavior**: `Family` y `Membership(admin)` se crean en una sola transacción. Los tokens
-devueltos incluyen `family_id` y `role`.
+**Behavior**: `Family` y `Membership(admin)` con `rol_familiar` Padre/Madre se crean en una sola
+transacción. Los tokens devueltos incluyen `family_id` y `role`.
 
 **Errors**: `400` si ya pertenece a un grupo activo; `401` no autenticado; `422` si `nombre` está
-vacío o `moneda_local` no es un código ISO 4217 de 3 letras.
+vacío, `moneda_local` no es un código ISO 4217 de 3 letras o `rol_familiar` no es Padre/Madre al
+crear.
 
 ### GET /families/me
 
@@ -150,6 +153,8 @@ Obtiene el grupo y sus miembros activos.
       "nombre_visualizacion": "string",
       "foto_avatar": "string",
       "role": "admin|member",
+      "rol_familiar": "padre|madre|hijo|hija|null",
+      "rol_permiso": "admin|member",
       "parentesco": "string|null",
       "estado": "activo"
     }
@@ -164,43 +169,39 @@ Obtiene el grupo y sus miembros activos.
 
 ### POST /families/me/invitations
 
-Genera un enlace de invitación (sólo admin).
+Genera un código de invitación (sólo admin).
 
 **Auth**: required + role admin + pertenece a grupo
 
-**Request**
-```json
-{
-  "expira_en_horas": 72
-}
-```
+**Request**: sin cuerpo; la expiración es fija de 7 días. El campo heredado `expira_en_horas` se
+acepta por compatibilidad pero no modifica la expiración.
 
 **Response 201**
 ```json
 {
   "invitation_id": "uuid",
-  "token": "string",
-  "link": "string",
-  "expira_en": "datetime"
+  "codigo": "string",
+  "expira_en": "datetime",
+  "usado": false
 }
 ```
 
-**Behavior**: token único e impredecible, con expiración. El `link` se construye con una URL base
-configurable, no hardcodeada.
+**Behavior**: código alfanumérico único de 8 caracteres, de un solo uso y con expiración fija de 7
+días. La UI expone únicamente el código, no un enlace.
 
-**Errors**: `401` no autenticado; `403` si no es admin; `422` si `expira_en_horas` está fuera del
-rango permitido (1–720).
+**Errors**: `401` no autenticado; `403` si no es admin.
 
 ### POST /invitations/join
 
-Une al usuario autenticado a un grupo mediante un token.
+Une al usuario autenticado a un grupo mediante un código de invitación.
 
 **Auth**: required + sin membresía activa
 
 **Request**
 ```json
 {
-  "token": "string",
+  "codigo": "string",
+  "rol_familiar": "padre|madre|hijo|hija|null",
   "parentesco": "string|null"
 }
 ```
@@ -209,7 +210,7 @@ Une al usuario autenticado a un grupo mediante un token.
 ```json
 {
   "family_id": "uuid",
-  "role": "member",
+  "role": "admin|member",
   "estado": "activo",
   "tokens": {
     "access_token": "string",
@@ -219,11 +220,14 @@ Une al usuario autenticado a un grupo mediante un token.
 }
 ```
 
-**Behavior**: valida token, expiración y uso; cuenta miembros activos; crea `Membership(member)` y
-marca `usado=true` en una sola transacción. Los tokens devueltos incluyen `family_id` y `role`.
+**Behavior**: valida código, expiración y uso; cuenta miembros activos; crea `Membership` con
+`role=admin` cuando `rol_familiar` es Padre/Madre (o cuando el `parentesco` lo indica) y `member` en
+el resto; marca `usado=true` en una sola transacción. Los tokens devueltos incluyen `family_id` y el
+`role` resultante.
 
-**Errors**: `400` si el token es inválido, expirado o ya usado; `400` si el grupo alcanzó 10
-miembros activos; `400` si el usuario ya pertenece a un grupo; `401` no autenticado.
+**Errors**: `400` si el código es inválido, expirado o ya usado; `400` si el grupo alcanzó 10
+miembros activos; `400` si el usuario ya pertenece a un grupo; `401` no autenticado; `422` si
+`rol_familiar` no es un valor permitido.
 
 ## Members Management (Admin)
 
@@ -260,17 +264,18 @@ grupo o está inactivo.
 
 ## Error Codes
 
-- `400 Bad Request`: límite de 10 alcanzado, segundo grupo, token inválido/expirado/usado,
+- `400 Bad Request`: límite de 10 alcanzado, segundo grupo, código inválido/expirado/usado,
   auto-expulsión o último admin.
 - `401 Unauthorized`: JWT propio ausente/inválido o Google token inválido.
 - `403 Forbidden`: sin permisos (no admin) o sin grupo donde se requiere.
 - `404 Not Found`: miembro inexistente o inactivo.
 - `409 Conflict`: conflictos de unicidad (email/google_id) según corresponda.
-- `422 Unprocessable Entity`: validación de payload (moneda, perfil, expiración, campos vacíos).
+- `422 Unprocessable Entity`: validación de payload (moneda, perfil, rol familiar, campos vacíos).
 
 ## Cross-Cutting Notes
 
 - Todos los errores DEBEN tener cuerpo `{"detail": "..."}` y la UI DEBE traducirlos a mensajes
   claros.
 - CORS DEBE usar una lista de orígenes permitidos (no `*` con credenciales).
-- Las URLs base de API, Client IDs de Google y URL de invitación se configuran por entorno.
+- Las URLs base de API y Client IDs de Google se configuran por entorno. `INVITATION_LINK_BASE` es
+  heredada y no se usa: la UI solo muestra códigos.

@@ -18,16 +18,8 @@ import {
   SuccessMessage,
 } from "@/components/ui";
 import { api, ApiError, refreshSession } from "@/lib/api";
-import {
-  errorDescriptorText,
-  toErrorDescriptor,
-  type ErrorDescriptor,
-} from "@/lib/errors";
-import {
-  invitationCode,
-  invitationDaysRemaining,
-  invitationStatus,
-} from "@/lib/invitation";
+import { errorDescriptorText, toErrorDescriptor, type ErrorDescriptor } from "@/lib/errors";
+import { invitationCode, invitationDaysRemaining, invitationStatus } from "@/lib/invitation";
 import { applyFamilyLeft, clearSession } from "@/lib/session";
 import type { FamilyDetail, Invitation, Member } from "@/lib/types";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -43,6 +35,10 @@ export default function FamilyMembersPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
+  const [memberAction, setMemberAction] = useState<{
+    type: "promote" | "remove";
+    userId: string;
+  } | null>(null);
   const [actionError, setActionError] = useState<ErrorDescriptor | null>(null);
   const [loadingAction, setLoadingAction] = useState<"delete" | "leave" | null>(null);
 
@@ -169,6 +165,7 @@ export default function FamilyMembersPage() {
   };
 
   const promote = async (userId: string) => {
+    setMemberAction({ type: "promote", userId });
     setError(null);
     setMessageKey(null);
     try {
@@ -177,11 +174,13 @@ export default function FamilyMembersPage() {
       await loadFamily();
     } catch (err) {
       await handleError(err);
+    } finally {
+      setMemberAction(null);
     }
   };
 
   const remove = async (userId: string) => {
-    setPendingRemoval(null);
+    setMemberAction({ type: "remove", userId });
     setError(null);
     setMessageKey(null);
     try {
@@ -190,6 +189,9 @@ export default function FamilyMembersPage() {
       await loadFamily();
     } catch (err) {
       await handleError(err);
+    } finally {
+      setMemberAction(null);
+      setPendingRemoval(null);
     }
   };
 
@@ -201,8 +203,16 @@ export default function FamilyMembersPage() {
     const role = member.rol_permiso ?? member.role;
     return role === "admin" ? t("family.adminRole") : t("family.memberRole");
   };
+  const familyRoleLabels: Record<string, string> = {
+    padre: t("family.familyRolePadre"),
+    madre: t("family.familyRoleMadre"),
+    hijo: t("family.familyRoleHijo"),
+    hija: t("family.familyRoleHija"),
+  };
   const familyRoleLabel = (member: Member) =>
-    member.rol_familiar ?? member.parentesco ?? t("family.memberRole");
+    (member.rol_familiar && familyRoleLabels[member.rol_familiar]) ||
+    member.parentesco ||
+    t("family.memberRole");
 
   return (
     <Page
@@ -230,10 +240,7 @@ export default function FamilyMembersPage() {
             <p className="text-body-small text-on-surface-variant">{t("family.memberLimit")}</p>
           </div>
           {family.members.length === 0 ? (
-            <EmptyState
-              title={t("family.membersHeading")}
-              description={t("family.membersEmpty")}
-            />
+            <EmptyState title={t("family.membersHeading")} description={t("family.membersEmpty")} />
           ) : (
             <ul className="divide-y divide-outline-variant">
               {family.members.map((member) => (
@@ -271,6 +278,11 @@ export default function FamilyMembersPage() {
                         <Button
                           size="sm"
                           variant="tonal"
+                          loading={
+                            memberAction?.type === "promote" &&
+                            memberAction.userId === member.user_id
+                          }
+                          disabled={Boolean(memberAction)}
                           onClick={() => void promote(member.user_id)}
                         >
                           {t("family.promote")}
@@ -279,6 +291,7 @@ export default function FamilyMembersPage() {
                       <Button
                         size="sm"
                         variant="danger"
+                        disabled={Boolean(memberAction)}
                         onClick={() => setPendingRemoval(member.user_id)}
                       >
                         {t("family.remove")}
@@ -338,7 +351,11 @@ export default function FamilyMembersPage() {
         confirmLabel={t("family.removeConfirm")}
         cancelLabel={t("common.cancel")}
         destructive
-        onCancel={() => setPendingRemoval(null)}
+        loading={memberAction?.type === "remove" && memberAction.userId === pendingRemoval}
+        disabled={Boolean(memberAction)}
+        onCancel={() => {
+          if (!memberAction) setPendingRemoval(null);
+        }}
         onConfirm={() => {
           if (pendingRemoval) void remove(pendingRemoval);
         }}

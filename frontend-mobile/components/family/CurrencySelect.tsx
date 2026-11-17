@@ -46,10 +46,10 @@ export function CurrencySelect({
   const { colors } = useTheme();
   const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState(searchQuery);
 
-  const current =
-    suggestions.find((option) => option.code === value)?.name ?? value;
+  const current = suggestions.find((option) => option.code === value)?.name ?? value;
   const otherResults = useMemo(
     () => (query.trim() ? searchCurrencies(query, formatLocale).slice(0, 12) : []),
     [formatLocale, query],
@@ -69,7 +69,10 @@ export function CurrencySelect({
         accessibilityLabel={`${label}: ${current}`}
         accessibilityState={{ expanded: open, disabled: disabled || loading }}
         disabled={disabled || loading}
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          setShowSearch(!suggestions.some((option) => option.code === value));
+          setOpen(true);
+        }}
         style={[styles.trigger, { borderColor: error ? colors.error : colors.outline }]}
       >
         <Text style={[typeStyle("bodyLarge"), { color: colors.onSurface }]}>
@@ -77,7 +80,10 @@ export function CurrencySelect({
         </Text>
       </Pressable>
       {localCode ? (
-        <Text accessibilityLiveRegion="polite" style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}
+        >
           {t("family.currencyDetected", { currency: localCode })}
         </Text>
       ) : null}
@@ -94,8 +100,14 @@ export function CurrencySelect({
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: 0.4 }]}
           />
-          <View accessibilityViewIsModal style={[styles.panel, { backgroundColor: colors.surface }]}>
-            <Text accessibilityRole="header" style={[typeStyle("titleLarge"), { color: colors.onSurface }]}>
+          <View
+            accessibilityViewIsModal
+            style={[styles.panel, { backgroundColor: colors.surface }]}
+          >
+            <Text
+              accessibilityRole="header"
+              style={[typeStyle("titleLarge"), { color: colors.onSurface }]}
+            >
               {label}
             </Text>
             <ScrollView style={styles.list}>
@@ -119,39 +131,55 @@ export function CurrencySelect({
                   </Pressable>
                 );
               })}
-            </ScrollView>
-            <SearchField
-              label={t("family.currencySearchLabel")}
-              placeholder={t("family.currencySearchPlaceholder")}
-              value={query}
-              onChangeText={(next) => {
-                setQuery(next);
-                onSearch?.(next);
-              }}
-              autoCapitalize="characters"
-            />
-            {query.trim() ? (
-              <ScrollView style={styles.list}>
-                {otherResults.map((option) => (
-                  <Pressable
-                    key={option.code}
-                    accessibilityRole="button"
-                    accessibilityLabel={optionLabel(option, t("family.currencyLocalBadge"))}
-                    accessibilityState={{ selected: option.code === value }}
-                    onPress={() => select(option.code)}
-                    style={[styles.option, { backgroundColor: colors.surfaceContainerHigh }]}
-                  >
-                    <Text style={[typeStyle("bodyLarge"), { color: colors.onSurface }]}>
-                      {optionLabel(option, t("family.currencyLocalBadge"))}
-                    </Text>
-                  </Pressable>
-                ))}
-                {otherResults.length === 0 ? (
-                  <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
-                    {t("family.currencyNoResults")}
+              {!showSearch ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t("family.currencyOther")}
+                  onPress={() => setShowSearch(true)}
+                  style={[styles.option, { backgroundColor: colors.surfaceContainerHigh }]}
+                >
+                  <Text style={[typeStyle("bodyLarge"), { color: colors.primary }]}>
+                    {t("family.currencyOther")}
                   </Text>
+                </Pressable>
+              ) : null}
+            </ScrollView>
+            {showSearch ? (
+              <>
+                <SearchField
+                  label={t("family.currencySearchLabel")}
+                  placeholder={t("family.currencySearchPlaceholder")}
+                  value={query}
+                  onChangeText={(next) => {
+                    setQuery(next);
+                    onSearch?.(next);
+                  }}
+                  autoCapitalize="characters"
+                />
+                {query.trim() ? (
+                  <ScrollView style={styles.list}>
+                    {otherResults.map((option) => (
+                      <Pressable
+                        key={option.code}
+                        accessibilityRole="button"
+                        accessibilityLabel={optionLabel(option, t("family.currencyLocalBadge"))}
+                        accessibilityState={{ selected: option.code === value }}
+                        onPress={() => select(option.code)}
+                        style={[styles.option, { backgroundColor: colors.surfaceContainerHigh }]}
+                      >
+                        <Text style={[typeStyle("bodyLarge"), { color: colors.onSurface }]}>
+                          {optionLabel(option, t("family.currencyLocalBadge"))}
+                        </Text>
+                      </Pressable>
+                    ))}
+                    {otherResults.length === 0 ? (
+                      <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
+                        {t("family.currencyNoResults")}
+                      </Text>
+                    ) : null}
+                  </ScrollView>
                 ) : null}
-              </ScrollView>
+              </>
             ) : null}
             <Button title={t("common.close")} variant="text" onPress={() => setOpen(false)} />
           </View>

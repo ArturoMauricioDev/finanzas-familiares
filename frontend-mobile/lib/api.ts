@@ -156,7 +156,11 @@ export const api = {
     });
   },
 
-  createFamily(payload: { nombre: string; moneda_local: string }): Promise<FamilyCreateResponse> {
+  createFamily(payload: {
+    nombre: string;
+    moneda_local: string;
+    rol_familiar?: string;
+  }): Promise<FamilyCreateResponse> {
     return request<FamilyCreateResponse>("/families", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -176,6 +180,7 @@ export const api = {
 
   joinFamilyByCode(payload: {
     codigo: string;
+    rol_familiar?: string;
     parentesco?: string;
   }): Promise<JoinInvitationResponse> {
     return request<JoinInvitationResponse>("/invitations/join", {
@@ -184,9 +189,14 @@ export const api = {
     });
   },
 
-  joinInvitation(payload: { token: string; parentesco?: string }): Promise<JoinInvitationResponse> {
+  joinInvitation(payload: {
+    token: string;
+    rol_familiar?: string;
+    parentesco?: string;
+  }): Promise<JoinInvitationResponse> {
     return api.joinFamilyByCode({
       codigo: payload.token,
+      rol_familiar: payload.rol_familiar,
       parentesco: payload.parentesco,
     });
   },

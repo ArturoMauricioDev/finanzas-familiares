@@ -18,6 +18,13 @@ class StatusEnum(str, enum.Enum):
     inactivo = "inactivo"
 
 
+class FamilyRoleEnum(str, enum.Enum):
+    padre = "padre"
+    madre = "madre"
+    hijo = "hijo"
+    hija = "hija"
+
+
 class Membership(Base):
     __tablename__ = "memberships"
     __table_args__ = (
@@ -36,6 +43,7 @@ class Membership(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
     role = Column(Enum(RoleEnum), default=RoleEnum.member, nullable=False)
+    rol_familiar = Column(Enum(FamilyRoleEnum), nullable=True)
     parentesco = Column(String, nullable=True)
     estado = Column(Enum(StatusEnum), default=StatusEnum.activo, nullable=False)
     fecha_union = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -66,6 +66,8 @@ export default function LoginPage() {
             <GoogleSignInButton
               onSuccess={handleSuccess}
               onError={() => setError(errorDescriptorFromKey("auth.googleFailed"))}
+              disabled={loading}
+              loading={loading}
             />
           </div>
         </div>

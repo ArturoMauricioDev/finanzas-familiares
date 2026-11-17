@@ -23,10 +23,11 @@
    ```
 3. Configurar Google Sign-In en `frontend-web` y `frontend-mobile` con sus Client IDs.
    - Web: Google Identity Services con `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
-   - Android/iOS: `@react-native-google-signin/google-signin` con `webClientId`
-     (`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`) y `frontend-mobile/google-services.json` (package
-     `com.finanzasfamiliares.app` + SHA-1). Reconstruye el development build tras cambiar el
-     archivo: `npx expo prebuild --clean && npx expo run:android`.
+   - Android/iOS: `react-native-nitro-google-signin` con `webClientId`
+     (`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`), `androidClientId`/`iosClientId` y el `package`
+     `com.finanzasfamiliares.app` + SHA-1 registrados en Google Cloud Console. No se usa
+     `google-services.json` ni `GoogleService-Info.plist`. Reconstruye el development build tras
+     cambiar los Client IDs: `npx expo prebuild --clean && npx expo run:android`.
 4. Verificar salud de la API.
    ```bash
    curl http://localhost:8000/health
@@ -43,8 +44,10 @@
 2. **Configurar perfil**: `PUT /api/v1/users/me/profile` con `nombre_visualizacion` y
    `foto_avatar`.
    - Esperado: `200`, perfil guardado.
-3. **Crear grupo**: `POST /api/v1/families` con `nombre` y `moneda_local` (ej. `"MXN"`).
-   - Esperado: `201`, `role=admin`, tokens actualizados con `family_id` y `role`.
+3. **Crear grupo**: `POST /api/v1/families` con `nombre`, `moneda_local` (ej. `"MXN"`) y
+   `rol_familiar` (`"padre"` o `"madre"`).
+   - Esperado: `201`, `role=admin`, tokens actualizados con `family_id` y `role`, y
+     `membership.rol_familiar` con el rol enviado.
 4. **Verificar grupo**: `GET /api/v1/families/me` con el nuevo token.
    - Esperado: `200` con el grupo y el creador como admin.
 
@@ -53,9 +56,12 @@
 1. **Login usuario B con Google** -> obtener tokens; `needs_profile_setup` según el caso.
 2. **Configurar perfil** si es necesario.
 3. **Admin genera invitación**: `POST /api/v1/families/me/invitations` con token admin.
-   - Esperado: `201` con `token` y `link`.
-4. **Usuario B se une**: `POST /api/v1/invitations/join` con el token (sin grupo activo).
-   - Esperado: `200`, `role=member`, tokens con `family_id`.
+   - Esperado: `201` con `codigo` (8 caracteres), `expira_en` a 7 días y `usado=false`; sin
+     `token` ni `link`.
+4. **Usuario B se une**: `POST /api/v1/invitations/join` con el `codigo` (sin grupo activo) y
+   `rol_familiar` (`"hijo"`, `"hija"`, `"padre"` o `"madre"`).
+   - Esperado: `200`; si `rol_familiar` es Padre/Madre, `role=admin`; en caso contrario
+     `role=member`. Tokens con `family_id` y el `role` resultante.
 5. **Verificar límite**: con 10 miembros activos, intentar unir al 11.º -> `400`.
 
 ### Escenario 3: Permisos y errores semánticos
@@ -87,9 +93,21 @@
 
 ### Escenario 6: Invitación inválida o expirada
 
-1. `POST /api/v1/invitations/join` con token inexistente -> `400`.
-2. Reutilizar un token ya usado -> `400`.
-3. Usar un token con `expira_en` en el pasado -> `400`.
+1. `POST /api/v1/invitations/join` con un código inexistente -> `400`.
+2. Reutilizar un código ya usado -> `400`.
+3. Usar un código con `expira_en` en el pasado -> `400`.
+
+### Escenario 7: Ciclo de vida de la familia
+
+1. **Único integrante elimina la familia**: `DELETE /api/v1/families/me` -> `200`, la familia
+   queda `eliminado` (soft delete), la membresía pasa a `inactivo` y los tokens quedan sin
+   `family_id`; el usuario conserva su cuenta.
+2. **Familia con más de un integrante**: `DELETE /api/v1/families/me` -> `400`; solo se ofrece
+   `POST /api/v1/families/me/leave`.
+3. **Abandono del último administrador**: el integrante con `fecha_union` más antigua recibe
+   automáticamente `role=admin` (SC-010).
+4. **Reasignación determinista**: con `fecha_union` empatadas, el desempate usa el `id` de la
+   membresía.
 
 ## Automated Validation
 
@@ -111,7 +129,9 @@ Expected coverage includes SC-002 (`401` sin JWT), SC-003 (segundo grupo rechaza
 
 ## Notes
 
-- Los tokens propios incluyen `user_id`, `family_id` (nullable) y `role` (nullable).
+- Los tokens propios incluyen `user_id`, `family_id` (nullable), `role` (nullable) y reflejan el
+  `role` resultante tras crear o unirse.
+- `rol_familiar` (`padre|madre|hijo|hija`) determina el permiso: Padre/Madre reciben `admin`.
 - El conteo de miembros usa `estado='activo'`.
 - La moneda es única por grupo; los montos futuros usarán `DECIMAL` conforme a la constitución.
 - FastAPI valida todas las reglas; el frontend sólo presenta el estado y traduce errores.

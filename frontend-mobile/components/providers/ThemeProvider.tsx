@@ -2,7 +2,12 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useColorScheme } from "react-native";
 import * as SystemUI from "expo-system-ui";
 
-import { colorsByMode, lightColors, type ThemeColors, type ThemeMode } from "../../lib/generated/tokens";
+import {
+  colorsByMode,
+  lightColors,
+  type ThemeColors,
+  type ThemeMode,
+} from "../../lib/generated/tokens";
 import {
   getThemePreference,
   resolveTheme,
@@ -14,6 +19,7 @@ interface ThemeContextValue {
   mode: ThemePreference;
   resolved: ThemeMode;
   colors: ThemeColors;
+  hydrated: boolean;
   setMode: (mode: ThemePreference) => void;
 }
 
@@ -21,6 +27,7 @@ const defaultValue: ThemeContextValue = {
   mode: "system",
   resolved: "light",
   colors: lightColors,
+  hydrated: true,
   setMode: () => undefined,
 };
 
@@ -65,13 +72,14 @@ export function ThemeProvider({
       mode,
       resolved,
       colors: colorsByMode[resolved],
+      hydrated,
       setMode: (nextMode) => {
         setModeState(nextMode);
         setHydrated(true);
         void setThemePreference(nextMode);
       },
     }),
-    [mode, resolved],
+    [hydrated, mode, resolved],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

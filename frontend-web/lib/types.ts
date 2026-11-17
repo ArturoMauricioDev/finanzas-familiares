@@ -59,7 +59,7 @@ export interface Tokens {
 
 export interface FamilyCreateResponse {
   family: Family;
-  membership: { role: string; estado: string };
+  membership: { role: string; rol_familiar?: string; estado: string };
   tokens: Tokens;
 }
 

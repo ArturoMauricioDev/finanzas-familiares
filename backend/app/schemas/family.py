@@ -4,10 +4,13 @@ from typing import List, Optional
 import pycountry
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.membership import FamilyRoleEnum
+
 
 class CreateFamilyRequest(BaseModel):
     nombre: str = Field(min_length=1, max_length=120)
     moneda_local: str = Field(min_length=3, max_length=3)
+    rol_familiar: FamilyRoleEnum = Field(default=FamilyRoleEnum.padre)
 
     @field_validator("nombre")
     @classmethod
@@ -15,6 +18,13 @@ class CreateFamilyRequest(BaseModel):
         value = value.strip()
         if not value:
             raise ValueError("nombre no puede estar vacío")
+        return value
+
+    @field_validator("rol_familiar")
+    @classmethod
+    def validate_creator_role(cls, value: FamilyRoleEnum) -> FamilyRoleEnum:
+        if value not in (FamilyRoleEnum.padre, FamilyRoleEnum.madre):
+            raise ValueError("rol_familiar debe ser padre o madre al crear la familia")
         return value
 
     @field_validator("moneda_local")
@@ -43,6 +53,7 @@ class TokensResponse(BaseModel):
 
 class MembershipInfo(BaseModel):
     role: str
+    rol_familiar: Optional[str] = None
     estado: str
 
 

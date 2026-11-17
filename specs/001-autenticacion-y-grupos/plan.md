@@ -18,9 +18,9 @@ El diseño se apoya en cuatro decisiones transversales:
 1. **Verificación fail-closed**: el backend sólo acepta Google ID tokens verificados por
    `google-auth` (firma, audiencia, emisor y expiración); cualquier fallo produce `401`.
 2. **Transacciones atómicas**: la creación de grupo + membresía admin y la unión por invitación +
-   consumo del token se confirman en una sola transacción.
-3. **Validación en backend**: moneda ISO 4217, campos de perfil no vacíos, límites de expiración
-   de invitación y reglas de unicidad/rol se validan antes de persistir.
+   consumo del código se confirman en una sola transacción.
+3. **Validación en backend**: moneda ISO 4217, campos de perfil no vacíos, rol familiar permitido y
+   reglas de unicidad/rol se validan antes de persistir.
 4. **Clientes desacoplados**: ambos frontends consumen la API mediante URLs y Client IDs
    configurables por entorno, nunca valores hardcodeados.
 
@@ -29,8 +29,8 @@ El diseño se apoya en cuatro decisiones transversales:
 **Language/Version**: Python 3.11 (Backend FastAPI); TypeScript (Next.js Web; React Native/Expo Móvil)
 
 **Primary Dependencies**: FastAPI 0.115, SQLAlchemy 2.0, Pydantic 2.9, Alembic, python-jose,
-google-auth; Next.js 15 / React (RC), `@react-oauth/google`; Expo 52, React Native 0.76,
-Expo Router, Google Sign-In SDK para móvil
+google-auth; Next.js 15 / React, `@react-oauth/google`; Expo SDK 58, React Native New
+Architecture, Expo Router, `react-native-nitro-google-signin`
 
 **Package Manager**: pnpm 12 con `pnpm-lock.yaml` versionado en ambos frontends
 
@@ -82,10 +82,11 @@ Invitation), 5 historias de usuario y 10 requisitos funcionales
 | Verificación Google | Usar `id_token.verify_oauth2_token` con `GOOGLE_CLIENT_ID`; eliminar cualquier decodificación sin verificar | Evita bypass de autenticación (FR-001, edge case token inválido, Principio V) |
 | JWT propio | Access + refresh con `user_id`, `family_id`, `role`; el refresh relee la membresía activa antes de emitir | Claims siempre vigentes tras crear/unirse a grupo (FR-002, T062) |
 | Creación de grupo | Family + Membership admin en una sola transacción con rollback | Atomicidad ACID y consistencia del núcleo familiar (FR-005) |
-| Unión por invitación | Validar token/expiración/uso y contar miembros activos dentro de la transacción; crear membresía y marcar `usado` juntos | Evita carreras y dobles uniones (FR-006, FR-008) |
-| Invitaciones | Token `secrets.token_urlsafe(32)`, único, con expiración configurable y un solo uso | Enlaces verificables y revocables por expiración (FR-006) |
+| Unión por invitación | Validar código/expiración/uso y contar miembros activos dentro de la transacción; crear membresía y marcar `usado` juntos | Evita carreras y dobles uniones (FR-006, FR-008) |
+| Invitaciones | Código alfanumérico de 8 caracteres (`secrets.choice`), único, de un solo uso y expiración fija de 7 días; la UI expone únicamente el código | Invitaciones fáciles de compartir sin enlaces ni tokens largos (FR-006) |
+| Roles familiares | `Membership.rol_familiar` (`padre|madre|hijo|hija`) separado de `role` (`admin|member`); Padre/Madre reciben `admin` automáticamente al crear o unirse | Cumple FR-005, FR-009, FR-012 y SC-007 |
 | Roles | `admin` requerido en el servicio para invitar, promover y expulsar; proteger auto-expulsión y último admin | Cumple FR-010 y SC-005 |
-| Validación | Pydantic: `moneda_local` ISO 4217 (3 letras), perfil no vacío, `expira_en_horas` acotado | Errores tempranos y consistentes (FR-003, FR-005) |
+| Validación | Pydantic: `moneda_local` ISO 4217 (3 letras), perfil no vacío, `rol_familiar` permitido al crear/unirse, código de invitación de 8 caracteres | Errores tempranos y consistentes (FR-003, FR-005, FR-009) |
 | Frontend | Guards de onboarding por estado de sesión (`needs_profile_setup`, `needs_family_setup`) persistido y renovado vía refresh | Flujo obligatorio y resistente a recargas (FR-003, FR-004, SC-006) |
 | Configuración | `NEXT_PUBLIC_API_URL`, `EXPO_PUBLIC_API_URL` y Client IDs por entorno; CORS con lista permitida | Paridad de entornos y menor superficie de riesgo (Principio V) |
 | Pruebas | Backend pytest para contratos/reglas; web y móvil Jest/Testing Library para flujos | Verificación de SC-002 a SC-005 y quickstart reproducible |

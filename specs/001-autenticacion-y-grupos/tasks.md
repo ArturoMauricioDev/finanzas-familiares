@@ -461,3 +461,12 @@ Task: "T059 [US5] Create invite screens in frontend-mobile/app/family/ and front
 - [X] T119 Remove unused and shadow code: unused exception classes, `api.refresh` in both clients, the unused web `GOOGLE_CLIENT_ID` export, unused backend `passlib`/`python-multipart`/`PyJWT` direct dependencies, and mobile `@react-native-async-storage/async-storage` per Constitution VI and T111 (unrequested)
 - [X] T120 Translate transport/network failures and 409 responses to Spanish user-facing messages in both frontends instead of displaying raw `Error.message` values per Constitution V and T110 (partial)
 - [X] T121 Add focused tests for the real `useAuthGuard` redirect logic on web and mobile, covering no session, profile setup, family setup with and without a pending invite, `requireFamily`, and reload behavior per plan "Testing" and T112 (partial)
+
+---
+
+## Phase 17: Convergence
+
+- [X] T122 HIGH: Implementar el rol familiar (`padre|madre|hijo|hija`) en `Membership` mediante columna y migración, asignar automáticamente `role=admin` al creador y a quien se una como Padre/Madre, dejar de derivar `rol_familiar` de `parentesco`, exponerlo en `MemberInfo` y cubrir con pytest la creación y la unión con Padre/Madre per `FR-005`/`FR-009`/`FR-012`/`US4/AC1`/`US5/AC2`/`SC-007`/Key Entities (`contradicts`).
+- [X] T123 Actualizar los formularios de creación y unión de familia en `frontend-web/app/(onboarding)/family/create/page.tsx`, `frontend-web/app/(onboarding)/invite/page.tsx`, `frontend-mobile/app/(onboarding)/family/create.tsx` y `frontend-mobile/app/(onboarding)/invite/index.tsx` para capturar, enviar y mostrar el rol familiar, en lugar de un `parentesco` libre que no determina el permiso, per `FR-005`/`FR-009`/`US4/AC1`/`US5/AC2` (`missing`).
+- [X] T124 Añadir un desempate determinista por `Membership.id` en `_active_members_ordered` de `backend/app/services/family_service.py` para que la reasignación de Administrador al miembro más antiguo sea estable ante `fecha_union` empatadas per `FR-017`/`SC-010`/Edge Case "Reasignación concurrente" (`partial`).
+- [X] T125 Actualizar la documentación de 001 (`plan.md` Key Design Decisions, `data-model.md`, `contracts/openapi.yaml` y `quickstart.md` Escenario 2) al contrato vigente de invitaciones solo por código de un solo uso y 7 días, Google Sign-In nativo con `react-native-nitro-google-signin` sin `google-services.json`, y escenarios de eliminación/abandono/reasignación per `FR-006`/`FR-011`/`FR-013`–`FR-018`/`T066`/`T084` (`contradicts`).

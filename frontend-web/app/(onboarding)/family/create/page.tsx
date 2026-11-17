@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { CurrencySelect } from "@/components/family/CurrencySelect";
 import { useI18n } from "@/components/providers/LocaleProvider";
-import { Button, Card, ErrorMessage, Field, Loading, Page } from "@/components/ui";
+import { Button, Card, ErrorMessage, Field, Loading, Page, Select } from "@/components/ui";
 import { api } from "@/lib/api";
 import { createCurrencySelection, isValidCurrencyCode } from "@/lib/currency";
 import {
@@ -23,8 +23,13 @@ export default function FamilyCreatePage() {
   const { formatLocale, t } = useI18n();
   const { session, ready } = useAuthGuard();
   const [nombre, setNombre] = useState("");
-  const [selection, setSelection] = useState(() => createCurrencySelection({ locale: formatLocale }));
-  const [moneda, setMoneda] = useState(() => createCurrencySelection({ locale: formatLocale }).selectedCode);
+  const [selection, setSelection] = useState(() =>
+    createCurrencySelection({ locale: formatLocale }),
+  );
+  const [moneda, setMoneda] = useState(
+    () => createCurrencySelection({ locale: formatLocale }).selectedCode,
+  );
+  const [rolFamiliar, setRolFamiliar] = useState("padre");
   const [detecting, setDetecting] = useState(true);
   const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [saving, setSaving] = useState(false);
@@ -68,6 +73,7 @@ export default function FamilyCreatePage() {
       const data = await api.createFamily({
         nombre,
         moneda_local: moneda,
+        rol_familiar: rolFamiliar,
       });
       applyFamilyCreated(data);
       clearPendingInviteCode();
@@ -101,10 +107,20 @@ export default function FamilyCreatePage() {
             label={t("family.currencyLabel")}
             value={moneda}
             suggestions={selection.suggested}
-            localCode={selection.detectedCountry ? moneda : null}
+            localCode={selection.suggested.find((option) => option.isLocal)?.code ?? null}
             loading={detecting}
             disabled={saving}
             onChange={setMoneda}
+          />
+          <Select
+            label={t("family.creatorRoleLabel")}
+            value={rolFamiliar}
+            disabled={saving}
+            options={[
+              { value: "padre", label: t("family.familyRolePadre") },
+              { value: "madre", label: t("family.familyRoleMadre") },
+            ]}
+            onChange={(event) => setRolFamiliar(event.target.value)}
           />
           <Button type="submit" loading={saving}>
             {saving ? t("common.creating") : t("family.createFamily")}

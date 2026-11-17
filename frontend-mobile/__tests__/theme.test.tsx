@@ -13,6 +13,7 @@ function Probe() {
     <>
       <Text testID="mode">{theme.mode}</Text>
       <Text testID="resolved">{theme.resolved}</Text>
+      <Text testID="hydrated">{String(theme.hydrated)}</Text>
       <Pressable accessibilityRole="button" onPress={() => theme.setMode("dark")}>
         <Text>Oscuro</Text>
       </Pressable>
@@ -39,6 +40,7 @@ describe("mobile theme provider", () => {
 
     await waitFor(() => expect(screen.getByTestId("mode").props.children).toBe("dark"));
     expect(screen.getByTestId("resolved").props.children).toBe("dark");
+    expect(screen.getByTestId("hydrated").props.children).toBe("true");
   });
 
   it("changes the theme on demand and persists it", async () => {

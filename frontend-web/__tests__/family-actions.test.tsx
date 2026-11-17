@@ -1,7 +1,8 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { FamilyActions } from "@/components/family/FamilyActions";
-import { useI18n } from "@/components/providers/LocaleProvider";
+import { LocaleProvider, useI18n } from "@/components/providers/LocaleProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import type { ErrorDescriptor } from "@/lib/errors";
 
 import { renderWithProviders } from "./helpers/renderWithProviders";
@@ -75,6 +76,37 @@ describe("FamilyActions", () => {
 
     expect(screen.getByText("No se pudo eliminar la familia.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Eliminar familia" })).toBeDisabled();
+  });
+
+  it("disables the confirmation while the action is in flight", async () => {
+    const onDelete = jest.fn();
+    const tree = (loadingAction: "delete" | null) => (
+      <ThemeProvider>
+        <LocaleProvider>
+          <FamilyActions memberCount={1} loadingAction={loadingAction} onDelete={onDelete} />
+        </LocaleProvider>
+      </ThemeProvider>
+    );
+
+    const { rerender } = render(tree(null));
+    fireEvent.click(screen.getAllByRole("button", { name: "Eliminar familia" })[0]);
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Eliminar familia" })).toHaveLength(2),
+    );
+
+    rerender(tree("delete"));
+
+    const confirmButtons = screen.getAllByRole("button", { name: "Eliminar familia" });
+    const confirm = confirmButtons[confirmButtons.length - 1];
+    expect(confirm).toBeDisabled();
+    expect(
+      screen
+        .getAllByRole("button", { name: "Cancelar" })
+        .every((button) => button.hasAttribute("disabled")),
+    ).toBe(true);
+
+    fireEvent.click(confirm);
+    expect(onDelete).not.toHaveBeenCalled();
   });
 
   it("re-translates a visible error when the language changes", async () => {

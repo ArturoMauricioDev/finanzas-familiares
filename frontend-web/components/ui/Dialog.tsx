@@ -11,12 +11,14 @@ export function Dialog({
   children,
   onClose,
   closeLabel,
+  closeDisabled = false,
 }: {
   open: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
   closeLabel?: string;
+  closeDisabled?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -49,8 +51,11 @@ export function Dialog({
       ref={ref}
       aria-labelledby={titleId}
       className="w-[min(92vw,32rem)] rounded-lg border border-outline-variant bg-surface p-0 text-on-surface shadow-lg backdrop:bg-scrim/40"
+      onCancel={(event) => {
+        if (closeDisabled) event.preventDefault();
+      }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && !closeDisabled) onClose();
       }}
     >
       <div className="p-6">
@@ -58,7 +63,7 @@ export function Dialog({
           <h2 id={titleId} className="text-title-large text-on-surface">
             {title}
           </h2>
-          <Button variant="text" size="sm" onClick={onClose}>
+          <Button variant="text" size="sm" disabled={closeDisabled} onClick={onClose}>
             {resolvedCloseLabel}
           </Button>
         </header>
@@ -75,6 +80,8 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   destructive = false,
+  loading = false,
+  disabled = false,
   onConfirm,
   onCancel,
 }: {
@@ -84,17 +91,31 @@ export function ConfirmDialog({
   confirmLabel: string;
   cancelLabel: string;
   destructive?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const busy = loading || disabled;
   return (
-    <Dialog open={open} title={title} onClose={onCancel} closeLabel={cancelLabel}>
+    <Dialog
+      open={open}
+      title={title}
+      onClose={onCancel}
+      closeLabel={cancelLabel}
+      closeDisabled={busy}
+    >
       <p className="mb-6 text-body-medium text-on-surface-variant">{description}</p>
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="text" onClick={onCancel}>
+        <Button variant="text" disabled={busy} onClick={onCancel}>
           {cancelLabel}
         </Button>
-        <Button variant={destructive ? "danger" : "primary"} onClick={onConfirm}>
+        <Button
+          variant={destructive ? "danger" : "primary"}
+          loading={loading}
+          disabled={disabled}
+          onClick={onConfirm}
+        >
           {confirmLabel}
         </Button>
       </div>

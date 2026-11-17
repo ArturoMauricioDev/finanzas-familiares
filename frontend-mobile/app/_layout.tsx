@@ -22,15 +22,15 @@ function RootNavigator() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  const { resolved } = useTheme();
+  const { resolved, hydrated } = useTheme();
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && hydrated) {
       void SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, hydrated]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !hydrated) return null;
 
   return (
     <>
