@@ -6,7 +6,8 @@ ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
 BACKEND_URL="${BACKEND_URL:-http://localhost:8000}"
 ENV_FILE="${ENV_FILE:-$ROOT_DIR/frontend-mobile/.env}"
-EXPO_CMD="${EXPO_CMD:-pnpm exec expo start --dev-client --tunnel}"
+EXPO_CMD="${EXPO_CMD:-pnpm exec expo start --dev-client --tunnel ngrok}"
+TUNNEL_ATTEMPTS="${TUNNEL_ATTEMPTS:-3}"
 START_DOCKER=1
 START_EXPO=0
 
@@ -33,7 +34,10 @@ Variables de entorno:
   BACKEND_URL          Igual que --url.
   ENV_FILE             Igual que --env-file.
   EXPO_CMD             Comando de Expo (por defecto:
-                       "pnpm exec expo start --dev-client --tunnel").
+                       "pnpm exec expo start --dev-client --tunnel ngrok").
+                       Usa "ngrok" para no depender de una cuenta de Expo; el
+                       proveedor "expo" requiere `pnpm exec expo login`.
+  TUNNEL_ATTEMPTS      Intentos para crear el túnel (por defecto: 3).
 
 Nota: la URL *.trycloudflare.com cambia en cada arranque. Los EXPO_PUBLIC_*
 se inyectan al empaquetar, así que reinicia Metro con `pnpm start -c`.
@@ -244,9 +248,28 @@ fi
 
 echo "Abriendo túnel hacia $BACKEND_URL..."
 : > "$LOG_FILE"
-"$CLOUDFLARED" tunnel --no-autoupdate --url "$BACKEND_URL" >"$LOG_FILE" 2>&1 &
-TUNNEL_PID=$!
-echo "$TUNNEL_PID" > "$PID_FILE"
+
+start_tunnel() {
+  "$CLOUDFLARED" tunnel --no-autoupdate --url "$BACKEND_URL" >>"$LOG_FILE" 2>&1 &
+  TUNNEL_PID=$!
+  echo "$TUNNEL_PID" > "$PID_FILE"
+}
+
+wait_for_tunnel_url() {
+  local url=""
+  for _ in $(seq 1 120); do
+    if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+      return 1
+    fi
+    url="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOG_FILE" | head -n1 || true)"
+    if [ -n "$url" ]; then
+      printf '%s\n' "$url"
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 1
+}
 
 cleanup() {
   if [ -n "${TUNNEL_PID:-}" ] && kill -0 "$TUNNEL_PID" 2>/dev/null; then
@@ -255,25 +278,35 @@ cleanup() {
   fi
   rm -f "$PID_FILE"
 }
+
+TUNNEL_PID=""
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
 TUNNEL_URL=""
-for _ in $(seq 1 120); do
-  if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
-    echo "cloudflared terminó inesperadamente. Log:" >&2
-    cat "$LOG_FILE" >&2
-    exit 1
+attempt=1
+while [ "$attempt" -le "$TUNNEL_ATTEMPTS" ]; do
+  if [ "$attempt" -gt 1 ]; then
+    echo "Reintentando túnel ($attempt/$TUNNEL_ATTEMPTS)..." >&2
+    printf -- '--- reintento %s ---\n' "$attempt" >>"$LOG_FILE"
+    sleep 2
   fi
-  TUNNEL_URL="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOG_FILE" | head -n1 || true)"
-  if [ -n "$TUNNEL_URL" ]; then
+
+  start_tunnel
+  if TUNNEL_URL="$(wait_for_tunnel_url)"; then
     break
   fi
-  sleep 0.5
+
+  echo "cloudflared no respondió (intento $attempt/$TUNNEL_ATTEMPTS)." >&2
+  kill "$TUNNEL_PID" 2>/dev/null || true
+  wait "$TUNNEL_PID" 2>/dev/null || true
+  TUNNEL_PID=""
+  TUNNEL_URL=""
+  attempt=$((attempt + 1))
 done
 
 if [ -z "$TUNNEL_URL" ]; then
-  echo "No se pudo obtener la URL del túnel. Log:" >&2
+  echo "No se pudo obtener la URL del túnel tras $TUNNEL_ATTEMPTS intento(s). Log:" >&2
   cat "$LOG_FILE" >&2
   exit 1
 fi

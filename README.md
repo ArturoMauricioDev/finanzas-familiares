@@ -114,8 +114,10 @@ nueva:
 
 La URL `*.trycloudflare.com` cambia en cada arranque; el script se encarga de actualizarla. Si
 `cloudflared` no está instalado lo descarga en `~/.cache/kitho`. Con `--expo` se ejecuta
-`pnpm exec expo start --dev-client --tunnel`; puedes cambiarlo con `EXPO_CMD`. Como los
-`EXPO_PUBLIC_*` se inyectan al empaquetar, reinicia Metro después de cambiar de URL.
+`pnpm exec expo start --dev-client --tunnel ngrok`; puedes cambiarlo con `EXPO_CMD`. Se usa el
+proveedor `ngrok` porque el túnel propio de Expo (`--tunnel` sin proveedor) exige
+`pnpm exec expo login`. Como los `EXPO_PUBLIC_*` se inyectan al empaquetar, reinicia Metro después
+de cambiar de URL.
 
 ## Google OAuth
 
