@@ -36,6 +36,8 @@ Núcleo familiar.
 | moneda_local | String(3) | not null; ISO 4217 | Código de moneda (ej. MXN, COP) |
 | creado_por | UUID FK -> User(id) | not null | Creador del grupo |
 | fecha_creacion | DateTime(tz) | not null, default now | Fecha creación |
+| estado | Enum('activo','eliminado') | not null, default 'activo' | Soft delete de la familia (FR-014) |
+| fecha_eliminacion | DateTime(tz) | nullable | Momento del soft delete (FR-014) |
 
 **Relations**: has many Memberships, has many Invitations.
 
@@ -43,6 +45,10 @@ Núcleo familiar.
 - `moneda_local` debe ser un código ISO 4217 de 3 letras (FR-005).
 - La moneda es única por grupo y aplica a todos sus registros (Principio III).
 - La familia y la membresía `admin` del creador se crean en una sola transacción (FR-005).
+- La familia solo puede eliminarse cuando queda 1 miembro activo; el borrado es lógico y
+  conserva el historial (FR-013, FR-014).
+- Al abandonar el último administrador, la membresía activa con `fecha_union` más antigua recibe
+  `role=admin`; ante empate se usa `Membership.id` (FR-017, SC-010).
 
 ### Membership
 

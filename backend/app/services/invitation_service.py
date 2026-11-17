@@ -52,13 +52,7 @@ def _active_membership(db: Session, user_id):
 
 
 def _resolve_family_role(request) -> Optional[FamilyRoleEnum]:
-    if request.rol_familiar:
-        return request.rol_familiar
-    if request.parentesco:
-        normalized = request.parentesco.strip().lower()
-        if normalized in (FamilyRoleEnum.padre.value, FamilyRoleEnum.madre.value):
-            return FamilyRoleEnum(normalized)
-    return None
+    return request.rol_familiar
 
 
 def create_invitation(db: Session, user_id, request):

@@ -1,5 +1,6 @@
 import {
   applyFamilyCreated,
+  applyFamilyLeft,
   applyInvitationJoined,
   applyTokenResponse,
   clearSession,
@@ -73,6 +74,26 @@ describe("session state", () => {
     expect(session?.user.family_id).toBe("family-2");
     expect(session?.user.role).toBe("member");
     expect(getSession()?.access_token).toBe("join-access");
+  });
+
+  it("clears family claims after leaving the family", () => {
+    applyTokenResponse({
+      ...tokenResponse,
+      user: { ...tokenResponse.user, family_id: "family-1", role: "admin" },
+      needs_family_setup: false,
+    });
+
+    const session = applyFamilyLeft({
+      success: true,
+      family_id: null,
+      tokens: { access_token: "left-access", refresh_token: "left-refresh", token_type: "bearer" },
+    });
+
+    expect(session?.user.family_id).toBeNull();
+    expect(session?.user.role).toBeNull();
+    expect(session?.needs_family_setup).toBe(true);
+    expect(session?.access_token).toBe("left-access");
+    expect(getSession()?.refresh_token).toBe("left-refresh");
   });
 
   it("clears the session", () => {

@@ -117,12 +117,20 @@ Run the suites defined by the plan:
 # Backend contract/integration tests
 docker compose exec backend pytest
 
+# Backend + regresión PostgreSQL (opcional, base desechable)
+docker compose exec db createdb -U finanzas finanzas_familiares_test
+docker compose exec -e TEST_POSTGRES_URL=postgresql://finanzas:finanzas@db:5432/finanzas_familiares_test \
+  backend pytest tests/test_postgres_invitation_expiry.py
+
 # Web tests
 cd frontend-web && pnpm test
 
 # Mobile tests
 cd frontend-mobile && pnpm test
 ```
+
+`backend/tests/test_postgres_invitation_expiry.py` se omite si no se define `TEST_POSTGRES_URL`;
+usa una base desechable (el test recrea el esquema) o, si ya existe, omite el `createdb`.
 
 Expected coverage includes SC-002 (`401` sin JWT), SC-003 (segundo grupo rechazado), SC-004
 (límite de 10 rechazado) and SC-005 (acciones exclusivas de admin denegadas a miembros).

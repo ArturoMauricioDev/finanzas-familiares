@@ -52,7 +52,7 @@ moneda local por grupo; verificación de token fail-closed; errores HTTP semánt
 rol en backend
 
 **Scale/Scope**: Núcleo familiar (máx. 10 usuarios), 4 entidades (User, Family, Membership,
-Invitation), 5 historias de usuario y 10 requisitos funcionales
+Invitation), 5 historias de usuario y 18 requisitos funcionales
 
 ## Constitution Check
 
@@ -86,6 +86,7 @@ Invitation), 5 historias de usuario y 10 requisitos funcionales
 | Invitaciones | Código alfanumérico de 8 caracteres (`secrets.choice`), único, de un solo uso y expiración fija de 7 días; la UI expone únicamente el código | Invitaciones fáciles de compartir sin enlaces ni tokens largos (FR-006) |
 | Roles familiares | `Membership.rol_familiar` (`padre|madre|hijo|hija`) separado de `role` (`admin|member`); Padre/Madre reciben `admin` automáticamente al crear o unirse | Cumple FR-005, FR-009, FR-012 y SC-007 |
 | Roles | `admin` requerido en el servicio para invitar, promover y expulsar; proteger auto-expulsión y último admin | Cumple FR-010 y SC-005 |
+| Ciclo de vida de la familia | Eliminar solo con 1 miembro activo aplica soft delete (`estado=eliminado`, `fecha_eliminacion`) y desactiva la membresía; abandonar desactiva la membresía y, si no quedan admins, reasigna al miembro activo más antiguo por `fecha_union` con desempate por `id`; los tokens resultantes quedan sin `family_id`/`role` | Cumple FR-013–FR-018 y SC-010, conserva historial y evita familias huérfanas |
 | Validación | Pydantic: `moneda_local` ISO 4217 (3 letras), perfil no vacío, `rol_familiar` permitido al crear/unirse, código de invitación de 8 caracteres | Errores tempranos y consistentes (FR-003, FR-005, FR-009) |
 | Frontend | Guards de onboarding por estado de sesión (`needs_profile_setup`, `needs_family_setup`) persistido y renovado vía refresh | Flujo obligatorio y resistente a recargas (FR-003, FR-004, SC-006) |
 | Configuración | `NEXT_PUBLIC_API_URL`, `EXPO_PUBLIC_API_URL` y Client IDs por entorno; CORS con lista permitida | Paridad de entornos y menor superficie de riesgo (Principio V) |

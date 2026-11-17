@@ -353,6 +353,106 @@ describe("web onboarding flows", () => {
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
   });
 
+  it("deletes the family when it has one member", async () => {
+    useSession(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+      }),
+    );
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+    mockApi.deleteFamily.mockResolvedValue({
+      success: true,
+      family_id: null,
+      tokens: { access_token: "left-access", refresh_token: "left-refresh", token_type: "bearer" },
+    });
+
+    render(<FamilyMembersPage />);
+    await screen.findByText("Familia Pérez");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Eliminar familia" })[0]);
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Eliminar familia" })).toHaveLength(2),
+    );
+    const confirmButtons = screen.getAllByRole("button", { name: "Eliminar familia" });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => expect(mockApi.deleteFamily).toHaveBeenCalledTimes(1));
+    expect(mockSession.applyFamilyLeft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        tokens: expect.objectContaining({ access_token: "left-access" }),
+      }),
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/family/select");
+  });
+
+  it("leaves the family when it has more than one member", async () => {
+    useSession(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+      }),
+    );
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+        {
+          user_id: "user-2",
+          nombre_visualizacion: "Luis",
+          foto_avatar: null,
+          role: "member",
+          parentesco: "hijo",
+          estado: "activo",
+        },
+      ],
+      member_count: 2,
+    });
+    mockApi.leaveFamily.mockResolvedValue({
+      success: true,
+      family_id: null,
+      tokens: { access_token: "left-access", refresh_token: "left-refresh", token_type: "bearer" },
+    });
+
+    render(<FamilyMembersPage />);
+    await screen.findByText("Familia Pérez");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Abandonar familia" })[0]);
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Abandonar familia" })).toHaveLength(2),
+    );
+    const confirmButtons = screen.getAllByRole("button", { name: "Abandonar familia" });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => expect(mockApi.leaveFamily).toHaveBeenCalledTimes(1));
+    expect(mockSession.applyFamilyLeft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        tokens: expect.objectContaining({ access_token: "left-access" }),
+      }),
+    );
+    expect(mockRouter.replace).toHaveBeenCalledWith("/family/select");
+  });
+
   it("reconciles the session when the active membership is gone", async () => {
     useSession(
       buildSession({

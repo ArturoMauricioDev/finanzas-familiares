@@ -16,7 +16,7 @@
 
 ### Session 2026-11-05
 
-- Q: ¿Cómo se resuelve el error 400 `invalid_request` de Android con `redirect_uri=finanzasfamiliares://auth/login`? → A: Usar Google Sign-In nativo (`@react-native-google-signin/google-signin`) con `webClientId`, `androidClientId` respaldado por `google-services.json` (package + SHA-1) y reconstruir el development build; el flujo web mantiene Google Identity Services y `expo-auth-session` solo como fallback web.
+- Q: ¿Cómo se resuelve el error 400 `invalid_request` de Android con `redirect_uri=finanzasfamiliares://auth/login`? → A: Usar Google Sign-In nativo (`react-native-nitro-google-signin`) con `webClientId` e `iosClientId` explícitos y el `package`/SHA-1 registrados en Google Cloud Console, sin `google-services.json` ni `GoogleService-Info.plist`, y reconstruir el development build; el flujo web mantiene Google Identity Services y `expo-auth-session` solo como fallback web.
 
 ### Session 2026-11-06
 
@@ -145,13 +145,13 @@ Como Administrador o integrante, quiero gestionar a los integrantes del grupo (h
 
 #### Autenticación móvil nativa
 
-- **FR-011**: En Android (y iOS cuando aplique), la app móvil DEBE usar Google Sign-In nativo (`@react-native-google-signin/google-signin`) en lugar de un `redirect_uri` con esquema personalizado; DEBE configurarse con el `webClientId` y el cliente Android respaldado por `google-services.json` (package + SHA-1). Un `redirect_uri` personalizado en Android NO es válido y produce `400 invalid_request`.
+- **FR-011**: En Android (y iOS cuando aplique), la app móvil DEBE usar Google Sign-In nativo mediante `react-native-nitro-google-signin` en lugar de un `redirect_uri` con esquema personalizado; DEBE configurarse con el `webClientId` e `iosClientId` explícitos y el `package` `com.finanzasfamiliares.app` + SHA-1 registrados en Google Cloud Console, sin `google-services.json` ni `GoogleService-Info.plist`. Un `redirect_uri` personalizado en Android NO es válido y produce `400 invalid_request`.
 
 #### Ciclo de vida de la familia
 
 - **FR-012**: Todo usuario con rol familiar Padre o Madre DEBE recibir automáticamente el rol de permiso Administrador al crear o unirse a una familia.
 - **FR-013**: La familia SOLO puede eliminarse cuando tiene exactamente 1 integrante activo; en ese caso, el integrante puede confirmar **Eliminar familia**.
-- **FR-014**: Eliminar una familia DEBE aplicar **soft delete** (estado `eliminada`, sin borrado físico), conservar el historial y el acceso del usuario, convertir su cuenta en **perfil individual** y redirigirlo al inicio del flujo principal.
+- **FR-014**: Eliminar una familia DEBE aplicar **soft delete** (estado `eliminado`, sin borrado físico), conservar el historial y el acceso del usuario, convertir su cuenta en **perfil individual** y redirigirlo al inicio del flujo principal.
 - **FR-015**: Cuando la familia tenga más de 1 integrante activo, el sistema NO DEBE permitir eliminarla, ni siquiera al Administrador; solo DEBE ofrecer **Abandonar familia** a todos los integrantes.
 - **FR-016**: Al abandonar una familia, el usuario DEBE quedar sin grupo, conservar su cuenta e historial y ser redirigido al flujo de selección/creación/unión de grupo.
 - **FR-017**: Si la familia queda sin administradores porque el Padre y la Madre abandonaron, el backend DEBE asignar automáticamente el rol Administrador al integrante con el `created_at` más antiguo en la membresía.

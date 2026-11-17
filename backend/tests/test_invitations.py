@@ -229,7 +229,7 @@ def test_join_as_parent_grants_admin_role(client, db):
     assert membership.rol_familiar == FamilyRoleEnum.madre
 
 
-def test_join_infers_parent_role_from_parentesco(client, db):
+def test_join_does_not_infer_role_from_parentesco(client, db):
     admin = create_user(db, email="admin@example.com")
     _create_family(client, admin)
     invitation = _create_invitation(client, admin)
@@ -242,10 +242,12 @@ def test_join_infers_parent_role_from_parentesco(client, db):
     )
 
     assert response.status_code == 200
-    assert response.json()["role"] == "admin"
+    assert response.json()["role"] == "member"
     membership = db.query(Membership).filter(Membership.user_id == invited.id).first()
     assert membership is not None
-    assert membership.rol_familiar == FamilyRoleEnum.padre
+    assert membership.role == RoleEnum.member
+    assert membership.rol_familiar is None
+    assert membership.parentesco == "Padre"
 
 
 def test_join_as_child_stays_member(client, db):

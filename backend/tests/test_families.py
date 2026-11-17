@@ -318,23 +318,34 @@ def test_leave_family_reassigns_oldest_member_as_admin(client, db):
     _add_member(db, family_id, "oldest@example.com")
     _add_member(db, family_id, "newest@example.com")
 
+    expected = (
+        db.query(Membership)
+        .filter(
+            Membership.family_id == family_id,
+            Membership.estado == StatusEnum.activo,
+            Membership.user_id != admin.id,
+        )
+        .order_by(Membership.fecha_union.asc(), Membership.id.asc())
+        .first()
+    )
+    assert expected is not None
+    expected_user_id = expected.user_id
+
     leave = client.post("/api/v1/families/me/leave", headers=auth_headers(admin))
     assert leave.status_code == 200
     assert leave.json()["success"] is True
 
     db.expire_all()
-    oldest = (
+    reassigned = (
         db.query(Membership)
         .filter(
+            Membership.user_id == expected_user_id,
             Membership.family_id == family_id,
             Membership.estado == StatusEnum.activo,
         )
-        .order_by(Membership.fecha_union.asc())
-        .first()
+        .one()
     )
-    assert oldest is not None
-    assert oldest.role == RoleEnum.admin
-    assert oldest.user_id != admin.id
+    assert reassigned.role == RoleEnum.admin
 
 
 def test_leave_family_with_one_member_is_rejected(client, db):

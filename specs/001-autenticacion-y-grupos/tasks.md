@@ -470,3 +470,24 @@ Task: "T059 [US5] Create invite screens in frontend-mobile/app/family/ and front
 - [X] T123 Actualizar los formularios de creación y unión de familia en `frontend-web/app/(onboarding)/family/create/page.tsx`, `frontend-web/app/(onboarding)/invite/page.tsx`, `frontend-mobile/app/(onboarding)/family/create.tsx` y `frontend-mobile/app/(onboarding)/invite/index.tsx` para capturar, enviar y mostrar el rol familiar, en lugar de un `parentesco` libre que no determina el permiso, per `FR-005`/`FR-009`/`US4/AC1`/`US5/AC2` (`missing`).
 - [X] T124 Añadir un desempate determinista por `Membership.id` en `_active_members_ordered` de `backend/app/services/family_service.py` para que la reasignación de Administrador al miembro más antiguo sea estable ante `fecha_union` empatadas per `FR-017`/`SC-010`/Edge Case "Reasignación concurrente" (`partial`).
 - [X] T125 Actualizar la documentación de 001 (`plan.md` Key Design Decisions, `data-model.md`, `contracts/openapi.yaml` y `quickstart.md` Escenario 2) al contrato vigente de invitaciones solo por código de un solo uso y 7 días, Google Sign-In nativo con `react-native-nitro-google-signin` sin `google-services.json`, y escenarios de eliminación/abandono/reasignación per `FR-006`/`FR-011`/`FR-013`–`FR-018`/`T066`/`T084` (`contradicts`).
+
+---
+
+## Phase 18: Convergence
+
+**Purpose**: Close remaining gaps between the specification/plan and the current implementation (appended by `/speckit.converge`).
+
+- [X] T126 HIGH: Corregir `backend/tests/test_families.py::test_leave_family_reassigns_oldest_member_as_admin` para que ordene los candidatos por `(Membership.fecha_union, Membership.id)` y verifique que el miembro reasignado es exactamente el más antiguo según el mismo criterio que `_active_members_ordered`, eliminando el fallo intermitente (~50 %) per `FR-017`/`SC-010`/`T124` (`partial`).
+- [X] T127 Eliminar la derivación de `rol_familiar` desde `parentesco` en `_resolve_family_role` de `backend/app/services/invitation_service.py`, actualizar `test_join_infers_parent_role_from_parentesco` para reflejar que solo `rol_familiar` Padre/Madre otorga `admin`, y corregir la frase del contrato que aún acepta `parentesco` para asignar el rol, per `FR-009`/`FR-012`/`T122` (`contradicts`).
+- [X] T128 Actualizar la documentación de 001: corregir el conteo de requisitos y añadir las decisiones de ciclo de vida en `plan.md`, agregar `estado` y `fecha_eliminacion` a la tabla `Family` de `data-model.md`, y documentar `DELETE /families/me` y `POST /families/me/leave` (incluida la reasignación de administrador) en `contracts/openapi.yaml`, per `FR-013`–`FR-018`/`T125` (`partial`).
+- [X] T129 Reconciliar `FR-011` y la aclaración 2026-11-05 de `spec.md` con la implementación aprobada de Google Sign-In nativo mediante `react-native-nitro-google-signin` con `webClientId`/`iosClientId` explícitos y sin `google-services.json`, de modo que spec, plan, quickstart, README y código coincidan, per `FR-011`/Clarifications 2026-11-05 (`contradicts`).
+- [X] T130 Añadir pruebas de flujo de eliminación y abandono de familia en `frontend-web/__tests__/flows.test.tsx` y `frontend-mobile/__tests__/flows.test.tsx` que verifiquen la llamada API, `applyFamilyLeft`, la limpieza de claims de sesión y la redirección a `/family/select`, per `T091`/plan Testing/`FR-013`–`FR-016` (`partial`).
+- [X] T131 Documentar `TEST_POSTGRES_URL` en `README.md` (y en la sección de validación de `quickstart.md`) con un ejemplo de base de datos desechable, para que `backend/tests/test_postgres_invitation_expiry.py` deje de saltarse silenciosamente en la validación documentada, per `T090`/plan Testing (`partial`).
+
+---
+
+## Phase 19: Convergence
+
+**Purpose**: Close remaining gaps between the specification/plan and the current implementation (appended by `/speckit.converge`).
+
+- [X] T132 LOW: Unificar la terminología del ciclo de vida cambiando en `spec.md` el literal `eliminada` de FR-014 por `eliminado` (valor real de `FamilyStatusEnum`) y añadir `estado` a los ejemplos del objeto `family` en `POST /families` y `GET /families/me` de `contracts/openapi.yaml`, para que spec, data-model, contrato y código usen los mismos nombres, per `FR-014`/`T128` (`contradicts`).

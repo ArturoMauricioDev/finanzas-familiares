@@ -109,7 +109,8 @@ Crea un grupo familiar (sólo si el usuario no tiene membresía activa).
     "nombre": "string",
     "moneda_local": "string",
     "creado_por": "uuid",
-    "fecha_creacion": "datetime"
+    "fecha_creacion": "datetime",
+    "estado": "activo"
   },
   "membership": {
     "role": "admin",
@@ -145,7 +146,8 @@ Obtiene el grupo y sus miembros activos.
     "nombre": "string",
     "moneda_local": "string",
     "creado_por": "uuid",
-    "fecha_creacion": "datetime"
+    "fecha_creacion": "datetime",
+    "estado": "activo"
   },
   "members": [
     {
@@ -164,6 +166,58 @@ Obtiene el grupo y sus miembros activos.
 ```
 
 **Errors**: `401` no autenticado; `403` si el usuario no pertenece a un grupo (redirigir a setup).
+
+### DELETE /families/me
+
+Elimina el grupo familiar cuando queda exactamente un integrante activo (soft delete).
+
+**Auth**: required + pertenece al grupo + 1 miembro activo
+
+**Response 200**
+```json
+{
+  "success": true,
+  "family_id": null,
+  "tokens": {
+    "access_token": "string",
+    "refresh_token": "string",
+    "token_type": "bearer"
+  }
+}
+```
+
+**Behavior**: marca `Family.estado=eliminado` y `fecha_eliminacion`, deja la membresía del usuario
+en `inactivo` y emite tokens sin `family_id` ni `role`; el historial se conserva y la cuenta pasa a
+perfil individual.
+
+**Errors**: `400` si el grupo tiene más de un miembro activo; `401` no autenticado; `403` si el
+usuario no pertenece a un grupo.
+
+### POST /families/me/leave
+
+Abandona el grupo familiar cuando hay más de un integrante activo.
+
+**Auth**: required + pertenece al grupo + más de 1 miembro activo
+
+**Response 200**
+```json
+{
+  "success": true,
+  "family_id": null,
+  "tokens": {
+    "access_token": "string",
+    "refresh_token": "string",
+    "token_type": "bearer"
+  }
+}
+```
+
+**Behavior**: marca la membresía del usuario como `inactivo`; si el grupo queda sin
+administradores, asigna `role=admin` a la membresía activa con `fecha_union` más antigua
+(desempate por `Membership.id`) y emite tokens sin `family_id` ni `role`.
+
+**Errors**: `400` si el usuario es el único integrante activo (debe usar
+`DELETE /families/me`); `401` no autenticado; `403` si el usuario no pertenece a un grupo.
 
 ## Invitations
 
@@ -221,9 +275,9 @@ Une al usuario autenticado a un grupo mediante un código de invitación.
 ```
 
 **Behavior**: valida código, expiración y uso; cuenta miembros activos; crea `Membership` con
-`role=admin` cuando `rol_familiar` es Padre/Madre (o cuando el `parentesco` lo indica) y `member` en
-el resto; marca `usado=true` en una sola transacción. Los tokens devueltos incluyen `family_id` y el
-`role` resultante.
+`role=admin` cuando `rol_familiar` es Padre/Madre y `member` en el resto; `parentesco` se guarda solo
+como etiqueta y no altera el permiso; marca `usado=true` en una sola transacción. Los tokens
+devueltos incluyen `family_id` y el `role` resultante.
 
 **Errors**: `400` si el código es inválido, expirado o ya usado; `400` si el grupo alcanzó 10
 miembros activos; `400` si el usuario ya pertenece a un grupo; `401` no autenticado; `422` si
