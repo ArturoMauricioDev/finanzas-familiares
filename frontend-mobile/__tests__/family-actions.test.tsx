@@ -31,13 +31,19 @@ describe("mobile FamilyActions", () => {
   it("offers delete only when the family has one member", async () => {
     const onDelete = jest.fn();
     await renderWithProviders(
-      <FamilyActions memberCount={1} onDelete={onDelete} onLeave={jest.fn()} />,
+      <FamilyActions
+        familyName="Familia Pérez"
+        memberCount={1}
+        onDelete={onDelete}
+        onLeave={jest.fn()}
+      />,
     );
 
     expect(screen.getByRole("button", { name: "Eliminar familia" })).toBeTruthy();
     expect(screen.queryByText("Abandonar familia")).toBeNull();
 
     await fireEvent.press(screen.getByRole("button", { name: "Eliminar familia" }));
+    expect(screen.getByText(/Se eliminará «Familia Pérez»/)).toBeTruthy();
     const buttons = screen.getAllByRole("button", { name: "Eliminar familia" });
     await fireEvent.press(buttons[buttons.length - 1]);
 
@@ -47,13 +53,19 @@ describe("mobile FamilyActions", () => {
   it("offers leave and never delete when there is more than one member", async () => {
     const onLeave = jest.fn();
     await renderWithProviders(
-      <FamilyActions memberCount={3} onDelete={jest.fn()} onLeave={onLeave} />,
+      <FamilyActions
+        familyName="Familia Pérez"
+        memberCount={3}
+        onDelete={jest.fn()}
+        onLeave={onLeave}
+      />,
     );
 
     expect(screen.queryByText("Eliminar familia")).toBeNull();
     expect(screen.getByRole("button", { name: "Abandonar familia" })).toBeTruthy();
 
     await fireEvent.press(screen.getByRole("button", { name: "Abandonar familia" }));
+    expect(screen.getByText(/Dejarás de formar parte de «Familia Pérez»/)).toBeTruthy();
     const buttons = screen.getAllByRole("button", { name: "Abandonar familia" });
     await fireEvent.press(buttons[buttons.length - 1]);
 
@@ -63,6 +75,7 @@ describe("mobile FamilyActions", () => {
   it("shows loading and error states", async () => {
     await renderWithProviders(
       <FamilyActions
+        familyName="Familia Pérez"
         memberCount={1}
         loadingAction="delete"
         error={deleteError}
@@ -81,7 +94,12 @@ describe("mobile FamilyActions", () => {
     await renderWithProviders(
       <>
         <LocaleToggle />
-        <FamilyActions memberCount={1} error={deleteError} onDelete={jest.fn()} />
+        <FamilyActions
+          familyName="Familia Pérez"
+          memberCount={1}
+          error={deleteError}
+          onDelete={jest.fn()}
+        />
       </>,
     );
 

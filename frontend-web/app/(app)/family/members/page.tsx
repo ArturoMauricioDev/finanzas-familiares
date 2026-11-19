@@ -15,13 +15,15 @@ import {
   ErrorMessage,
   Loading,
   Page,
+  Select,
   SuccessMessage,
+  TextField,
 } from "@/components/ui";
 import { api, ApiError, refreshSession } from "@/lib/api";
 import { errorDescriptorText, toErrorDescriptor, type ErrorDescriptor } from "@/lib/errors";
 import { invitationCode, invitationDaysRemaining, invitationStatus } from "@/lib/invitation";
 import { applyFamilyLeft, clearSession } from "@/lib/session";
-import type { FamilyDetail, Invitation, Member } from "@/lib/types";
+import type { FamilyDetail, FamilyRole, Invitation, Member } from "@/lib/types";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function FamilyMembersPage() {
@@ -34,6 +36,8 @@ export default function FamilyMembersPage() {
   const [messageKey, setMessageKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [inviteRole, setInviteRole] = useState<FamilyRole>("hijo");
+  const [inviteKinship, setInviteKinship] = useState("");
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
   const [memberAction, setMemberAction] = useState<{
     type: "promote" | "remove";
@@ -92,7 +96,10 @@ export default function FamilyMembersPage() {
     setError(null);
     setMessageKey(null);
     try {
-      const data = await api.createInvitation();
+      const data = await api.createInvitation({
+        rolFamiliar: inviteRole,
+        parentesco: inviteKinship.trim() || undefined,
+      });
       setInvitation(data);
       setMessageKey("family.invitationGenerated");
     } catch (err) {
@@ -210,9 +217,14 @@ export default function FamilyMembersPage() {
     hija: t("family.familyRoleHija"),
   };
   const familyRoleLabel = (member: Member) =>
-    (member.rol_familiar && familyRoleLabels[member.rol_familiar]) ||
-    member.parentesco ||
-    t("family.memberRole");
+    (member.rol_familiar && familyRoleLabels[member.rol_familiar]) || t("family.memberRole");
+  const roleOptions = (["padre", "madre", "hijo", "hija"] as const).map((value) => ({
+    value,
+    label: familyRoleLabels[value],
+  }));
+  const invitationRoleLabel = invitation?.rol_familiar
+    ? familyRoleLabels[invitation.rol_familiar]
+    : undefined;
 
   return (
     <Page
@@ -228,6 +240,11 @@ export default function FamilyMembersPage() {
     >
       <ErrorMessage
         message={error ? errorDescriptorText(error, t, t("family.loadFailed")) : null}
+        action={
+          <Button size="sm" variant="text" onClick={() => void loadFamily()}>
+            {t("common.retry")}
+          </Button>
+        }
       />
       <SuccessMessage message={messageKey ? t(messageKey) : null} />
 
@@ -309,6 +326,20 @@ export default function FamilyMembersPage() {
         <Card variant="elevated" className="space-y-4">
           <h2 className="text-title-large text-on-surface">{t("family.inviteHeading")}</h2>
           <p className="text-body-medium text-on-surface-variant">{t("family.inviteBody")}</p>
+          <Select
+            label={t("family.inviteRoleLabel")}
+            hint={t("family.inviteRoleHint")}
+            options={roleOptions}
+            value={inviteRole}
+            onChange={(event) => setInviteRole(event.target.value as FamilyRole)}
+          />
+          <TextField
+            label={t("family.inviteKinshipLabel")}
+            hint={t("family.inviteKinshipHint")}
+            value={inviteKinship}
+            maxLength={80}
+            onChange={(event) => setInviteKinship(event.target.value)}
+          />
           <Button loading={generating} onClick={() => void generateInvitation()}>
             {t("family.generateInvitation")}
           </Button>
@@ -316,6 +347,7 @@ export default function FamilyMembersPage() {
           {invitation ? (
             <InviteCode
               code={invitationCode(invitation)}
+              roleLabel={invitationRoleLabel}
               expiresAt={invitation.expira_en}
               daysRemaining={invitationDaysRemaining(invitation.expira_en)}
               status={invitationStatus(invitation)}
@@ -329,13 +361,21 @@ export default function FamilyMembersPage() {
             </p>
           )}
         </Card>
-      ) : null}
+      ) : (
+        <Card variant="outlined" className="space-y-2">
+          <h2 className="text-title-large text-on-surface">{t("family.inviteHeading")}</h2>
+          <p className="text-body-medium text-on-surface-variant">
+            {t("family.inviteAdminOnly")}
+          </p>
+        </Card>
+      )}
 
       {family ? (
         <Card variant="outlined" className="space-y-3">
           <h2 className="text-title-large text-on-surface">{t("family.familyActionsHeading")}</h2>
           <FamilyActions
             memberCount={family.member_count}
+            familyName={family.family.nombre}
             loadingAction={loadingAction}
             error={actionError}
             onDelete={deleteFamily}
@@ -347,7 +387,11 @@ export default function FamilyMembersPage() {
       <ConfirmDialog
         open={pendingRemoval !== null}
         title={t("family.removeConfirmTitle")}
-        description={t("family.removeConfirmBody")}
+        description={t("family.removeConfirmBody", {
+          name:
+            family?.members.find((member) => member.user_id === pendingRemoval)
+              ?.nombre_visualizacion || t("common.noName"),
+        })}
         confirmLabel={t("family.removeConfirm")}
         cancelLabel={t("common.cancel")}
         destructive

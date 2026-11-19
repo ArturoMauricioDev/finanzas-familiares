@@ -92,6 +92,23 @@ describe("useAuthGuard", () => {
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));
   });
 
+  it.each(["/family/select", "/family/create", "/invite"])(
+    "redirects users who already have a family away from %s",
+    async (path) => {
+      mockPathname = path;
+      session.saveSession(
+        buildSession({
+          needs_family_setup: false,
+          user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+        }),
+      );
+
+      render(<Probe />);
+
+      await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/"));
+    },
+  );
+
   it("refreshes a session with missing onboarding flags on load", async () => {
     const stale = buildSession();
     delete (stale as Partial<session.SessionState>).needs_profile_setup;

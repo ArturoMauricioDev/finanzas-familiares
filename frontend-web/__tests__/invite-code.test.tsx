@@ -23,6 +23,15 @@ describe("InviteCode", () => {
     expect(screen.queryByText(/https?:\/\//)).not.toBeInTheDocument();
   });
 
+  it("uses the singular form when one day remains", async () => {
+    await renderWithProviders(
+      <InviteCode code="ABCD1234" expiresAt={expiresAt} daysRemaining={1} onCopy={jest.fn()} />,
+    );
+
+    expect(screen.getByText(/1 día restante/)).toBeInTheDocument();
+    expect(screen.queryByText(/1 días restantes/)).not.toBeInTheDocument();
+  });
+
   it("copies the complete code and announces success", async () => {
     const onCopy = jest.fn();
     await renderWithProviders(

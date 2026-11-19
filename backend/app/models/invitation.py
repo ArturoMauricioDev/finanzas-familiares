@@ -1,10 +1,11 @@
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
 from app.db.base import Base
+from app.models.membership import FamilyRoleEnum
 
 
 class Invitation(Base):
@@ -23,3 +24,5 @@ class Invitation(Base):
     expira_en = Column(DateTime(timezone=True), nullable=False)
     usado = Column(Boolean, default=False, nullable=False)
     fecha_uso = Column(DateTime(timezone=True), nullable=True)
+    rol_familiar = Column(Enum(FamilyRoleEnum), nullable=True)
+    parentesco = Column(String(80), nullable=True)

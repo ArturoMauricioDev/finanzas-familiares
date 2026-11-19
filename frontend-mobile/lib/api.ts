@@ -11,6 +11,7 @@ import type {
   FamilyCreateResponse,
   FamilyDetail,
   FamilyLifecycleResponse,
+  FamilyRole,
   Invitation,
   JoinInvitationResponse,
   TokenResponse,
@@ -171,34 +172,28 @@ export const api = {
     return request<FamilyDetail>("/families/me");
   },
 
-  createInvitation(expiraEnHoras = 168): Promise<Invitation> {
+  createInvitation(payload: {
+    rolFamiliar: FamilyRole;
+    parentesco?: string;
+  }): Promise<Invitation> {
     return request<Invitation>("/families/me/invitations", {
       method: "POST",
-      body: JSON.stringify({ expira_en_horas: expiraEnHoras }),
+      body: JSON.stringify({
+        rol_familiar: payload.rolFamiliar,
+        parentesco: payload.parentesco,
+      }),
     });
   },
 
-  joinFamilyByCode(payload: {
-    codigo: string;
-    rol_familiar?: string;
-    parentesco?: string;
-  }): Promise<JoinInvitationResponse> {
+  joinFamilyByCode(payload: { codigo: string }): Promise<JoinInvitationResponse> {
     return request<JoinInvitationResponse>("/invitations/join", {
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
-  joinInvitation(payload: {
-    token: string;
-    rol_familiar?: string;
-    parentesco?: string;
-  }): Promise<JoinInvitationResponse> {
-    return api.joinFamilyByCode({
-      codigo: payload.token,
-      rol_familiar: payload.rol_familiar,
-      parentesco: payload.parentesco,
-    });
+  joinInvitation(payload: { token: string }): Promise<JoinInvitationResponse> {
+    return api.joinFamilyByCode({ codigo: payload.token });
   },
 
   leaveFamily(): Promise<FamilyLifecycleResponse> {

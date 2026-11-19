@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { axe } from "jest-axe";
 import type { ReactNode } from "react";
 
 import { api, ApiError, refreshSession } from "@/lib/api";
@@ -12,6 +13,7 @@ import FamilySelectPage from "@/app/(onboarding)/family/select/page";
 import FamilyCreatePage from "@/app/(onboarding)/family/create/page";
 import InvitePage from "@/app/(onboarding)/invite/page";
 import FamilyMembersPage from "@/app/(app)/family/members/page";
+import HomePage from "@/app/(app)/page";
 
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
 const mockSearchParams = new URLSearchParams();
@@ -121,6 +123,19 @@ beforeEach(() => {
 });
 
 describe("web onboarding flows", () => {
+  it("explains the promise and what comes later before asking for an account", () => {
+    render(<LoginPage />);
+
+    expect(
+      screen.getByText("El lugar de tu familia para organizarse. Finanzas y presupuestos, en camino."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Finanzas y presupuestos, en camino")).toBeInTheDocument();
+    expect(screen.getAllByText(/en camino/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText("Entras con tu cuenta de Google. No publicamos nada en tu nombre."),
+    ).toBeInTheDocument();
+  });
+
   it("signs in with Google and redirects to profile setup", async () => {
     const nextSession = buildSession({ needs_profile_setup: true, needs_family_setup: true });
     mockAuth.signInWithGoogle.mockResolvedValue({
@@ -158,6 +173,24 @@ describe("web onboarding flows", () => {
     fireEvent.click(screen.getByText("Google login"));
 
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/invite"));
+  });
+
+  it("sends users who already have a family to Home", async () => {
+    const nextSession = buildSession();
+    mockAuth.signInWithGoogle.mockResolvedValue({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: nextSession.user,
+      needs_profile_setup: false,
+      needs_family_setup: false,
+    });
+    mockSession.applyTokenResponse.mockReturnValue(nextSession);
+
+    render(<LoginPage />);
+    fireEvent.click(screen.getByText("Google login"));
+
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/"));
   });
 
   it("saves the profile and redirects to family selection", async () => {
@@ -211,19 +244,32 @@ describe("web onboarding flows", () => {
     expect(mockRouter.replace).toHaveBeenCalledWith("/invite");
   });
 
-  it("offers both group selection options", () => {
+  it("offers create as the primary action when there is no pending code", () => {
     useSession(buildSession({ needs_family_setup: true }));
+    mockSession.getPendingInviteCode.mockReturnValue(null);
 
     render(<FamilySelectPage />);
 
-    expect(screen.getByRole("link", { name: "Crear nuevo grupo familiar" })).toHaveAttribute(
-      "href",
-      "/family/create",
-    );
-    expect(screen.getByRole("link", { name: "Unirme mediante código" })).toHaveAttribute(
-      "href",
-      "/invite",
-    );
+    const create = screen.getByRole("link", { name: "Crear mi familia" });
+    const invited = screen.getByRole("link", { name: "Tengo un código" });
+    expect(create).toHaveAttribute("href", "/family/create");
+    expect(invited).toHaveAttribute("href", "/invite");
+    expect(create.className).toContain("bg-primary");
+    expect(invited.className).toContain("border-outline");
+  });
+
+  it("offers join as the primary action when an invitation code is pending", () => {
+    useSession(buildSession({ needs_family_setup: true }));
+    mockSession.getPendingInviteCode.mockReturnValue("ABCD1234");
+
+    render(<FamilySelectPage />);
+
+    const join = screen.getByRole("link", { name: "Unirme con mi código" });
+    const create = screen.getByRole("link", { name: "Crear mi familia" });
+    expect(join).toHaveAttribute("href", "/invite");
+    expect(create).toHaveAttribute("href", "/family/create");
+    expect(join.className).toContain("bg-primary");
+    expect(create.className).toContain("border-outline");
   });
 
   it("creates a family and stores the refreshed tokens", async () => {
@@ -252,7 +298,7 @@ describe("web onboarding flows", () => {
     );
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
     expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
-    expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
+    expect(mockRouter.replace).toHaveBeenCalledWith("/");
   });
 
   it("joins a family with an invitation code", async () => {
@@ -271,21 +317,16 @@ describe("web onboarding flows", () => {
       target: { value: "abcd-1234" },
     });
     expect(mockSession.savePendingInviteCode).toHaveBeenCalledWith("ABCD1234");
-    fireEvent.change(screen.getByLabelText("Parentesco (opcional)"), {
-      target: { value: "hija" },
-    });
-    fireEvent.click(screen.getByText("Unirme al grupo"));
+    fireEvent.click(screen.getByText("Unirme a la familia"));
 
     await waitFor(() =>
       expect(mockApi.joinFamilyByCode).toHaveBeenCalledWith({
         codigo: "ABCD1234",
-        rol_familiar: "hijo",
-        parentesco: "hija",
       }),
     );
     expect(mockSession.applyInvitationJoined).toHaveBeenCalled();
     expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
-    expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
+    expect(mockRouter.replace).toHaveBeenCalledWith("/");
   });
 
   it("shows an inline translated error for an expired invitation code", async () => {
@@ -296,7 +337,7 @@ describe("web onboarding flows", () => {
     );
 
     render(<InvitePage />);
-    fireEvent.click(screen.getByText("Unirme al grupo"));
+    fireEvent.click(screen.getByText("Unirme a la familia"));
 
     await waitFor(() =>
       expect(screen.getByLabelText("Código de invitación")).toHaveAttribute("aria-invalid", "true"),
@@ -331,6 +372,7 @@ describe("web onboarding flows", () => {
     mockApi.createInvitation.mockResolvedValue({
       invitation_id: "invitation-1",
       codigo: "ABCD1234",
+      rol_familiar: "madre",
       usado: false,
       expira_en: "2026-11-02T00:00:00Z",
     });
@@ -340,17 +382,134 @@ describe("web onboarding flows", () => {
     render(<FamilyMembersPage />);
 
     await screen.findByText("Familia Pérez");
+    const roleSelect = screen.getByLabelText("Rol de la persona que invitas");
+    expect(roleSelect).toHaveValue("hijo");
+    fireEvent.change(roleSelect, { target: { value: "madre" } });
+    expect(screen.getAllByRole("button", { name: "Generar invitación" })).toHaveLength(1);
+
     fireEvent.click(screen.getByText("Generar invitación"));
-    await waitFor(() => expect(mockApi.createInvitation).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockApi.createInvitation).toHaveBeenCalledWith({
+        rolFamiliar: "madre",
+        parentesco: undefined,
+      }),
+    );
     expect(screen.getByText("ABCD-1234")).toBeInTheDocument();
+    expect(await screen.findByText("Invitación para: Madre")).toBeInTheDocument();
     expect(screen.queryByText(/invite\?token=/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Promover"));
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
 
     fireEvent.click(screen.getByText("Expulsar"));
+    expect(screen.getByText("¿Dar de baja a Luis del grupo?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
+  });
+
+  it("explains why a member cannot invite", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "member" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "member",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+
+    render(<FamilyMembersPage />);
+    await screen.findByText("Familia Pérez");
+
+    expect(
+      screen.getByText(
+        "Solo quien administra puede invitar. Pídeselo a un administrador de tu familia.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Generar invitación")).not.toBeInTheDocument();
+  });
+
+  it("has no detectable accessibility violations on family selection", async () => {
+    useSession(buildSession({ needs_family_setup: true }));
+    mockSession.getPendingInviteCode.mockReturnValue("ABCD1234");
+
+    const { container } = render(<FamilySelectPage />);
+
+    const results = await axe(container);
+    expect(results.violations).toHaveLength(0);
+  });
+
+  it("has no detectable accessibility violations on the invitation screen", async () => {
+    useSession(buildSession({ needs_family_setup: true }));
+    mockSession.getPendingInviteCode.mockReturnValue("ABCD1234");
+
+    const { container } = render(<InvitePage />);
+
+    const results = await axe(container);
+    expect(results.violations).toHaveLength(0);
+  });
+
+  it("has no detectable accessibility violations on members for an admin", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+
+    const { container } = render(<FamilyMembersPage />);
+    await screen.findByText("Familia Pérez");
+
+    const results = await axe(container);
+    expect(results.violations).toHaveLength(0);
+  });
+
+  it("shows legacy members without family role as members", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          rol_familiar: "padre",
+          parentesco: null,
+          estado: "activo",
+        },
+        {
+          user_id: "user-2",
+          nombre_visualizacion: "Luis",
+          foto_avatar: null,
+          role: "member",
+          parentesco: "hija",
+          estado: "activo",
+        },
+      ],
+      member_count: 2,
+    });
+
+    render(<FamilyMembersPage />);
+    await screen.findByText("Familia Pérez");
+
+    expect(screen.getByText(/Rol familiar: Miembro/)).toBeInTheDocument();
+    expect(screen.queryByText(/Rol familiar: hija/)).not.toBeInTheDocument();
   });
 
   it("deletes the family when it has one member", async () => {
@@ -473,5 +632,50 @@ describe("web onboarding flows", () => {
 
     await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));
+  });
+});
+
+describe("web home", () => {
+  const detail = {
+    family,
+    members: [
+      {
+        user_id: "user-1",
+        nombre_visualizacion: "Ana",
+        foto_avatar: null,
+        role: "admin",
+        parentesco: null,
+        estado: "activo",
+      },
+    ],
+    member_count: 1,
+  };
+
+  it("shows the family summary and the setup checklist instead of redirecting", async () => {
+    useSession(buildSession());
+    mockApi.getFamily.mockResolvedValue(detail);
+
+    render(<HomePage />);
+
+    expect(await screen.findByText("Familia Pérez")).toBeInTheDocument();
+    expect(screen.getByText("Hola, Ana.")).toBeInTheDocument();
+    expect(screen.getByText("2 de 3 pasos completados")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Invitar a alguien" })).toBeInTheDocument();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it("retries loading when the family request fails", async () => {
+    useSession(buildSession());
+    mockApi.getFamily
+      .mockRejectedValueOnce(new ApiError("boom", 500))
+      .mockResolvedValueOnce(detail);
+
+    render(<HomePage />);
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    expect(await screen.findByText("Familia Pérez")).toBeInTheDocument();
+    expect(mockApi.getFamily).toHaveBeenCalledTimes(2);
   });
 });

@@ -129,3 +129,16 @@
 - [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
 - [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
 - [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+
+## UX Gate *(mandatory for any feature touching UI)*
+
+Completa `.specify/templates/ux-checklist.md` y pégalo aquí, o enlaza el archivo completado.
+
+- **Objetivo del usuario**: [una frase; debe cumplirse en <10 s]
+- **Acción primaria**: [una sola]
+- **Estados cubiertos**: [carga, carga de acción, vacío, error con reintento, error local, sin
+  permiso, éxito, offline]
+- **Accesibilidad**: [foco, teclado, live regions, estado seleccionado, contraste, touch ≥44]
+- **Tokens**: [confirmar cero valores fuera de `design-tokens/tokens.json`]
+- **Métricas**: [evento de entrada, éxito y abandono; sin PII]
+- **Veredicto**: aprobado / aprobado con observaciones / rechazado

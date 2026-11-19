@@ -8,6 +8,7 @@ import { errorDescriptorText, type ErrorDescriptor } from "@/lib/errors";
 
 export interface FamilyActionsProps {
   memberCount: number;
+  familyName: string;
   onDelete?: () => void | Promise<void>;
   onLeave?: () => void | Promise<void>;
   loadingAction?: "delete" | "leave" | null;
@@ -16,6 +17,7 @@ export interface FamilyActionsProps {
 
 export function FamilyActions({
   memberCount,
+  familyName,
   onDelete,
   onLeave,
   loadingAction = null,
@@ -33,8 +35,8 @@ export function FamilyActions({
     ? t("family.deleteFamilyConfirmTitle")
     : t("family.leaveFamilyConfirmTitle");
   const description = canDelete
-    ? t("family.deleteFamilyConfirmBody")
-    : t("family.leaveFamilyConfirmBody");
+    ? t("family.deleteFamilyConfirmBody", { family: familyName })
+    : t("family.leaveFamilyConfirmBody", { family: familyName });
   const label = canDelete ? t("family.deleteFamily") : t("family.leaveFamily");
   const errorFallback = canDelete ? t("family.deleteFamilyFailed") : t("family.leaveFamilyFailed");
 

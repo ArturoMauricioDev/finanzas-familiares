@@ -7,12 +7,15 @@ from app.models.membership import FamilyRoleEnum
 
 
 class CreateInvitationRequest(BaseModel):
-    expira_en_horas: int = Field(default=168, ge=1, le=720)
+    rol_familiar: FamilyRoleEnum
+    parentesco: Optional[str] = Field(default=None, max_length=80)
 
 
 class InvitationResponse(BaseModel):
     invitation_id: str
     codigo: str
+    rol_familiar: Optional[FamilyRoleEnum] = None
+    parentesco: Optional[str] = None
     expira_en: datetime
     usado: bool
 
@@ -20,8 +23,6 @@ class InvitationResponse(BaseModel):
 class JoinInvitationRequest(BaseModel):
     codigo: Optional[str] = Field(default=None, min_length=1, max_length=32)
     token: Optional[str] = Field(default=None, min_length=1)
-    rol_familiar: Optional[FamilyRoleEnum] = None
-    parentesco: Optional[str] = Field(default=None, max_length=80)
 
     @model_validator(mode="after")
     def require_code_or_token(self) -> "JoinInvitationRequest":
@@ -39,5 +40,6 @@ class TokensResponse(BaseModel):
 class JoinInvitationResponse(BaseModel):
     family_id: str
     role: str
+    rol_familiar: Optional[FamilyRoleEnum] = None
     estado: str
     tokens: TokensResponse

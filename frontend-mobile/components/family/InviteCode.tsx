@@ -13,6 +13,7 @@ import { ErrorMessage } from "../ui/InlineBanner";
 
 export interface InviteCodeProps {
   code: string;
+  roleLabel?: string;
   expiresAt: string;
   daysRemaining: number;
   status?: InvitationStatus;
@@ -24,6 +25,7 @@ export interface InviteCodeProps {
 
 export function InviteCode({
   code,
+  roleLabel,
   expiresAt,
   daysRemaining,
   status = "active",
@@ -66,14 +68,25 @@ export function InviteCode({
         {formatInvitationCode(code)}
       </Text>
 
+      {roleLabel ? (
+        <Text style={[typeStyle("bodyMedium"), { color: colors.onSurface }]}>
+          {t("family.invitationFor", { role: roleLabel })}
+        </Text>
+      ) : null}
+
       <Text
         accessibilityHint={t("family.invitationSingleUse")}
         style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}
       >
-        {t("family.invitationExpires", {
-          date: formatDate(expiresAt, formatLocale),
-          days: daysRemaining,
-        })}
+        {t(
+          daysRemaining === 1
+            ? "family.invitationExpiresOne"
+            : "family.invitationExpires",
+          {
+            date: formatDate(expiresAt, formatLocale),
+            days: daysRemaining,
+          },
+        )}
         {" · "}
         {t("family.invitationSingleUse")}
       </Text>

@@ -86,6 +86,24 @@ describe("web MD3 components", () => {
     expect(screen.getByText("Sin integrantes")).toBeInTheDocument();
   });
 
+  it("offers a retry action inside error messages", () => {
+    const onRetry = jest.fn();
+    render(
+      <ErrorMessage
+        message="No pudimos cargar."
+        action={
+          <Button size="sm" variant="text" onClick={onRetry}>
+            Reintentar
+          </Button>
+        }
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("No pudimos cargar.");
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   it("has no detectable accessibility violations", async () => {
     const { container } = render(
       <Card>

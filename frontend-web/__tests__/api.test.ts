@@ -136,16 +136,16 @@ describe("api client", () => {
       );
 
     await api.getFamily();
-    await api.createInvitation();
-    await api.joinFamilyByCode({ codigo: "ABCD", parentesco: "hija" });
+    await api.createInvitation({ rolFamiliar: "hija", parentesco: "hija" });
+    await api.joinFamilyByCode({ codigo: "ABCD" });
 
     expect(fetchMock.mock.calls[0][0]).toContain("/families/me");
     expect(fetchMock.mock.calls[1][0]).toContain("/families/me/invitations");
     expect(fetchMock.mock.calls[2][0]).toContain("/invitations/join");
-    expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ expira_en_horas: 168 }));
-    expect(fetchMock.mock.calls[2][1].body).toBe(
-      JSON.stringify({ codigo: "ABCD", parentesco: "hija" }),
+    expect(fetchMock.mock.calls[1][1].body).toBe(
+      JSON.stringify({ rol_familiar: "hija", parentesco: "hija" }),
     );
+    expect(fetchMock.mock.calls[2][1].body).toBe(JSON.stringify({ codigo: "ABCD" }));
   });
 
   it("refreshes the session and retries once after a 401", async () => {

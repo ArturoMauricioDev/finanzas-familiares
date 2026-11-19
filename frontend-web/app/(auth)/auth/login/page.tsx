@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -19,7 +21,7 @@ function nextPath(current: { needs_profile_setup: boolean; needs_family_setup: b
   if (current.needs_family_setup) {
     return getPendingInviteCode() ? "/invite" : "/family/select";
   }
-  return "/family/members";
+  return "/";
 }
 
 export default function LoginPage() {
@@ -57,7 +59,15 @@ export default function LoginPage() {
   return (
     <Page title={t("auth.title")} subtitle={t("auth.subtitle")}>
       <Card variant="elevated">
-        <div className="space-y-4">
+        <div className="space-y-5">
+          <ul className="space-y-3">
+            {["welcome.pointFamily", "welcome.pointRoles", "welcome.pointFinance"].map((key) => (
+              <li key={key} className="flex items-start gap-3">
+                <Check size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-primary" />
+                <span className="text-body-large text-on-surface">{t(key)}</span>
+              </li>
+            ))}
+          </ul>
           <ErrorMessage
             message={error ? errorDescriptorText(error, t, t("auth.signInFailed")) : null}
           />
@@ -69,6 +79,15 @@ export default function LoginPage() {
               disabled={loading}
               loading={loading}
             />
+          </div>
+          <div className="space-y-2 text-center">
+            <p className="text-body-small text-on-surface-variant">{t("welcome.trust")}</p>
+            <Link
+              href="/legal"
+              className="inline-flex min-h-11 items-center justify-center rounded-full px-4 text-label-large font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {t("legal.linkLabel")}
+            </Link>
           </div>
         </div>
       </Card>

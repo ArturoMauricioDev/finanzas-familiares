@@ -27,7 +27,12 @@ describe("FamilyActions", () => {
   it("offers delete only when the family has one member", async () => {
     const onDelete = jest.fn();
     await renderWithProviders(
-      <FamilyActions memberCount={1} onDelete={onDelete} onLeave={jest.fn()} />,
+      <FamilyActions
+        familyName="Familia Pérez"
+        memberCount={1}
+        onDelete={onDelete}
+        onLeave={jest.fn()}
+      />,
     );
 
     expect(screen.getAllByText("Eliminar familia").length).toBeGreaterThan(0);
@@ -38,6 +43,7 @@ describe("FamilyActions", () => {
     await waitFor(() =>
       expect(screen.getAllByRole("button", { name: "Eliminar familia" })).toHaveLength(2),
     );
+    expect(screen.getByText(/Se eliminará «Familia Pérez»/)).toBeInTheDocument();
     const confirmButtons = screen.getAllByRole("button", { name: "Eliminar familia" });
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
 
@@ -47,7 +53,12 @@ describe("FamilyActions", () => {
   it("offers leave and never delete when the family has more than one member", async () => {
     const onLeave = jest.fn();
     await renderWithProviders(
-      <FamilyActions memberCount={2} onDelete={jest.fn()} onLeave={onLeave} />,
+      <FamilyActions
+        familyName="Familia Pérez"
+        memberCount={2}
+        onDelete={jest.fn()}
+        onLeave={onLeave}
+      />,
     );
 
     expect(screen.queryByText("Eliminar familia")).not.toBeInTheDocument();
@@ -58,6 +69,7 @@ describe("FamilyActions", () => {
     await waitFor(() =>
       expect(screen.getAllByRole("button", { name: "Abandonar familia" })).toHaveLength(2),
     );
+    expect(screen.getByText(/Dejarás de formar parte de «Familia Pérez»/)).toBeInTheDocument();
     const confirmButtons = screen.getAllByRole("button", { name: "Abandonar familia" });
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
 
@@ -67,6 +79,7 @@ describe("FamilyActions", () => {
   it("disables the action and maps an error descriptor while loading", async () => {
     await renderWithProviders(
       <FamilyActions
+        familyName="Familia Pérez"
         memberCount={1}
         loadingAction="delete"
         error={deleteError}
@@ -83,7 +96,12 @@ describe("FamilyActions", () => {
     const tree = (loadingAction: "delete" | null) => (
       <ThemeProvider>
         <LocaleProvider>
-          <FamilyActions memberCount={1} loadingAction={loadingAction} onDelete={onDelete} />
+          <FamilyActions
+            familyName="Familia Pérez"
+            memberCount={1}
+            loadingAction={loadingAction}
+            onDelete={onDelete}
+          />
         </LocaleProvider>
       </ThemeProvider>
     );
@@ -113,7 +131,12 @@ describe("FamilyActions", () => {
     await renderWithProviders(
       <>
         <LocaleToggle />
-        <FamilyActions memberCount={1} error={deleteError} onDelete={jest.fn()} />
+        <FamilyActions
+          familyName="Familia Pérez"
+          memberCount={1}
+          error={deleteError}
+          onDelete={jest.fn()}
+        />
       </>,
     );
 

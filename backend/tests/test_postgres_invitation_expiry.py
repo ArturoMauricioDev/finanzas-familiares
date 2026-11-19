@@ -73,7 +73,7 @@ def _create_admin_family(db, email="admin@example.com"):
 
 def _create_invitation(db, admin):
     response = invitation_service.create_invitation(
-        db, admin.id, CreateInvitationRequest(expira_en_horas=72)
+        db, admin.id, CreateInvitationRequest(rol_familiar="hijo")
     )
     invitation = db.query(Invitation).filter(Invitation.codigo == response.codigo).first()
     assert invitation is not None

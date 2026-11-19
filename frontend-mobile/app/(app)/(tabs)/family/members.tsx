@@ -12,8 +12,10 @@ import {
   Dialog,
   EmptyState,
   ErrorMessage,
+  Field,
   Loading,
   Page,
+  Select,
   SuccessMessage,
 } from "../../../../components/ui";
 import { useI18n } from "../../../../components/providers/LocaleProvider";
@@ -30,7 +32,7 @@ import {
   invitationStatus,
 } from "../../../../lib/invitation";
 import { applyFamilyLeft, clearSession } from "../../../../lib/session";
-import type { FamilyDetail, Invitation, Member } from "../../../../lib/types";
+import type { FamilyDetail, FamilyRole, Invitation, Member } from "../../../../lib/types";
 import { useAuthGuard } from "../../../../hooks/useAuthGuard";
 import { spacing, shape } from "../../../../lib/generated/tokens";
 import { typeStyle } from "../../../../lib/ui-styles";
@@ -46,6 +48,8 @@ export default function FamilyMembersScreen() {
   const [messageKey, setMessageKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [inviteRole, setInviteRole] = useState<FamilyRole>("hijo");
+  const [inviteKinship, setInviteKinship] = useState("");
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
   const [memberAction, setMemberAction] = useState<{
     type: "promote" | "remove";
@@ -104,7 +108,10 @@ export default function FamilyMembersScreen() {
     setError(null);
     setMessageKey(null);
     try {
-      const data = await api.createInvitation();
+      const data = await api.createInvitation({
+        rolFamiliar: inviteRole,
+        parentesco: inviteKinship.trim() || undefined,
+      });
       setInvitation(data);
       setMessageKey("family.invitationGenerated");
     } catch (err) {
@@ -211,9 +218,14 @@ export default function FamilyMembersScreen() {
     hija: t("family.familyRoleHija"),
   };
   const familyRoleLabel = (member: Member) =>
-    (member.rol_familiar && familyRoleLabels[member.rol_familiar]) ||
-    member.parentesco ||
-    t("family.memberRole");
+    (member.rol_familiar && familyRoleLabels[member.rol_familiar]) || t("family.memberRole");
+  const roleOptions = (["padre", "madre", "hijo", "hija"] as const).map((value) => ({
+    value,
+    label: familyRoleLabels[value],
+  }));
+  const invitationRoleLabel = invitation?.rol_familiar
+    ? familyRoleLabels[invitation.rol_familiar]
+    : undefined;
 
   return (
     <Page
@@ -229,6 +241,7 @@ export default function FamilyMembersScreen() {
     >
       <ErrorMessage
         message={error ? errorDescriptorText(error, t, t("family.loadFailed")) : null}
+        action={<Button title={t("common.retry")} variant="text" onPress={() => void loadFamily()} />}
       />
       <SuccessMessage message={messageKey ? t(messageKey) : null} />
 
@@ -307,6 +320,22 @@ export default function FamilyMembersScreen() {
           <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
             {t("family.inviteBody")}
           </Text>
+          <Select
+            label={t("family.inviteRoleLabel")}
+            value={inviteRole}
+            options={roleOptions}
+            onChange={(value) => setInviteRole(value as FamilyRole)}
+          />
+          <Text style={[typeStyle("bodySmall"), { color: colors.onSurfaceVariant }]}>
+            {t("family.inviteRoleHint")}
+          </Text>
+          <Field
+            label={t("family.inviteKinshipLabel")}
+            hint={t("family.inviteKinshipHint")}
+            value={inviteKinship}
+            maxLength={80}
+            onChangeText={setInviteKinship}
+          />
           <Button
             title={t("family.generateInvitation")}
             loading={generating}
@@ -315,6 +344,7 @@ export default function FamilyMembersScreen() {
           {invitation ? (
             <InviteCode
               code={invitationCode(invitation)}
+              roleLabel={invitationRoleLabel}
               expiresAt={invitation.expira_en}
               daysRemaining={invitationDaysRemaining(invitation.expira_en)}
               status={invitationStatus(invitation)}
@@ -328,7 +358,16 @@ export default function FamilyMembersScreen() {
             </Text>
           )}
         </Card>
-      ) : null}
+      ) : (
+        <Card>
+          <Text style={[typeStyle("titleLarge"), { color: colors.onSurface }]}>
+            {t("family.inviteHeading")}
+          </Text>
+          <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
+            {t("family.inviteAdminOnly")}
+          </Text>
+        </Card>
+      )}
 
       {family ? (
         <Card>
@@ -337,6 +376,7 @@ export default function FamilyMembersScreen() {
           </Text>
           <FamilyActions
             memberCount={family.member_count}
+            familyName={family.family.nombre}
             loadingAction={loadingAction}
             error={actionError}
             onDelete={deleteFamily}
@@ -354,7 +394,11 @@ export default function FamilyMembersScreen() {
         closeLabel={t("common.cancel")}
       >
         <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
-          {t("family.removeConfirmBody")}
+          {t("family.removeConfirmBody", {
+            name:
+              family?.members.find((member) => member.user_id === pendingRemoval)
+                ?.nombre_visualizacion || t("common.noName"),
+          })}
         </Text>
         <Button
           title={t("family.removeConfirm")}

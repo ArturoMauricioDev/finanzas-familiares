@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.post("/families/me/invitations", response_model=InvitationResponse, status_code=201)
 def create_invitation(
-    request: CreateInvitationRequest = CreateInvitationRequest(),
+    request: CreateInvitationRequest,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):

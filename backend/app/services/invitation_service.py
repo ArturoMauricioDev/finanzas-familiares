@@ -1,6 +1,6 @@
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -15,9 +15,16 @@ INVITATION_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 INVITATION_CODE_LENGTH = 8
 INVITATION_EXPIRY_DAYS = 7
 
+_NON_ALPHANUMERIC = re.compile(r"[^A-Z0-9]")
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _normalize_invitation_code(code: str) -> str:
+    """Mirror the client normalization: uppercase, no spaces or separators."""
+    return _NON_ALPHANUMERIC.sub("", code.upper())
 
 
 def _generate_invitation_code(db: Session) -> str:
@@ -51,10 +58,6 @@ def _active_membership(db: Session, user_id):
     )
 
 
-def _resolve_family_role(request) -> Optional[FamilyRoleEnum]:
-    return request.rol_familiar
-
-
 def create_invitation(db: Session, user_id, request):
     membership = _active_membership(db, user_id)
     if not membership or membership.role != RoleEnum.admin:
@@ -80,6 +83,8 @@ def create_invitation(db: Session, user_id, request):
         generado_por=user_id,
         expira_en=expira_en,
         usado=False,
+        rol_familiar=request.rol_familiar,
+        parentesco=request.parentesco,
     )
     db.add(invitation)
     db.commit()
@@ -90,6 +95,8 @@ def create_invitation(db: Session, user_id, request):
     return InvitationResponse(
         invitation_id=str(invitation.id),
         codigo=codigo,
+        rol_familiar=invitation.rol_familiar,
+        parentesco=invitation.parentesco,
         expira_en=invitation.expira_en,
         usado=False,
     )
@@ -102,11 +109,19 @@ def join_invitation(db: Session, user_id, request):
             detail="User already belongs to a family",
         )
 
-    code = (request.codigo or request.token or "").strip().upper()
-    invitation = db.query(Invitation).filter(Invitation.codigo == code).with_for_update().first()
-    if not invitation and request.token:
+    normalized_code = _normalize_invitation_code(request.codigo or "")
+    invitation = None
+    if normalized_code:
         invitation = (
-            db.query(Invitation).filter(Invitation.token == request.token).with_for_update().first()
+            db.query(Invitation)
+            .filter(Invitation.codigo == normalized_code)
+            .with_for_update()
+            .first()
+        )
+    if not invitation and request.token:
+        token = request.token.strip()
+        invitation = (
+            db.query(Invitation).filter(Invitation.token == token).with_for_update().first()
         )
     if not invitation:
         raise HTTPException(
@@ -148,7 +163,7 @@ def join_invitation(db: Session, user_id, request):
         )
 
     try:
-        rol_familiar = _resolve_family_role(request)
+        rol_familiar = invitation.rol_familiar
         membership_role = (
             RoleEnum.admin
             if rol_familiar in (FamilyRoleEnum.padre, FamilyRoleEnum.madre)
@@ -159,7 +174,7 @@ def join_invitation(db: Session, user_id, request):
             family_id=invitation.family_id,
             role=membership_role,
             rol_familiar=rol_familiar,
-            parentesco=request.parentesco,
+            parentesco=invitation.parentesco,
             estado=StatusEnum.activo,
         )
         db.add(membership)
@@ -195,6 +210,7 @@ def join_invitation(db: Session, user_id, request):
     return JoinInvitationResponse(
         family_id=str(invitation.family_id),
         role=membership_role.value,
+        rol_familiar=rol_familiar,
         estado="activo",
         tokens=TokensResponse(access_token=access_token, refresh_token=refresh_token),
     )

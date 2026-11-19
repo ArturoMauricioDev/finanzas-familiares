@@ -30,7 +30,7 @@ export default function FamilyCreateScreen() {
 
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
-      router.replace("/family/members");
+      router.replace("/");
     }
   }, [ready, session, router]);
 
@@ -70,7 +70,7 @@ export default function FamilyCreateScreen() {
       });
       await applyFamilyCreated(data);
       await clearPendingInviteCode();
-      router.replace("/family/members");
+      router.replace("/");
     } catch (err) {
       setError(toErrorDescriptor(err));
     } finally {

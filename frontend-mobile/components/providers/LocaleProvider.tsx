@@ -41,6 +41,19 @@ function createI18n(locale: Locale): I18n {
   i18n.locale = locale;
   i18n.enableFallback = true;
   i18n.missingBehavior = "guess";
+  /** Las cadenas del proyecto usan `{campo}`; i18n-js v4 no lo interpreta por defecto. */
+  (
+    i18n as unknown as {
+      interpolate: (
+        instance: unknown,
+        message: string,
+        options: Record<string, unknown>,
+      ) => string;
+    }
+  ).interpolate = (_instance, message, options) =>
+    message.replace(/\{(\w+)\}/g, (match, key) =>
+      options[key] === undefined ? match : String(options[key]),
+    );
   return i18n;
 }
 

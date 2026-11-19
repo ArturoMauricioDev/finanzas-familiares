@@ -115,6 +115,11 @@ export default function SettingsScreen() {
         <Text style={[typeStyle("bodyMedium"), { color: theme.colors.onSurfaceVariant }]}>
           {t("legal.body")}
         </Text>
+        <Button
+          title={t("legal.linkLabel")}
+          variant="text"
+          onPress={() => router.push("/legal")}
+        />
       </Card>
 
       <Dialog

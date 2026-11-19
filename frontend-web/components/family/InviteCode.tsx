@@ -9,6 +9,7 @@ import { formatInvitationCode, type InvitationStatus } from "@/lib/invitation";
 
 export interface InviteCodeProps {
   code: string;
+  roleLabel?: string;
   expiresAt: string;
   daysRemaining: number;
   status?: InvitationStatus;
@@ -20,6 +21,7 @@ export interface InviteCodeProps {
 
 export function InviteCode({
   code,
+  roleLabel,
   expiresAt,
   daysRemaining,
   status = "active",
@@ -55,11 +57,22 @@ export function InviteCode({
         {formatInvitationCode(code)}
       </p>
 
+      {roleLabel ? (
+        <p className="text-body-medium text-on-surface">
+          {t("family.invitationFor", { role: roleLabel })}
+        </p>
+      ) : null}
+
       <p id="invite-code-expiry" className="text-body-small text-on-surface-variant">
-        {t("family.invitationExpires", {
-          date: formatDate(expiresAt, formatLocale),
-          days: daysRemaining,
-        })}
+        {t(
+          daysRemaining === 1
+            ? "family.invitationExpiresOne"
+            : "family.invitationExpires",
+          {
+            date: formatDate(expiresAt, formatLocale),
+            days: daysRemaining,
+          },
+        )}
         {" · "}
         {t("family.invitationSingleUse")}
       </p>

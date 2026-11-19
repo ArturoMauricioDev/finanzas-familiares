@@ -223,14 +223,27 @@ describe("mobile onboarding flows", () => {
     expect(mockRouter.replace).toHaveBeenCalledWith("/invite");
   });
 
-  it("offers both group selection options", async () => {
+  it("offers create as the primary action when there is no pending code", async () => {
     useSession(buildSession({ needs_family_setup: true }));
+    mockSession.getPendingInviteCode.mockResolvedValue(null);
 
     await render(<FamilySelectScreen />);
-    await fireEvent.press(screen.getByText("Crear nuevo grupo familiar"));
-    await fireEvent.press(screen.getByRole("button", { name: "Unirme mediante código" }));
+    await waitFor(() => expect(screen.getByText("Crear mi familia")).toBeTruthy());
+    await fireEvent.press(screen.getByText("Crear mi familia"));
+    await fireEvent.press(screen.getByRole("button", { name: "Tengo un código" }));
 
     expect(mockRouter.push).toHaveBeenCalledWith("/family/create");
+    expect(mockRouter.push).toHaveBeenCalledWith("/invite");
+  });
+
+  it("offers join as the primary action when an invitation code is pending", async () => {
+    useSession(buildSession({ needs_family_setup: true }));
+    mockSession.getPendingInviteCode.mockResolvedValue("ABCD1234");
+
+    await render(<FamilySelectScreen />);
+    await waitFor(() => expect(screen.getByText("Ya tenemos tu código")).toBeTruthy());
+    await fireEvent.press(screen.getByRole("button", { name: "Unirme con mi código" }));
+
     expect(mockRouter.push).toHaveBeenCalledWith("/invite");
   });
 
@@ -255,7 +268,7 @@ describe("mobile onboarding flows", () => {
     );
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
     expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
-    expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
+    expect(mockRouter.replace).toHaveBeenCalledWith("/");
   });
 
   it("joins a family with an invitation code", async () => {
@@ -272,19 +285,16 @@ describe("mobile onboarding flows", () => {
     expect(screen.getByPlaceholderText("Ej. ABCD-1234").props.value).toBe("ABCD1234");
     await fireEvent.changeText(screen.getByPlaceholderText("Ej. ABCD-1234"), "abcd-1234");
     expect(mockSession.savePendingInviteCode).toHaveBeenCalledWith("ABCD1234");
-    await fireEvent.changeText(screen.getByPlaceholderText("Ej. hija, hijo, madre"), "hija");
-    await fireEvent.press(screen.getByText("Unirme al grupo"));
+    await fireEvent.press(screen.getByText("Unirme a la familia"));
 
     await waitFor(() =>
       expect(mockApi.joinFamilyByCode).toHaveBeenCalledWith({
         codigo: "ABCD1234",
-        rol_familiar: "hijo",
-        parentesco: "hija",
       }),
     );
     expect(mockSession.applyInvitationJoined).toHaveBeenCalled();
     expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
-    expect(mockRouter.replace).toHaveBeenCalledWith("/family/members");
+    expect(mockRouter.replace).toHaveBeenCalledWith("/");
   });
 
   it("prefills a saved invitation code", async () => {
@@ -306,7 +316,7 @@ describe("mobile onboarding flows", () => {
     );
 
     await render(<InviteScreen />);
-    await fireEvent.press(screen.getByText("Unirme al grupo"));
+    await fireEvent.press(screen.getByText("Unirme a la familia"));
 
     await waitFor(() =>
       expect(screen.getByText("Este código de invitación ha caducado.")).toBeTruthy(),
@@ -340,6 +350,7 @@ describe("mobile onboarding flows", () => {
     mockApi.createInvitation.mockResolvedValue({
       invitation_id: "invitation-1",
       codigo: "ABCD1234",
+      rol_familiar: "madre",
       usado: false,
       expira_en: "2026-11-02T00:00:00Z",
     });
@@ -348,17 +359,93 @@ describe("mobile onboarding flows", () => {
     await render(<FamilyMembersScreen />);
 
     await screen.findByText("Familia Pérez");
+    await fireEvent.press(screen.getByRole("button", { name: "Rol de la persona que invitas: Hijo" }));
+    const hijoSelf = screen.getByRole("button", { name: "Hijo" });
+    expect(hijoSelf.props.accessibilityState).toMatchObject({ selected: true });
+    await fireEvent.press(screen.getByRole("button", { name: "Madre" }));
     await fireEvent.press(screen.getByText("Generar invitación"));
-    await waitFor(() => expect(mockApi.createInvitation).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockApi.createInvitation).toHaveBeenCalledWith({
+        rolFamiliar: "madre",
+        parentesco: undefined,
+      }),
+    );
     expect(screen.getByText("ABCD-1234")).toBeTruthy();
+    expect(await screen.findByText("Invitación para: Madre")).toBeTruthy();
+    expect(
+      screen.getByText("Invitación generada. Comparte el código con tu familia.").props
+        .accessibilityLiveRegion,
+    ).toBe("polite");
     expect(screen.queryByText(/invite\?token=/)).toBeNull();
 
     await fireEvent.press(screen.getByText("Promover"));
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
 
     await fireEvent.press(screen.getByText("Expulsar"));
+    expect(screen.getByText("¿Dar de baja a Luis del grupo?")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
+  });
+
+  it("explains why a member cannot invite", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "member" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "member",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+
+    await render(<FamilyMembersScreen />);
+    await screen.findByText("Familia Pérez");
+
+    expect(
+      screen.getByText(
+        "Solo quien administra puede invitar. Pídeselo a un administrador de tu familia.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Generar invitación")).toBeNull();
+  });
+
+  it("shows legacy members without family role as members", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          rol_familiar: "padre",
+          parentesco: null,
+          estado: "activo",
+        },
+        {
+          user_id: "user-2",
+          nombre_visualizacion: "Luis",
+          foto_avatar: null,
+          role: "member",
+          parentesco: "hija",
+          estado: "activo",
+        },
+      ],
+      member_count: 2,
+    });
+
+    await render(<FamilyMembersScreen />);
+    await screen.findByText("Familia Pérez");
+
+    expect(await screen.findByText(/Rol familiar: Miembro/)).toBeTruthy();
+    expect(screen.queryByText(/Rol familiar: hija/)).toBeNull();
   });
 
   it("deletes the family when it has one member", async () => {

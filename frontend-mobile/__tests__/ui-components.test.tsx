@@ -41,4 +41,18 @@ describe("mobile MD3 components", () => {
     expect(screen.getByText("Sin integrantes")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Generar invitación" })).toBeTruthy();
   });
+
+  it("offers a retry action inside error messages", async () => {
+    const onRetry = jest.fn();
+    await render(
+      <ErrorMessage
+        message="No pudimos cargar."
+        action={<Button title="Reintentar" variant="text" onPress={onRetry} />}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Reintentar" }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
 });

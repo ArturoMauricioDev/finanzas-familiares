@@ -64,7 +64,7 @@ describe("web locale provider", () => {
     expect(screen.getByTestId("version")).toHaveTextContent("Version 1.2.3");
     expect(window.localStorage.getItem("kitho_locale")).toBe("en");
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toBe("Kitho Family");
+    expect(document.title).toBe("Kitho: your family, in order");
     expect(screen.getByTestId("formatLocale")).toHaveTextContent("en-US");
   });
 

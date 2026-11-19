@@ -73,6 +73,11 @@ export function useAuthGuard(requireFamily = false) {
         return;
       }
 
+      if (!current.needs_family_setup && FAMILY_SETUP_PATHS.includes(pathname)) {
+        redirect("/");
+        return;
+      }
+
       setSession(current);
       setReady(true);
     };

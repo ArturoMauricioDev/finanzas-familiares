@@ -63,9 +63,13 @@ export interface FamilyCreateResponse {
   tokens: Tokens;
 }
 
+export type FamilyRole = "padre" | "madre" | "hijo" | "hija";
+
 export interface Invitation {
   invitation_id: string;
   codigo: string;
+  rol_familiar?: FamilyRole | null;
+  parentesco?: string | null;
   expira_en: string;
   usado: boolean;
   estado?: "activa" | "usada" | "expirada";
@@ -75,6 +79,7 @@ export interface Invitation {
 export interface JoinInvitationResponse {
   family_id: string;
   role: string;
+  rol_familiar?: FamilyRole | null;
   estado: string;
   tokens: Tokens;
 }

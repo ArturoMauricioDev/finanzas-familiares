@@ -81,6 +81,14 @@ beforeEach(() => {
 });
 
 describe("native Google sign-in login", () => {
+  it("explains the promise and what comes later before asking for an account", async () => {
+    await render(<LoginScreen />);
+
+    expect(screen.getByText(/El lugar de tu familia para organizarse/)).toBeTruthy();
+    expect(screen.getAllByText(/en camino/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/No publicamos nada en tu nombre/)).toBeTruthy();
+  });
+
   it.each([
     {
       name: "profile setup",
@@ -101,10 +109,10 @@ describe("native Google sign-in login", () => {
       expectedPath: "/invite",
     },
     {
-      name: "family members",
+      name: "family hub",
       overrides: { needs_profile_setup: false, needs_family_setup: false },
       pendingInvite: null,
-      expectedPath: "/family/members",
+      expectedPath: "/",
     },
   ])(
     "navigates to $expectedPath after native success for $name",

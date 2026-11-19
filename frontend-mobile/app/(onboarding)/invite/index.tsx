@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { useI18n } from "../../../components/providers/LocaleProvider";
-import { Button, Card, ErrorMessage, Field, Loading, Page, Select } from "../../../components/ui";
+import { Button, Card, ErrorMessage, Field, Loading, Page } from "../../../components/ui";
 import { ApiError, api } from "../../../lib/api";
 import {
   errorDescriptorText,
@@ -22,8 +22,6 @@ export default function InviteScreen() {
   const router = useRouter();
   const { t } = useI18n();
   const [code, setCode] = useState("");
-  const [rolFamiliar, setRolFamiliar] = useState("hijo");
-  const [parentesco, setParentesco] = useState("");
   const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [codeError, setCodeError] = useState<ErrorDescriptor | null>(null);
   const [joining, setJoining] = useState(false);
@@ -39,7 +37,7 @@ export default function InviteScreen() {
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
       void clearPendingInviteCode();
-      router.replace("/family/members");
+      router.replace("/");
     }
   }, [ready, session, router]);
 
@@ -54,12 +52,10 @@ export default function InviteScreen() {
     try {
       const data = await api.joinFamilyByCode({
         codigo: normalized,
-        rol_familiar: rolFamiliar,
-        parentesco: parentesco.trim() || undefined,
       });
       await applyInvitationJoined(data);
       await clearPendingInviteCode();
-      router.replace("/family/members");
+      router.replace("/");
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         await clearPendingInviteCode();
@@ -110,24 +106,6 @@ export default function InviteScreen() {
           hint={t("invite.codeNotice")}
           autoCapitalize="characters"
           autoCorrect={false}
-        />
-        <Select
-          label={t("invite.familyRoleLabel")}
-          value={rolFamiliar}
-          options={[
-            { value: "padre", label: t("family.familyRolePadre") },
-            { value: "madre", label: t("family.familyRoleMadre") },
-            { value: "hijo", label: t("family.familyRoleHijo") },
-            { value: "hija", label: t("family.familyRoleHija") },
-          ]}
-          onChange={setRolFamiliar}
-        />
-        <Field
-          label={t("invite.relationshipLabel")}
-          value={parentesco}
-          onChangeText={setParentesco}
-          placeholder={t("invite.relationshipPlaceholder")}
-          maxLength={80}
         />
         <Button
           title={joining ? t("invite.joining") : t("invite.join")}

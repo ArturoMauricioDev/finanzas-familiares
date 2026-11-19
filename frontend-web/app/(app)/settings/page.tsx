@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -111,6 +112,12 @@ export default function SettingsPage() {
       <Card variant="outlined" className="space-y-2">
         <h2 className="text-title-large text-on-surface">{t("legal.title")}</h2>
         <p className="text-body-medium text-on-surface-variant">{t("legal.body")}</p>
+        <Link
+          href="/legal"
+          className="inline-flex min-h-11 items-center justify-center self-start rounded-full px-4 text-label-large font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          {t("legal.linkLabel")}
+        </Link>
       </Card>
 
       <ConfirmDialog

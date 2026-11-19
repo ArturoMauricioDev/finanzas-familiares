@@ -114,14 +114,16 @@ describe("mobile api client", () => {
       )
       .mockResolvedValueOnce(jsonResponse({ success: true }));
 
-    await api.createInvitation();
+    await api.createInvitation({ rolFamiliar: "hijo" });
     await api.joinFamilyByCode({ codigo: "ABCD" });
     await api.promoteMember("user-1");
 
     expect(fetchMock.mock.calls[0][0]).toContain("/families/me/invitations");
     expect(fetchMock.mock.calls[1][0]).toContain("/invitations/join");
     expect(fetchMock.mock.calls[2][0]).toContain("/members/user-1/promote");
-    expect(fetchMock.mock.calls[0][1].body).toBe(JSON.stringify({ expira_en_horas: 168 }));
+    expect(fetchMock.mock.calls[0][1].body).toBe(
+      JSON.stringify({ rol_familiar: "hijo" }),
+    );
     expect(fetchMock.mock.calls[1][1].body).toBe(JSON.stringify({ codigo: "ABCD" }));
   });
 

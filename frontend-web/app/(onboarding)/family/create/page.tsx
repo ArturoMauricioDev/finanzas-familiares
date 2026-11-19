@@ -36,7 +36,7 @@ export default function FamilyCreatePage() {
 
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
-      router.replace("/family/members");
+      router.replace("/");
     }
   }, [ready, session, router]);
 
@@ -77,7 +77,7 @@ export default function FamilyCreatePage() {
       });
       applyFamilyCreated(data);
       clearPendingInviteCode();
-      router.replace("/family/members");
+      router.replace("/");
     } catch (err) {
       setError(toErrorDescriptor(err));
     } finally {
