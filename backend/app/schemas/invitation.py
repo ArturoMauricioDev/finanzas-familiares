@@ -10,6 +10,19 @@ class CreateInvitationRequest(BaseModel):
     rol_familiar: FamilyRoleEnum
     parentesco: Optional[str] = Field(default=None, max_length=80)
 
+    @model_validator(mode="after")
+    def validate_kinship(self) -> "CreateInvitationRequest":
+        parentesco = (self.parentesco or "").strip()
+        if self.rol_familiar == FamilyRoleEnum.otro:
+            if not parentesco:
+                raise ValueError("parentesco es obligatorio cuando el rol es otro")
+            self.parentesco = parentesco
+        else:
+            if parentesco:
+                raise ValueError("parentesco solo aplica cuando el rol es otro")
+            self.parentesco = None
+        return self
+
 
 class InvitationResponse(BaseModel):
     invitation_id: str

@@ -56,6 +56,7 @@ jest.mock("../lib/session", () => ({
   savePendingInviteCode: jest.fn(async () => {}),
   clearPendingInviteCode: jest.fn(async () => {}),
   applyFamilyLeft: jest.fn(),
+  sessionNeedsRefresh: jest.fn(() => false),
 }));
 
 jest.mock("../lib/api", () => {
@@ -176,6 +177,55 @@ describe("mobile onboarding flows", () => {
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/invite"));
   });
 
+  it("keeps the first-run order and never lands on Home before there is a family", async () => {
+    const nextSession = buildSession({ needs_profile_setup: true, needs_family_setup: true });
+    mockUseIdTokenAuthRequest.mockReturnValue([
+      {},
+      { type: "success", params: { id_token: "mobile-token" } },
+      jest.fn(),
+    ]);
+    mockAuth.signInWithGoogle.mockResolvedValue({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: nextSession.user,
+      needs_profile_setup: true,
+      needs_family_setup: true,
+    });
+    mockSession.applyTokenResponse.mockResolvedValue(nextSession);
+
+    await render(<LoginScreen />);
+
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/profile/setup"));
+    expect(mockRouter.replace).not.toHaveBeenCalledWith("/");
+    expect(mockRouter.replace).not.toHaveBeenCalledWith("/family/select");
+  });
+
+  it("preserves the pending invitation code through login and skips family selection", async () => {
+    const nextSession = buildSession({ needs_family_setup: true });
+    mockUseIdTokenAuthRequest.mockReturnValue([
+      {},
+      { type: "success", params: { id_token: "mobile-token" } },
+      jest.fn(),
+    ]);
+    mockAuth.signInWithGoogle.mockResolvedValue({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: nextSession.user,
+      needs_profile_setup: false,
+      needs_family_setup: true,
+    });
+    mockSession.applyTokenResponse.mockResolvedValue(nextSession);
+    mockSession.getPendingInviteCode.mockResolvedValue("invite-code");
+
+    await render(<LoginScreen />);
+
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/invite"));
+    expect(mockSession.getPendingInviteCode).toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalledWith("/family/select");
+  });
+
   it("saves the profile and redirects to family selection", async () => {
     useSession(buildSession({ needs_profile_setup: true, needs_family_setup: true }));
     mockApi.updateProfile.mockResolvedValue({
@@ -257,7 +307,7 @@ describe("mobile onboarding flows", () => {
 
     await render(<FamilyCreateScreen />);
     await fireEvent.changeText(screen.getByPlaceholderText("Ej. Familia Pérez"), "Familia Pérez");
-    await fireEvent.press(screen.getByText("Crear grupo"));
+    await fireEvent.press(screen.getByRole("button", { name: "Crear familia" }));
 
     await waitFor(() =>
       expect(mockApi.createFamily).toHaveBeenCalledWith({
@@ -380,11 +430,61 @@ describe("mobile onboarding flows", () => {
 
     await fireEvent.press(screen.getByText("Promover"));
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
+    expect(await screen.findByText("Miembro promovido a administrador.")).toBeTruthy();
 
     await fireEvent.press(screen.getByText("Expulsar"));
     expect(screen.getByText("¿Dar de baja a Luis del grupo?")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
+  });
+
+  it("shows the kinship field only for the Other role and requires it", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+    mockApi.createInvitation.mockResolvedValue({
+      invitation_id: "invitation-1",
+      codigo: "ABCD1234",
+      rol_familiar: "otro",
+      parentesco: "Cuñada",
+      usado: false,
+      expira_en: "2026-11-02T00:00:00Z",
+    });
+
+    await render(<FamilyMembersScreen />);
+    await screen.findByText("Familia Pérez");
+
+    expect(screen.queryByLabelText("Vínculo familiar")).toBeNull();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Rol de la persona que invitas: Hijo" }),
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Otro" }));
+
+    const kinshipField = screen.getByLabelText("Vínculo familiar");
+    await fireEvent.press(screen.getByText("Generar invitación"));
+    await waitFor(() => expect(mockApi.createInvitation).not.toHaveBeenCalled());
+    expect(screen.getByText("Indica el vínculo familiar para continuar.")).toBeTruthy();
+
+    await fireEvent.changeText(kinshipField, "Cuñada");
+    await fireEvent.press(screen.getByText("Generar invitación"));
+    await waitFor(() =>
+      expect(mockApi.createInvitation).toHaveBeenCalledWith({
+        rolFamiliar: "otro",
+        parentesco: "Cuñada",
+      }),
+    );
   });
 
   it("explains why a member cannot invite", async () => {
@@ -444,8 +544,8 @@ describe("mobile onboarding flows", () => {
     await render(<FamilyMembersScreen />);
     await screen.findByText("Familia Pérez");
 
-    expect(await screen.findByText(/Rol familiar: Miembro/)).toBeTruthy();
-    expect(screen.queryByText(/Rol familiar: hija/)).toBeNull();
+    expect(await screen.findByText("Miembro")).toBeTruthy();
+    expect(screen.queryByText("hija")).toBeNull();
   });
 
   it("deletes the family when it has one member", async () => {

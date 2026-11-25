@@ -41,6 +41,13 @@ function buildSession(overrides: Partial<session.SessionState> = {}): session.Se
   };
 }
 
+function buildExpiredToken(): string {
+  const payload = Buffer.from(
+    JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 60 }),
+  ).toString("base64url");
+  return `header.${payload}.signature`;
+}
+
 function Probe({ requireFamily = false }: { requireFamily?: boolean }) {
   const { session: current, ready } = useAuthGuard(requireFamily);
   return <Text testID="state">{ready ? current?.user.id : "loading"}</Text>;
@@ -60,6 +67,19 @@ describe("mobile useAuthGuard", () => {
 
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login"));
   });
+
+  it.each(["/family/select", "/family/create", "/invite"])(
+    "sends users without a session away from the cycle route %s to login",
+    async (path) => {
+      mockPathname = path;
+
+      await render(<Probe />);
+
+      await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login"));
+      expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("state")).toHaveTextContent("loading");
+    },
+  );
 
   it("redirects incomplete profiles to profile setup", async () => {
     await session.saveSession(
@@ -131,6 +151,41 @@ describe("mobile useAuthGuard", () => {
     await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
     expect(await screen.findByText("user-1")).toBeTruthy();
     expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it("refreshes an expired access token instead of trusting the stored session", async () => {
+    await session.saveSession(
+      buildSession({
+        access_token: buildExpiredToken(),
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+      }),
+    );
+    mockRefreshSession.mockResolvedValue(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+      }),
+    );
+
+    await render(<Probe />);
+
+    await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
+    expect(await screen.findByText("user-1")).toBeTruthy();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it("sends an expired session with a failed refresh to login", async () => {
+    await session.saveSession(
+      buildSession({
+        access_token: buildExpiredToken(),
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+      }),
+    );
+    mockRefreshSession.mockResolvedValue(null);
+
+    await render(<Probe />);
+
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login"));
+    expect(screen.getByTestId("state")).toHaveTextContent("loading");
   });
 
   it("reconciles a stale family flag when the user already has a family", async () => {

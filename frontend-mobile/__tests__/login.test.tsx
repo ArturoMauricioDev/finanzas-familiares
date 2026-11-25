@@ -3,6 +3,7 @@ import { useIdTokenAuthRequest } from "expo-auth-session/providers/google";
 
 import LoginScreen from "../app/(auth)/auth/login";
 import * as auth from "../lib/auth";
+import { refreshSession } from "../lib/api";
 import { ApiError } from "../lib/errors";
 import * as googleSignIn from "../lib/google-signin";
 import * as session from "../lib/session";
@@ -39,15 +40,21 @@ jest.mock("../lib/google-signin", () => ({
   requestGoogleIdToken: jest.fn(),
 }));
 
+jest.mock("../lib/api", () => ({
+  refreshSession: jest.fn(),
+}));
+
 jest.mock("../lib/session", () => ({
   getSession: jest.fn(),
   applyTokenResponse: jest.fn(),
   getPendingInviteCode: jest.fn(),
+  sessionNeedsRefresh: jest.fn(() => false),
 }));
 
 const mockAuth = auth as jest.Mocked<typeof auth>;
 const mockGoogleSignIn = googleSignIn as jest.Mocked<typeof googleSignIn>;
 const mockSession = session as jest.Mocked<typeof session>;
+const mockRefreshSession = refreshSession as jest.Mock;
 const mockUseIdTokenAuthRequest = useIdTokenAuthRequest as jest.Mock;
 
 function buildSession(overrides: Partial<session.SessionState> = {}): session.SessionState {
@@ -77,6 +84,7 @@ beforeEach(() => {
   mockUseIdTokenAuthRequest.mockReturnValue([{}, null, jest.fn()]);
   mockSession.getSession.mockResolvedValue(null);
   mockSession.getPendingInviteCode.mockResolvedValue(null);
+  mockSession.sessionNeedsRefresh.mockReturnValue(false);
   mockGoogleSignIn.requestGoogleIdToken.mockResolvedValue({ status: "cancelled" });
 });
 
@@ -205,6 +213,28 @@ describe("native Google sign-in login", () => {
     await waitFor(() =>
       expect(screen.getByText("El inicio de sesión con Google no es válido.")).toBeTruthy(),
     );
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it("validates an expired stored session before redirecting", async () => {
+    mockSession.getSession.mockResolvedValue(buildSession({ needs_family_setup: true }));
+    mockSession.sessionNeedsRefresh.mockReturnValue(true);
+    mockRefreshSession.mockResolvedValue(buildSession({ needs_family_setup: false }));
+
+    await render(<LoginScreen />);
+
+    await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
+    expect(mockRouter.replace).toHaveBeenCalledWith("/");
+  });
+
+  it("stays on login when the expired session cannot be refreshed", async () => {
+    mockSession.getSession.mockResolvedValue(buildSession({ needs_family_setup: true }));
+    mockSession.sessionNeedsRefresh.mockReturnValue(true);
+    mockRefreshSession.mockResolvedValue(null);
+
+    await render(<LoginScreen />);
+
+    await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
     expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });

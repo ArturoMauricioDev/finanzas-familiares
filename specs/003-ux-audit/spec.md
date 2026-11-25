@@ -16,6 +16,14 @@ el ciclo de vida de la familia."
 
 - Q: ¿Cuál debe ser la acción primaria en la pantalla de elegir familia después del login? → A: Contextual: con código de invitación pendiente, "unirme" es primaria; sin código, "crear" es primaria.
 
+### Session 2026-11-20
+
+- Q: ¿Qué opciones debe ofrecer el selector de rol al invitar a una persona y qué permiso otorga cada una? → A: Padre y Madre administran; Hijo, Hija, Tío, Abuelo y Otro entran como miembros. Al elegir **Otro** se muestra y exige el vínculo familiar; con cualquier otra opción el campo no se muestra ni se envía.
+- **Copy acordado**: la acción para crear la familia se rotula **Crear familia** (no "crear grupo") y la invitación en Home se rotula **Agregar integrantes a tu familia** (no "Invita a tu familia").
+- Q: ¿Debe la spec fijar explícitamente que el login es siempre la primera pantalla y que el ciclo de familia (elegir, crear, unirse) es inaccesible sin sesión? → A: Sí; sin sesión la persona ve el login y nunca las pantallas del ciclo, en web y móvil.
+- Q: Cuando alguien abre un enlace de invitación sin tener sesión, ¿cuál debe ser el orden correcto de entrada? → A: Login primero conservando el código; tras autenticarse va directo a **Unirme**, sin pasar por la elección de familia.
+- Q: En el primer acceso, ¿dónde debe colocarse el perfil mínimo dentro de la secuencia de entrada? → A: Antes del ciclo de familia, solo si falta (login → perfil → ciclo de familia → Home).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Entrar y entender para qué sirve Kitho (Priority: P1)
@@ -38,6 +46,8 @@ hace Kitho y qué no hace todavía.
    continúa al perfil mínimo (solo si falta), nunca a Home.
 3. **Given** una persona sin sesión, **When** el acceso falla, **Then** ve un mensaje claro con
    opción de reintentar.
+4. **Given** una persona sin sesión, **When** intenta abrir directamente una pantalla del ciclo de
+   familia, **Then** es enviada al login y no ve esa pantalla.
 
 ---
 
@@ -72,7 +82,8 @@ familia activa.
 ### User Story 3 - Invitar declarando el rol de la persona invitada (Priority: P1)
 
 Quien administra la familia genera un código de un solo uso e indica quién va a entrar: padre,
-madre, hijo o hija. Puede añadir el parentesco si lo desea. Quien se une no vuelve a elegir rol.
+madre, hijo, hija, tío, abuelo u otro. Si elige **Otro**, indica el vínculo familiar; en cualquier
+otra opción ese campo no se muestra. Quien se une no vuelve a elegir rol.
 
 **Why this priority**: define los permisos de cada integrante en el momento correcto, sin pedirle
 datos de modelo a quien solo quiere entrar.
@@ -90,6 +101,9 @@ con el que entra la segunda cuenta.
    **Then** ve por qué no puede invitar y quién sí puede.
 4. **Given** un código ya emitido antes de este cambio (sin rol declarado), **When** alguien lo
    usa, **Then** entra como miembro y la lista lo muestra como "Miembro".
+5. **Given** una persona administradora que elige **Otro** como rol, **When** completa la
+   invitación, **Then** el campo vínculo familiar aparece y es obligatorio; si elige cualquier
+   otro rol, el campo no aparece ni se envía.
 
 ---
 
@@ -125,6 +139,8 @@ de familia.
 - Lector de pantalla: la carga, el error y el éxito se anuncian; el error de código se asocia al
   campo correspondiente.
 - Familia cuyo único administrador abandona: la familia conserva al menos un administrador.
+- Persona sin sesión que abre directamente una pantalla del ciclo (enlace o historial): se le lleva
+  al login; si traía un código de invitación, se conserva y, tras entrar, va a "Unirme".
 
 ## Requirements *(mandatory)*
 
@@ -158,12 +174,12 @@ de familia.
   parentesco.
 - **FR-010**: Un código MUST ser de un solo uso, MUST caducar a los 7 días y MUST NOT permitir
   superar los 10 integrantes activos.
-- **FR-011**: Quien invita MUST declarar el rol de la persona invitada entre padre, madre, hijo e
-  hija al generar el código.
+- **FR-011**: Quien invita MUST declarar el rol de la persona invitada entre padre, madre, hijo,
+  hija, tío, abuelo u otro al generar el código.
 - **FR-012**: Al unirse, la persona MUST recibir el rol declarado en el código, sin posibilidad de
   elegir otro.
-- **FR-013**: El rol padre o madre MUST otorgar administración; el rol hijo o hija MUST entrar como
-  miembro sin administración.
+- **FR-013**: Los roles padre y madre MUST otorgar administración; hijo, hija, tío, abuelo y otro
+  MUST entrar como miembros sin administración.
 - **FR-014**: Un código emitido sin rol declarado MUST incorporar a la persona como miembro, sin rol
   familiar, y la lista MUST mostrarla como "Miembro" (nunca "Sin nombre").
 - **FR-015**: Solo quien administra MUST poder generar códigos; quien no administra MUST ver una
@@ -205,7 +221,22 @@ de familia.
   ya está disponible; sin código pendiente, "crear familia" es la primaria y "me invitaron" aparece
   como secundaria explícita. En ambos casos MUST haber una sola acción primaria.
 - **FR-030**: Una persona que llega con un código de invitación pendiente MUST NOT tener que pasar
-  por la pantalla de elegir familia para unirse.
+  por la pantalla de elegir familia para unirse; el código MUST conservarse a través del login de
+  modo que, tras autenticarse, la persona llegue directamente a **Unirme**.
+- **FR-031**: El campo **Vínculo familiar** MUST mostrarse y ser obligatorio únicamente cuando el rol
+  elegido sea **Otro**; con cualquier otro rol MUST ocultarse y no enviarse al backend.
+- **FR-032**: La acción de crear familia MUST rotularse **Crear familia** en toda la interfaz, nunca
+  "crear grupo".
+- **FR-033**: La invitación en Home MUST rotularse **Agregar integrantes a tu familia**, nunca
+  "Invita a tu familia".
+
+**Orden de entrada (login → familia)**
+
+- **FR-034**: Sin sesión, la app MUST mostrar el login como primera pantalla y MUST NOT mostrar
+  ninguna pantalla del ciclo de familia (elegir, crear, unirse); el ciclo MUST exigir sesión en web
+  y móvil.
+- **FR-035**: La secuencia de entrada MUST respetar el orden login → perfil mínimo (solo si falta) →
+  ciclo de familia → Home; el perfil MUST resolverse antes de elegir, crear o unirse.
 
 ### Key Entities
 
@@ -214,9 +245,10 @@ de familia.
 - **Familia**: núcleo familiar con nombre, una única moneda para todos sus registros y hasta 10
   integrantes activos.
 - **Membresía**: vínculo entre una persona y una familia. Tiene un rol familiar (padre, madre, hijo,
-  hija) y un permiso derivado (administrador solo para padre y madre; miembro para hijo e hija).
+  hija, tío, abuelo u otro) y un permiso derivado (administrador solo para padre y madre; miembro
+  para el resto). Cuando el rol es **Otro**, el vínculo familiar es obligatorio.
 - **Invitación**: código de un solo uso emitido por una persona administradora. Declara el rol de
-  quien lo usará, puede incluir el parentesco y caduca a los 7 días.
+  quien lo usará, incluye el vínculo familiar solo si el rol es **Otro** y caduca a los 7 días.
 
 ## Success Criteria *(mandatory)*
 
@@ -241,6 +273,9 @@ de familia.
   automatizadas, y las pantallas se muestran sin recorte en 375, 768, 1024 y 1440 px.
 - **SC-011**: 100% de las personas con código pendiente llega a "unirme" sin pasar por la elección,
   y 0 de ellas ve "crear" como acción primaria; sin código pendiente, "crear" es la primaria.
+- **SC-012**: 100% de las pantallas del ciclo de familia redirigen al login cuando no hay sesión
+  (0 accesos sin sesión) y el 100% de los primeros accesos sigue el orden login → perfil (si falta) →
+  ciclo de familia → Home.
 
 ## Assumptions
 
@@ -251,6 +286,10 @@ de familia.
   única explicada antes de crear; D4 solo administradores invitan; D5 medición con Umami.
 - **Roles fijos en esta etapa**: no se cambia el rol de una persona después de unirse; esa capacidad
   queda fuera de alcance.
+- **Catálogo de roles**: padre, madre, hijo, hija, tío, abuelo y otro. Solo padre y madre
+  administran; tío, abuelo y otro entran como miembros.
+- **Vínculo familiar**: es texto libre y solo se solicita cuando el rol es **Otro**; en los demás
+  casos no se muestra ni se persiste.
 - **Padres y madres son pares**: ambos administran con los mismos permisos.
 - **Una familia por persona**: no existe pertenencia simultánea a varias familias activas.
 - **Acceso**: se reutiliza el inicio de sesión con Google ya existente.

@@ -289,6 +289,21 @@ sigue abierto.
 | B1 | Promesa de organización (no finanzas), 3 puntos de valor y nota de confianza en login; copy de perfil mínimo; jerarquía y consecuencias en crear/unirse; consecuencia de moneda antes de crear; formulario de unirse reducido a un campo (sin rol ni parentesco). | `shared/i18n/{es,en}.json`, `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(onboarding)/{invite,family/create,family/select}/page.tsx`, `frontend-mobile/app/(auth)/auth/login.tsx`, `frontend-mobile/app/(onboarding)/{invite/index,family/create,family/select}.tsx`, `specs/003-ux-audit/copy-deck-b.md` | `check-shared` sincronizado; typecheck, lint y tests en verde en web (127) y móvil (128); pruebas de flujo actualizadas (unirse envía solo `codigo`) |
 | B2 | Rol declarado en la invitación: columnas `rol_familiar`/`parentesco` en `invitations`, el rol de la membresía se deriva de la invitación al unirse, selector de rol (inicio en `hijo`) y parentesco opcional al invitar, "Invitación para: …" en el código, aviso explicado para quien no administra, y jerarquía contextual de `family/select` (con código → unirme; sin código → crear) con guard que devuelve a Home a quien ya tiene familia. | `backend/app/models/invitation.py`, `backend/alembic/versions/005_invitation_family_role.py`, `backend/app/schemas/invitation.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-{web,mobile}/lib/api.ts`, `frontend-{web,mobile}/lib/types.ts`, `frontend-web/app/(onboarding)/family/select/page.tsx`, `frontend-mobile/app/(onboarding)/family/select.tsx`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `frontend-{web,mobile}/components/family/InviteCode.tsx`, `frontend-{web,mobile}/hooks/useAuthGuard.ts`, `shared/i18n/{es,en}.json`, `specs/003-ux-audit/copy-deck-b.md` | Backend 55 passed / 2 skipped (rol heredado, rol del cuerpo ignorado, código heredado → `member`, `422` sin rol, `403` no admin); migración `005` aplicada y revertida (`downgrade -1` + `upgrade head`); web 127 tests, móvil 128 (jerarquía contextual, selector, no-admin, `jest-axe`); `check-ui` 105 archivos; `check-shared` sincronizado |
 
+| B2+ | Roles `tío`, `abuelo` y `otro` (miembros) con enum PostgreSQL ampliado; **Vínculo familiar** obligatorio y visible solo con el rol **Otro** (oculto y no enviado en el resto); copys cálidos **Crear familia** y **Agregar integrantes a tu familia**. | `backend/app/models/membership.py`, `backend/alembic/versions/006_family_role_extra_values.py`, `backend/app/schemas/invitation.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-{web,mobile}/lib/types.ts`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `shared/i18n/{es,en}.json` | Backend 58 passed / 2 skipped (tío/abuelo/otro → `member`, `422` en vínculo incoherente); enum `familyroleenum` con 7 valores y migración `006` aplicada/revertida; web 130 tests y móvil 131 (siete roles, campo condicional, copys, `jest-axe` con campo visible) |
+
+### Verificación de cierre (2026-11-20) · B2 ampliado
+
+```bash
+docker compose exec -T backend alembic upgrade head   # 005 -> 006
+docker compose exec -T backend alembic downgrade -1 && alembic upgrade head  # reversible
+docker compose exec -T backend pytest -q              # 58 passed, 2 skipped
+cd frontend-web && pnpm run typecheck && pnpm run lint && pnpm test        # 130 tests
+cd frontend-mobile && pnpm run typecheck && pnpm run lint && pnpm test     # 131 tests, 5 warnings previos
+node scripts/check-shared.mjs                         # Shared artifacts are synchronized
+node scripts/check-ui.mjs                             # UI guard passed for 107 files
+node scripts/check-contrast.mjs                       # 38 token pairs (4.5:1 text, 3:1 UI)
+```
+
 ### Verificación de cierre (2026-11-19)
 
 ```bash

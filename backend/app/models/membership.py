@@ -23,6 +23,9 @@ class FamilyRoleEnum(str, enum.Enum):
     madre = "madre"
     hijo = "hijo"
     hija = "hija"
+    tio = "tio"
+    abuelo = "abuelo"
+    otro = "otro"
 
 
 class Membership(Base):

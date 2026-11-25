@@ -64,6 +64,12 @@
 - Q: ¿Qué debe mostrar el login si el usuario cancela el selector de cuentas de Google? → A: Volver al estado inicial sin mensaje; la cancelación no se trata como error.
 - Q: ¿Cómo deben presentarse los errores nativos de Google Sign-In en móvil? → A: Mapear los errores conocidos a claves i18n y usar un mensaje genérico traducido como fallback.
 
+### Session 2026-11-20
+
+- Q: Cuando un usuario sin sesión abre directamente una ruta del ciclo de familia (`/family/select`, `/family/create` o `/invite`), ¿qué debe ocurrir? → A: Redirigir siempre a login y, tras autenticarse, continuar al paso de onboarding que corresponda (perfil o familia); ninguna pantalla de familia es accesible sin sesión válida.
+- Q: Si un usuario ya autenticado abre el login, ¿a dónde debe enviarlo la app? → A: Redirigir automáticamente según su estado de onboarding: configuración de perfil si falta, selección/creación/unión de familia si no tiene familia, e Inicio si ya está completo.
+- Q: Cuando un usuario autenticado elimina o abandona su familia, ¿a dónde debe volver? → A: Al ciclo de familia (seleccionar/crear/unirse), conservando la sesión y sin pasar por el login.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Sistema visual coherente y accesible (Priority: P1)
@@ -193,6 +199,8 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - **Pantallas compactas y zoom**: con viewport de `320px` o zoom de texto al `200%`, el contenido debe seguir siendo usable y legible.
 - **Teclado y foco**: los diálogos deben atrapar el foco, cerrarse con Escape en web y devolver el foco al elemento de origen.
 - **Sesión expirada**: al recibir `401`, la app debe redirigir al login conservando tema e idioma elegidos.
+- **Acceso directo sin sesión al ciclo de familia**: al abrir `/family/select`, `/family/create` o `/invite` sin sesión válida, la app debe redirigir al login sin mostrar contenido de familia; tras autenticarse continúa al onboarding correspondiente.
+- **Login con sesión activa**: al abrir el login con una sesión válida, la app no debe mostrar el formulario y debe redirigir según el estado de onboarding (perfil, familia o Inicio).
 - **Google Sign-In sin sesión válida en móvil**: si el usuario cancela el selector de cuentas, el login vuelve al estado inicial sin mensaje; si el flujo falla (sin token por error, Play Services no disponible o validación con backend fallida), el login debe mostrar un error inline traducido y permitir reintentar, mapeando los errores conocidos a claves i18n y usando un mensaje genérico traducido como fallback. Nunca debe volver silenciosamente a la pantalla de login ante un fallo.
 - **Error de backend sin traducción**: si no existe clave i18n para un mensaje, se muestra el texto del backend como fallback sin romper la interfaz.
 - **Logo ausente**: si no existe el asset definitivo, se muestra el wordmark Kitho sin imágenes rotas ni espacios vacíos.
@@ -238,7 +246,7 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - **FR-017**: La app móvil DEBE usar tabs inferiores con Inicio, Miembros y Perfil.
 - **FR-018**: En web, la navegación principal DEBE mostrar Inicio, Miembros, Perfil y Ajustes. En móvil, Ajustes DEBE ser accesible desde Perfil.
 - **FR-019**: La ruta Inicio DEBE redirigir a Miembros mientras no exista un dashboard financiero.
-- **FR-020**: Las rutas protegidas DEBEN respetar los redireccionamientos de la spec 001: login, configuración de perfil, selección/creación/unión de grupo y miembros.
+- **FR-020**: Las rutas protegidas DEBEN respetar los redireccionamientos de la spec 001: login, configuración de perfil, selección/creación/unión de grupo y miembros. El login DEBE ser la única puerta de entrada: sin sesión válida, cualquier ruta del ciclo de familia (`/family/select`, `/family/create`, `/invite`) DEBE redirigir al login y NO renderizar contenido de familia; tras autenticarse, el usuario continúa al paso de onboarding que corresponda (perfil o familia). Si un usuario ya autenticado abre el login, la app DEBE redirigirlo según su estado (configuración de perfil, ciclo de familia o Inicio) sin mostrarlo.
 - **FR-021**: El ítem de navegación activo DEBE reflejarse visualmente y exponerse mediante atributos accesibles.
 - **FR-022**: La web DEBE ser mobile-first y usar las clases de ventana MD3: compact `<600px`, medium `600px–839px`, expanded `>=840px`.
 - **FR-023**: Las pantallas DEBEN evitar scroll horizontal desde `320px` de ancho y respetar áreas seguras en móvil.
@@ -302,7 +310,7 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 
 - **FR-079**: La sección Miembros DEBE mostrar **Eliminar familia** únicamente cuando la familia tenga exactamente 1 integrante.
 - **FR-080**: Con más de 1 integrante, la sección Miembros DEBE mostrar **Abandonar familia** y NO **Eliminar familia**, para todos los integrantes incluido el Administrador.
-- **FR-081**: Eliminar y abandonar familia DEBEN solicitar confirmación, mostrar estado de carga y comunicar el resultado; tras eliminar, el usuario es redirigido al inicio del flujo principal y conserva su historial como perfil individual.
+- **FR-081**: Eliminar y abandonar familia DEBEN solicitar confirmación, mostrar estado de carga y comunicar el resultado; tras eliminar o abandonar, el usuario autenticado es redirigido al ciclo de familia (seleccionar/crear/unirse) conservando la sesión y sin pasar por el login, y conserva su historial como perfil individual.
 - **FR-082**: Estas acciones DEBEN consumir las reglas y endpoints definidos en la spec 001; el frontend no debe duplicar la lógica de autorización.
 
 #### Avatar
@@ -413,7 +421,7 @@ Como responsable del producto, quiero dejar preparada la integración de gráfic
 - Las 5 monedas sugeridas por región son valores por defecto de producto y pueden ajustarse sin cambios de backend. Listas iniciales: Latinoamérica `MXN, BRL, ARS, COP, CLP`; España/Europa `EUR, GBP, CHF, SEK, PLN`; Estados Unidos `USD, CAD, MXN, EUR, GBP`. La moneda local detectada se coloca siempre primero.
 - La unión a una familia se realiza exclusivamente por código; no se ofrecen invitaciones por enlace.
 - Cada código de invitación es de un solo uso y expira a los 7 días; la UI comunica ambas condiciones al administrador.
-- Tras eliminar la familia, el inicio del flujo principal es la pantalla de selección/creación/unión de grupo.
+- Tras eliminar o abandonar la familia, el usuario autenticado vuelve al ciclo de familia (selección/creación/unión de grupo); el login solo se exige cuando no hay sesión válida.
 - Las futuras pantallas financieras usarán Recharts y Victory Native, pero no forman parte de esta iteración.
 - Los usuarios tienen conexión a internet estable durante los flujos de autenticación y gestión de grupo.
 - El español es el idioma inicial y el inglés se ofrece como alternativa completa.

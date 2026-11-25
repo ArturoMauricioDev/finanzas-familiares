@@ -76,6 +76,12 @@ def create_invitation(db: Session, user_id, request):
     codigo = _generate_invitation_code(db)
     expira_en = _utcnow() + timedelta(days=INVITATION_EXPIRY_DAYS)
 
+    parentesco = (
+        (request.parentesco or "").strip()
+        if request.rol_familiar == FamilyRoleEnum.otro
+        else None
+    )
+
     invitation = Invitation(
         family_id=membership.family_id,
         codigo=codigo,
@@ -84,7 +90,7 @@ def create_invitation(db: Session, user_id, request):
         expira_en=expira_en,
         usado=False,
         rol_familiar=request.rol_familiar,
-        parentesco=request.parentesco,
+        parentesco=parentesco or None,
     )
     db.add(invitation)
     db.commit()

@@ -17,16 +17,23 @@ aceptarse al **unirse**.
 
 ```json
 {
-  "rol_familiar": "madre",
-  "parentesco": "tía"
+  "rol_familiar": "otro",
+  "parentesco": "Cuñada"
 }
 ```
 
 | Campo | Tipo | Obligatorio | Regla |
 | --- | --- | --- | --- |
-| `rol_familiar` | `padre` \| `madre` \| `hijo` \| `hija` | **Sí (nuevo)** | Fuera del conjunto → `422` |
-| `parentesco` | texto ≤ 80 | No | Informativo; no altera permisos |
+| `rol_familiar` | `padre` \| `madre` \| `hijo` \| `hija` \| `tio` \| `abuelo` \| `otro` | **Sí** | Fuera del conjunto → `422` |
+| `parentesco` | texto 1–80 | Solo si `rol_familiar = otro` | Obligatorio y no vacío con `otro`; prohibido con cualquier otro rol → `422` |
 | `expira_en_horas` | — | — | **Retirado**: la caducidad es fija de 7 días (FR-010); si un cliente antiguo lo envía, se ignora |
+
+**Regla de validación** (Pydantic `model_validator` + servicio):
+
+```text
+rol_familiar = otro  →  parentesco obligatorio (1–80, sin espacios sobrantes)
+rol_familiar ≠ otro  →  parentesco ausente o nulo
+```
 
 **Respuesta `201`**
 
@@ -34,18 +41,18 @@ aceptarse al **unirse**.
 {
   "invitation_id": "0f1e...",
   "codigo": "ABCD2345",
-  "rol_familiar": "madre",
-  "parentesco": "tía",
-  "expira_en": "2026-11-26T12:00:00Z",
+  "rol_familiar": "otro",
+  "parentesco": "Cuñada",
+  "expira_en": "2026-11-27T12:00:00Z",
   "usado": false
 }
 ```
 
-`rol_familiar` y `parentesco` se añaden a la respuesta para que la interfaz pueda mostrar para quién
-es el código sin una segunda consulta.
+`rol_familiar` y `parentesco` viajan en la respuesta para que la interfaz muestre para quién es el
+código sin una segunda consulta; `parentesco` es `null` salvo en **Otro**.
 
-**Errores**: `403` no administrador · `404` familia inexistente o inactiva · `422` rol inválido ·
-`500` no se pudo generar el código.
+**Errores**: `403` no administrador · `404` familia inexistente o inactiva · `422` rol inválido o
+vínculo incoherente · `500` no se pudo generar el código.
 
 ---
 
@@ -53,7 +60,9 @@ es el código sin una segunda consulta.
 
 `POST /invitations/join`
 
-**Quién**: persona autenticada **sin** membresía activa. Con familia → `400`.
+**Quién**: persona autenticada **sin** membresía activa. Con familia → `400`. El cliente solo llega
+aquí con sesión: la puerta de entrada (FR-034/FR-035) conserva el código pendiente a través del login
+y evita que esta pantalla se muestre sin sesión.
 
 **Cuerpo (después del cambio)**
 
@@ -86,8 +95,9 @@ o, si llega un enlace heredado:
 }
 ```
 
-`role` se deriva del rol de la invitación: `padre`/`madre` → `admin`; `hijo`/`hija` → `member`.
-`rol_familiar` en la respuesta es el aplicado (nuevo; `null` en códigos heredados).
+`role` se deriva del rol de la invitación: `padre`/`madre` → `admin`;
+`hijo`/`hija`/`tio`/`abuelo`/`otro` → `member`. `rol_familiar` en la respuesta es el aplicado
+(`null` en códigos heredados); `parentesco` viaja en la membresía solo cuando el rol es **Otro**.
 
 **Errores**
 
@@ -117,10 +127,16 @@ caducidad) y la lista de miembros muestra el rol aplicado.
 | Clave | Español | Inglés |
 | --- | --- | --- |
 | `family.inviteRoleLabel` | Rol de la persona que invitas | Role of the person you invite |
-| `family.inviteRoleHint` | Padre y madre administran la familia; hijo e hija entran como miembros. | Father and mother administer the family; son and daughter join as members. |
+| `family.inviteRoleHint` | Padre y madre administran la familia; el resto entra como miembro. | Father and mother administer the family; everyone else joins as a member. |
 | `family.invitationFor` | Invitación para: {role} | Invitation for: {role} |
 | `family.invitationExpires` | Caduca el {date} · {days} días restantes | Expires on {date} · {days} days remaining |
 | `family.invitationExpiresOne` | Caduca el {date} · 1 día restante | Expires on {date} · 1 day remaining |
-| `family.inviteKinshipLabel` | Vínculo familiar (opcional) | Family relationship (optional) |
+| `family.inviteKinshipLabel` | Vínculo familiar | Family relationship |
+| `family.inviteKinshipHint` | Cuéntanos cómo se relaciona con la familia. | Tell us how they are related to the family. |
+| `family.inviteKinshipRequired` | Indica el vínculo familiar para continuar. | Enter the family relationship to continue. |
+| `family.createFamily` | Crear familia | Create family |
+| `dashboard.checkInvite` | Agregar integrantes a tu familia | Add members to your family |
 
-El selector no muestra jerga de modelo: usa `family.familyRolePadre|Madre|Hijo|Hija` ya existentes.
+El selector no muestra jerga de modelo: usa `family.familyRolePadre|Madre|Hijo|Hija|Tio|Abuelo|Otro`.
+El campo de vínculo solo existe visualmente cuando el rol es **Otro**; con otro rol no se renderiza ni
+se envía.

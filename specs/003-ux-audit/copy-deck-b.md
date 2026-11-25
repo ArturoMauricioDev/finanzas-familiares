@@ -79,9 +79,17 @@ Copy adicional:
 | `family.nameLabel` | Nombre de la familia | Family name |
 | `family.currencyLabel` | Moneda local (ISO 4217) | Local currency (ISO 4217) |
 | `family.creatorRoleLabel` | Tu rol en la familia | Your role in the family |
-| `family.createFamily` | Crear grupo | Create group |
+| `family.createFamily` | Crear familia | Create family |
 
-La consecuencia de la moneda va en el subtítulo, antes del formulario, no en el error (D3).
+La consecuencia de la moneda va en el subtítulo, antes del formulario, no en el error (D3). El botón
+usa el término canónico **familia**, nunca "grupo".
+
+## 4b. Home
+
+| Clave | Español | Inglés |
+| --- | --- | --- |
+| `dashboard.checkInvite` | Agregar integrantes a tu familia | Add members to your family |
+| `dashboard.checkInviteDone` | Ya son {count} en la familia | You are already {count} in the family |
 
 ## 5. Unirme con un código
 
@@ -102,12 +110,20 @@ Eliminado en B1: `invite.familyRoleLabel`, `invite.relationshipLabel`,
 | Clave | Español | Inglés |
 | --- | --- | --- |
 | `family.inviteRoleLabel` | Rol de la persona que invitas | Role of the person you invite |
-| `family.inviteRoleHint` | Padre y madre administran la familia; hijo e hija entran como miembros. | Father and mother administer the family; son and daughter join as members. |
-| `family.inviteKinshipLabel` | Vínculo familiar (opcional) | Family relationship (optional) |
-| `family.inviteKinshipHint` | Solo informativo; no cambia los permisos. | Informational only; it does not change permissions. |
+| `family.inviteRoleHint` | Padre y madre administran la familia; el resto entra como miembro. | Father and mother administer the family; everyone else joins as a member. |
+| `family.inviteKinshipLabel` | Vínculo familiar | Family relationship |
+| `family.inviteKinshipHint` | Cuéntanos cómo se relaciona con la familia. | Tell us how they are related to the family. |
+| `family.inviteKinshipRequired` | Indica el vínculo familiar para continuar. | Enter the family relationship to continue. |
 | `family.invitationFor` | Invitación para: {role} | Invitation for: {role} |
 | `family.invitationExpires` | Caduca el {date} · {days} días restantes | Expires on {date} · {days} days remaining |
 | `family.invitationExpiresOne` | Caduca el {date} · 1 día restante | Expires on {date} · 1 day remaining |
+| `family.familyRolePadre` | Padre | Father |
+| `family.familyRoleMadre` | Madre | Mother |
+| `family.familyRoleHijo` | Hijo | Son |
+| `family.familyRoleHija` | Hija | Daughter |
+| `family.familyRoleTio` | Tío | Uncle |
+| `family.familyRoleAbuelo` | Abuelo | Grandfather |
+| `family.familyRoleOtro` | Otro | Other |
 | `family.memberRole` | Miembro | Member |
 | `family.inviteAdminOnly` | Solo quien administra puede invitar. Pídeselo a un administrador de tu familia. | Only an administrator can invite. Ask an administrator in your family. |
 | `family.removeConfirmBody` | ¿Dar de baja a {name} del grupo? | Remove {name} from the group? |
@@ -115,8 +131,10 @@ Eliminado en B1: `invite.familyRoleLabel`, `invite.relationshipLabel`,
 | `family.leaveFamilyConfirmBody` | Dejarás de formar parte de «{family}». Si eres el último administrador, otra persona asumirá el rol automáticamente. | You will leave «{family}». If you are the last administrator, someone else will take over the role automatically. |
 
 El selector inicia en **Hijo** (menor privilegio, R3) y nunca está vacío. `{role}` usa
-`family.familyRolePadre|Madre|Hijo|Hija`. Las confirmaciones destructivas nombran siempre el objeto
-concreto: el nombre de la familia al eliminarla o abandonarla y el de la persona al darla de baja.
+`family.familyRolePadre|Madre|Hijo|Hija|Tio|Abuelo|Otro`. El campo **Vínculo familiar** solo se
+muestra (y se exige) con el rol **Otro**; con cualquier otro rol no se renderiza ni se envía. Las
+confirmaciones destructivas nombran siempre el objeto concreto: el nombre de la familia al
+eliminarla o abandonarla y el de la persona al darla de baja.
 Un código heredado sin rol familiar se muestra como `family.memberRole`, nunca con el parentesco.
 
 ## Matriz de estados (B1)

@@ -40,14 +40,43 @@ grupo familiar y gestión de integrantes mediante códigos de invitación de un 
 
 Variables principales en `.env`:
 
-| Variable | Descripción |
-| --- | --- |
-| `DATABASE_URL` | Cadena de conexión PostgreSQL. |
-| `SECRET_KEY` | Clave para firmar los JWT propios. |
-| `GOOGLE_CLIENT_ID` | Client ID web usado para validar el `id_token`. |
-| `GOOGLE_CLIENT_IDS` | Client IDs adicionales de Android/iOS para validar sus `id_token`, separados por comas. |
-| `CORS_ORIGINS` | Orígenes permitidos, separados por comas. |
-| `INVITATION_LINK_BASE` | Base de enlace heredada; la UI de feature 002 solo expone códigos. |
+| Variable               | Descripción                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `DATABASE_URL`         | Cadena de conexión PostgreSQL.                                                          |
+| `SECRET_KEY`           | Clave para firmar los JWT propios.                                                      |
+| `GOOGLE_CLIENT_ID`     | Client ID web usado para validar el `id_token`.                                         |
+| `GOOGLE_CLIENT_IDS`    | Client IDs adicionales de Android/iOS para validar sus `id_token`, separados por comas. |
+| `CORS_ORIGINS`         | Orígenes permitidos, separados por comas.                                               |
+| `INVITATION_LINK_BASE` | Base de enlace heredada; la UI de feature 002 solo expone códigos.                      |
+
+## Reiniciar la base de datos
+
+`scripts/reset-db.sh` elimina todos los datos y deja la base como nueva. Por defecto vacía el
+schema `public` y reaplica las migraciones de Alembic (`alembic upgrade head`).
+
+```bash
+Ñ           # pide confirmación, vacía y migra
+./scripts/reset-db.sh -y           # sin confirmación
+./scripts/reset-db.sh -y --volume  # elimina el volumen de Docker (down -v) y migra
+./scripts/reset-db.sh --no-migrate # solo vacía, sin reaplicar migraciones
+```
+
+> Advertencia: es una operación destructiva e irreversible. No afecta el código ni las
+> migraciones, solo los datos.
+
+Opciones y variables de entorno:
+
+| Opción / variable | Descripción                                                                 |
+| ----------------- | --------------------------------------------------------------------------- |
+| `-y`, `--yes`     | No pedir confirmación.                                                      |
+| `--no-migrate`    | Vaciar la base sin reaplicar migraciones.                                   |
+| `--volume`        | Eliminar el volumen de Docker (`docker compose down -v`) y recrear la base. |
+| `-h`, `--help`    | Mostrar la ayuda.                                                           |
+| `COMPOSE`         | Comando de Compose (por defecto `docker compose`).                          |
+| `DB_SERVICE`      | Servicio de PostgreSQL (por defecto `db`).                                  |
+| `BACKEND_SERVICE` | Servicio del backend (por defecto `backend`).                               |
+| `POSTGRES_USER`   | Usuario de la base (por defecto `finanzas`).                                |
+| `POSTGRES_DB`     | Nombre de la base (por defecto `finanzas_familiares`).                      |
 
 ## Frontend web
 
@@ -109,6 +138,7 @@ nueva:
 ```bash
 ./scripts/dev-tunnel.sh          # deja el túnel activo en primer plano
 ./scripts/dev-tunnel.sh --expo   # además inicia Metro/Expo
+./scripts/dev-tunnel.sh --clear  # como --expo, pero limpia la caché de Metro
 ./scripts/dev-tunnel.sh --stop   # detiene un túnel que quedó en ejecución
 ```
 
@@ -117,7 +147,7 @@ La URL `*.trycloudflare.com` cambia en cada arranque; el script se encarga de ac
 `pnpm exec expo start --dev-client --tunnel ngrok`; puedes cambiarlo con `EXPO_CMD`. Se usa el
 proveedor `ngrok` porque el túnel propio de Expo (`--tunnel` sin proveedor) exige
 `pnpm exec expo login`. Como los `EXPO_PUBLIC_*` se inyectan al empaquetar, reinicia Metro después
-de cambiar de URL.
+de cambiar de URL: `--clear` hace eso mismo y además limpia la caché de Metro (`expo start --clear`).
 
 ## Google OAuth
 
@@ -139,7 +169,7 @@ de cambiar de URL.
 - Un `redirect_uri` personalizado en Android produce `Error 400: invalid_request`; no lo uses para
   el flujo nativo.
 - **Expo web (`pnpm web`)**: `expo-auth-session` usa `origin + /auth/login` como `redirect_uri`, así
-  que debes registrar esa URL exacta en los *Authorized redirect URIs* de la credencial **Web**.
+  que debes registrar esa URL exacta en los _Authorized redirect URIs_ de la credencial **Web**.
   Define `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` con una URL estable (por ejemplo
   `https://tu-dominio-estable/auth/login`) para evitar el `redirect_uri_mismatch` cuando la URL del
   preview cambia; en local usa `http://localhost:8081/auth/login`.

@@ -31,10 +31,12 @@ import {
   type ErrorDescriptor,
 } from "../../../lib/errors";
 import { requestGoogleIdToken } from "../../../lib/google-signin";
+import { refreshSession } from "../../../lib/api";
 import {
   applyTokenResponse,
   getPendingInviteCode,
   getSession,
+  sessionNeedsRefresh,
   type SessionState,
 } from "../../../lib/session";
 import { spacing } from "../../../lib/generated/tokens";
@@ -130,9 +132,15 @@ export default function LoginScreen() {
   useEffect(() => {
     const checkSession = async () => {
       const session = await getSession();
-      if (session?.access_token) await redirectFromSession(session);
+      if (!session?.access_token) return;
+      if (sessionNeedsRefresh(session)) {
+        const refreshed = await refreshSession();
+        if (refreshed) await redirectFromSession(refreshed);
+        return;
+      }
+      await redirectFromSession(session);
     };
-    checkSession();
+    void checkSession();
   }, [redirectFromSession]);
 
   useEffect(() => {

@@ -8,13 +8,19 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/components/providers/LocaleProvider";
 import { Card, ErrorMessage, GoogleSignInButton, Loading, Page } from "@/components/ui";
 import { signInWithGoogle } from "@/lib/auth";
+import { refreshSession } from "@/lib/api";
 import {
   errorDescriptorFromKey,
   errorDescriptorText,
   toErrorDescriptor,
   type ErrorDescriptor,
 } from "@/lib/errors";
-import { applyTokenResponse, getPendingInviteCode, getSession } from "@/lib/session";
+import {
+  applyTokenResponse,
+  getPendingInviteCode,
+  getSession,
+  sessionNeedsRefresh,
+} from "@/lib/session";
 
 function nextPath(current: { needs_profile_setup: boolean; needs_family_setup: boolean }): string {
   if (current.needs_profile_setup) return "/profile/setup";
@@ -31,9 +37,21 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const session = getSession();
-    if (!session?.access_token) return;
-    router.replace(nextPath(session));
+    let active = true;
+    const checkSession = async () => {
+      const session = getSession();
+      if (!session?.access_token) return;
+      if (sessionNeedsRefresh(session)) {
+        const refreshed = await refreshSession();
+        if (active && refreshed) router.replace(nextPath(refreshed));
+        return;
+      }
+      if (active) router.replace(nextPath(session));
+    };
+    void checkSession();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   const handleSuccess = async (credential: string) => {

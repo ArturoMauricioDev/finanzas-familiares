@@ -33,11 +33,19 @@ export default function FamilyMembersPage() {
   const [family, setFamily] = useState<FamilyDetail | null>(null);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [error, setError] = useState<ErrorDescriptor | null>(null);
-  const [messageKey, setMessageKey] = useState<string | null>(null);
+  const [inviteFeedback, setInviteFeedback] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [membersFeedback, setMembersFeedback] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [inviteRole, setInviteRole] = useState<FamilyRole>("hijo");
   const [inviteKinship, setInviteKinship] = useState("");
+  const [inviteKinshipError, setInviteKinshipError] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
   const [memberAction, setMemberAction] = useState<{
     type: "promote" | "remove";
@@ -91,19 +99,49 @@ export default function FamilyMembersPage() {
     }
   }, [ready, session, loadFamily]);
 
+  const resolveActionError = useCallback(
+    async (err: unknown): Promise<string | null> => {
+      if (err instanceof ApiError && err.status === 401) {
+        clearSession();
+        router.replace("/auth/login");
+        return null;
+      }
+      if (err instanceof ApiError && err.status === 403) {
+        const reconciled = await refreshSession();
+        if (!reconciled) {
+          clearSession();
+          router.replace("/auth/login");
+          return null;
+        }
+        if (reconciled.needs_family_setup) {
+          router.replace("/family/select");
+          return null;
+        }
+      }
+      return errorDescriptorText(toErrorDescriptor(err), t, t("family.loadFailed"));
+    },
+    [router, t],
+  );
+
   const generateInvitation = async () => {
+    const isOtherRole = inviteRole === "otro";
+    const trimmedKinship = inviteKinship.trim();
+    if (isOtherRole && !trimmedKinship) {
+      setInviteKinshipError(true);
+      return;
+    }
     setGenerating(true);
-    setError(null);
-    setMessageKey(null);
+    setInviteFeedback(null);
     try {
       const data = await api.createInvitation({
         rolFamiliar: inviteRole,
-        parentesco: inviteKinship.trim() || undefined,
+        parentesco: isOtherRole ? trimmedKinship : undefined,
       });
       setInvitation(data);
-      setMessageKey("family.invitationGenerated");
+      setInviteFeedback({ kind: "success", text: t("family.invitationGenerated") });
     } catch (err) {
-      await handleError(err);
+      const text = await resolveActionError(err);
+      if (text) setInviteFeedback({ kind: "error", text });
     } finally {
       setGenerating(false);
     }
@@ -113,9 +151,9 @@ export default function FamilyMembersPage() {
     if (!invitation) return;
     try {
       await navigator.clipboard.writeText(invitationCode(invitation));
-      setMessageKey("common.copiedCode");
+      setInviteFeedback({ kind: "success", text: t("common.copiedCode") });
     } catch {
-      setMessageKey("common.copyCodeFailed");
+      setInviteFeedback({ kind: "error", text: t("common.copyCodeFailed") });
     }
   };
 
@@ -131,7 +169,7 @@ export default function FamilyMembersPage() {
         await copyCode();
       }
     } catch {
-      setMessageKey("common.copyCodeFailed");
+      setInviteFeedback({ kind: "error", text: t("common.copyCodeFailed") });
     }
   };
 
@@ -173,14 +211,14 @@ export default function FamilyMembersPage() {
 
   const promote = async (userId: string) => {
     setMemberAction({ type: "promote", userId });
-    setError(null);
-    setMessageKey(null);
+    setMembersFeedback(null);
     try {
       await api.promoteMember(userId);
-      setMessageKey("family.promoteSuccess");
+      setMembersFeedback({ kind: "success", text: t("family.promoteSuccess") });
       await loadFamily();
     } catch (err) {
-      await handleError(err);
+      const text = await resolveActionError(err);
+      if (text) setMembersFeedback({ kind: "error", text });
     } finally {
       setMemberAction(null);
     }
@@ -188,14 +226,14 @@ export default function FamilyMembersPage() {
 
   const remove = async (userId: string) => {
     setMemberAction({ type: "remove", userId });
-    setError(null);
-    setMessageKey(null);
+    setMembersFeedback(null);
     try {
       await api.removeMember(userId);
-      setMessageKey("family.removeSuccess");
+      setMembersFeedback({ kind: "success", text: t("family.removeSuccess") });
       await loadFamily();
     } catch (err) {
-      await handleError(err);
+      const text = await resolveActionError(err);
+      if (text) setMembersFeedback({ kind: "error", text });
     } finally {
       setMemberAction(null);
       setPendingRemoval(null);
@@ -206,19 +244,28 @@ export default function FamilyMembersPage() {
 
   const currentMember = family?.members.find((member) => member.user_id === session.user.id);
   const isAdmin = (currentMember?.rol_permiso ?? currentMember?.role) === "admin";
-  const roleLabel = (member: Member) => {
-    const role = member.rol_permiso ?? member.role;
-    return role === "admin" ? t("family.adminRole") : t("family.memberRole");
-  };
   const familyRoleLabels: Record<string, string> = {
     padre: t("family.familyRolePadre"),
     madre: t("family.familyRoleMadre"),
     hijo: t("family.familyRoleHijo"),
     hija: t("family.familyRoleHija"),
+    tio: t("family.familyRoleTio"),
+    abuelo: t("family.familyRoleAbuelo"),
+    otro: t("family.familyRoleOtro"),
   };
   const familyRoleLabel = (member: Member) =>
     (member.rol_familiar && familyRoleLabels[member.rol_familiar]) || t("family.memberRole");
-  const roleOptions = (["padre", "madre", "hijo", "hija"] as const).map((value) => ({
+  const memberRelation = (member: Member) => {
+    const isAdminMember = (member.rol_permiso ?? member.role) === "admin";
+    const parts: string[] = [];
+    if (member.rol_familiar) parts.push(familyRoleLabel(member));
+    if (isAdminMember) parts.push(t("family.adminRole"));
+    else if (!member.rol_familiar) parts.push(t("family.memberRole"));
+    return parts.join(" · ");
+  };
+  const roleOptions = (
+    ["padre", "madre", "hijo", "hija", "tio", "abuelo", "otro"] as const
+  ).map((value) => ({
     value,
     label: familyRoleLabels[value],
   }));
@@ -246,7 +293,6 @@ export default function FamilyMembersPage() {
           </Button>
         }
       />
-      <SuccessMessage message={messageKey ? t(messageKey) : null} />
 
       {loading ? <Loading /> : null}
 
@@ -256,6 +302,13 @@ export default function FamilyMembersPage() {
             <h2 className="text-title-large text-on-surface">{t("family.membersHeading")}</h2>
             <p className="text-body-small text-on-surface-variant">{t("family.memberLimit")}</p>
           </div>
+          {membersFeedback ? (
+            membersFeedback.kind === "success" ? (
+              <SuccessMessage message={membersFeedback.text} />
+            ) : (
+              <ErrorMessage message={membersFeedback.text} />
+            )
+          ) : null}
           {family.members.length === 0 ? (
             <EmptyState title={t("family.membersHeading")} description={t("family.membersEmpty")} />
           ) : (
@@ -277,14 +330,8 @@ export default function FamilyMembersPage() {
                         {member.nombre_visualizacion || t("common.noName")}
                       </p>
                       <p className="text-body-small text-on-surface-variant">
-                        {t("family.roleFamilyLabel")}: {familyRoleLabel(member)} ·{" "}
-                        {t("family.rolePermissionLabel")}: {roleLabel(member)}
+                        {memberRelation(member)}
                         {member.user_id === session.user.id ? ` · ${t("common.you")}` : ""}
-                      </p>
-                      <p className="text-body-small text-on-surface-variant">
-                        {member.estado === "activo"
-                          ? t("family.memberStatusActive")
-                          : member.estado}
                       </p>
                     </div>
                   </div>
@@ -331,18 +378,41 @@ export default function FamilyMembersPage() {
             hint={t("family.inviteRoleHint")}
             options={roleOptions}
             value={inviteRole}
-            onChange={(event) => setInviteRole(event.target.value as FamilyRole)}
+            onChange={(event) => {
+              const next = event.target.value as FamilyRole;
+              setInviteRole(next);
+              if (next !== "otro") {
+                setInviteKinship("");
+                setInviteKinshipError(false);
+              }
+            }}
           />
-          <TextField
-            label={t("family.inviteKinshipLabel")}
-            hint={t("family.inviteKinshipHint")}
-            value={inviteKinship}
-            maxLength={80}
-            onChange={(event) => setInviteKinship(event.target.value)}
-          />
+          {inviteRole === "otro" ? (
+            <TextField
+              label={t("family.inviteKinshipLabel")}
+              hint={t("family.inviteKinshipHint")}
+              value={inviteKinship}
+              maxLength={80}
+              required
+              error={inviteKinshipError ? t("family.inviteKinshipRequired") : undefined}
+              onChange={(event) => {
+                setInviteKinship(event.target.value);
+                if (inviteKinshipError && event.target.value.trim()) {
+                  setInviteKinshipError(false);
+                }
+              }}
+            />
+          ) : null}
           <Button loading={generating} onClick={() => void generateInvitation()}>
             {t("family.generateInvitation")}
           </Button>
+          {inviteFeedback ? (
+            inviteFeedback.kind === "success" ? (
+              <SuccessMessage message={inviteFeedback.text} />
+            ) : (
+              <ErrorMessage message={inviteFeedback.text} />
+            )
+          ) : null}
 
           {invitation ? (
             <InviteCode

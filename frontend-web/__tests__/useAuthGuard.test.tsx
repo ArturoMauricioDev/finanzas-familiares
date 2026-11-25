@@ -59,6 +59,19 @@ describe("useAuthGuard", () => {
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login"));
   });
 
+  it.each(["/family/select", "/family/create", "/invite"])(
+    "sends users without a session away from the cycle route %s to login",
+    async (path) => {
+      mockPathname = path;
+
+      render(<Probe />);
+
+      await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login"));
+      expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("state").textContent).toBe("loading");
+    },
+  );
+
   it("redirects incomplete profiles to profile setup", async () => {
     session.saveSession(buildSession({ needs_profile_setup: true, needs_family_setup: true }));
 

@@ -7,7 +7,10 @@ import {
   applyTokenResponse,
   clearSession,
   getSession,
+  getTokenExpiry,
+  sessionNeedsRefresh,
   updateSession,
+  type SessionState,
 } from "../lib/session";
 
 const tokenResponse = {
@@ -101,5 +104,41 @@ describe("mobile session state", () => {
     await applyTokenResponse(tokenResponse);
     await clearSession();
     expect(await getSession()).toBeNull();
+  });
+});
+
+function buildSession(accessToken: string): SessionState {
+  return {
+    access_token: accessToken,
+    refresh_token: "refresh",
+    user: tokenResponse.user,
+    needs_profile_setup: false,
+    needs_family_setup: true,
+  };
+}
+
+function buildToken(exp: number): string {
+  const payload = Buffer.from(JSON.stringify({ exp })).toString("base64url");
+  return `header.${payload}.signature`;
+}
+
+describe("mobile session expiry", () => {
+  it("reads the expiry from the access token", () => {
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    expect(getTokenExpiry(buildToken(exp))).toBe(exp * 1000);
+  });
+
+  it("requests a refresh when the access token has expired", () => {
+    const session = buildSession(buildToken(Math.floor(Date.now() / 1000) - 60));
+    expect(sessionNeedsRefresh(session)).toBe(true);
+  });
+
+  it("keeps a session whose access token is still valid", () => {
+    const session = buildSession(buildToken(Math.floor(Date.now() / 1000) + 3600));
+    expect(sessionNeedsRefresh(session)).toBe(false);
+  });
+
+  it("does not force a refresh for tokens without a readable expiry", () => {
+    expect(sessionNeedsRefresh(buildSession("access"))).toBe(false);
   });
 });

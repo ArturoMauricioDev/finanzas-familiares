@@ -50,7 +50,7 @@ def test_create_invitation_rejects_invalid_role(client, db):
 
     response = client.post(
         "/api/v1/families/me/invitations",
-        json={"rol_familiar": "abuelo"},
+        json={"rol_familiar": "primo"},
         headers=auth_headers(admin),
     )
     assert response.status_code == 422
@@ -62,18 +62,42 @@ def test_create_invitation_returns_and_persists_role(client, db):
 
     response = client.post(
         "/api/v1/families/me/invitations",
-        json={"rol_familiar": "madre", "parentesco": "tía"},
+        json={"rol_familiar": "otro", "parentesco": "Cuñada"},
         headers=auth_headers(admin),
     )
 
     assert response.status_code == 201
     body = response.json()
-    assert body["rol_familiar"] == "madre"
-    assert body["parentesco"] == "tía"
+    assert body["rol_familiar"] == "otro"
+    assert body["parentesco"] == "Cuñada"
     invitation = db.query(Invitation).filter(Invitation.codigo == body["codigo"]).first()
     assert invitation is not None
-    assert invitation.rol_familiar == FamilyRoleEnum.madre
-    assert invitation.parentesco == "tía"
+    assert invitation.rol_familiar == FamilyRoleEnum.otro
+    assert invitation.parentesco == "Cuñada"
+
+
+def test_create_invitation_other_role_requires_kinship(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+
+    response = client.post(
+        "/api/v1/families/me/invitations",
+        json={"rol_familiar": "otro"},
+        headers=auth_headers(admin),
+    )
+    assert response.status_code == 422
+
+
+def test_create_invitation_rejects_kinship_for_other_roles(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+
+    response = client.post(
+        "/api/v1/families/me/invitations",
+        json={"rol_familiar": "hijo", "parentesco": "sobrino"},
+        headers=auth_headers(admin),
+    )
+    assert response.status_code == 422
 
 
 def test_member_cannot_create_invitation(client, db):
@@ -362,7 +386,7 @@ def test_join_as_child_stays_member(client, db):
 def test_join_copies_parentesco_from_invitation(client, db):
     admin = create_user(db, email="admin@example.com")
     _create_family(client, admin)
-    invitation = _create_invitation(client, admin, rol_familiar="hija", parentesco="sobrina")
+    invitation = _create_invitation(client, admin, rol_familiar="otro", parentesco="Sobrina")
 
     invited = create_user(db, email="niece@example.com")
     response = client.post(
@@ -374,4 +398,32 @@ def test_join_copies_parentesco_from_invitation(client, db):
     assert response.status_code == 200
     membership = db.query(Membership).filter(Membership.user_id == invited.id).first()
     assert membership is not None
-    assert membership.parentesco == "sobrina"
+    assert membership.rol_familiar == FamilyRoleEnum.otro
+    assert membership.parentesco == "Sobrina"
+
+
+def test_join_as_extended_roles_stays_member(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+
+    cases = [
+        ("tio", None),
+        ("abuelo", None),
+        ("otro", "Cuñada"),
+    ]
+    for index, (role, kinship) in enumerate(cases):
+        invitation = _create_invitation(
+            client, admin, rol_familiar=role, parentesco=kinship
+        )
+        invited = create_user(db, email=f"extended{index}@example.com")
+        response = client.post(
+            "/api/v1/invitations/join",
+            json={"codigo": invitation["codigo"]},
+            headers=auth_headers(invited),
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["role"] == "member"
+        membership = db.query(Membership).filter(Membership.user_id == invited.id).first()
+        assert membership is not None
+        assert membership.role == RoleEnum.member
+        assert membership.rol_familiar == FamilyRoleEnum(role)

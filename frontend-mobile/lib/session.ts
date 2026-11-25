@@ -70,13 +70,55 @@ export async function getAccessToken(): Promise<string | null> {
   return session?.access_token ?? null;
 }
 
-export function sessionNeedsRefresh(session: SessionState | null): boolean {
+const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function decodeBase64Url(value: string): string | null {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  let output = "";
+  let buffer = 0;
+  let bits = 0;
+
+  for (const char of normalized) {
+    if (char === "=") continue;
+    const index = BASE64_ALPHABET.indexOf(char);
+    if (index === -1) return null;
+    buffer = (buffer << 6) | index;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      output += String.fromCharCode((buffer >> bits) & 0xff);
+    }
+  }
+
+  return output;
+}
+
+export function getTokenExpiry(token: string): number | null {
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+  const decoded = decodeBase64Url(payload);
+  if (!decoded) return null;
+
+  try {
+    const data = JSON.parse(decoded) as { exp?: unknown };
+    return typeof data.exp === "number" && Number.isFinite(data.exp) ? data.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+export function sessionNeedsRefresh(session: SessionState | null, now = Date.now()): boolean {
   if (!session) return false;
   if (!session.user?.id) return true;
-  return (
+  if (
     typeof session.needs_profile_setup !== "boolean" ||
     typeof session.needs_family_setup !== "boolean"
-  );
+  ) {
+    return true;
+  }
+
+  const expiresAt = getTokenExpiry(session.access_token);
+  return expiresAt !== null && expiresAt <= now;
 }
 
 export async function reconcileFamilyFlag(session: SessionState): Promise<SessionState> {

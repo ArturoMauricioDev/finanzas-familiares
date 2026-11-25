@@ -63,7 +63,7 @@ export interface FamilyCreateResponse {
   tokens: Tokens;
 }
 
-export type FamilyRole = "padre" | "madre" | "hijo" | "hija";
+export type FamilyRole = "padre" | "madre" | "hijo" | "hija" | "tio" | "abuelo" | "otro";
 
 export interface Invitation {
   invitation_id: string;

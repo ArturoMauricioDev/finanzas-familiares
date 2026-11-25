@@ -140,7 +140,7 @@ Como Administrador o integrante, quiero gestionar a los integrantes del grupo (h
 - **FR-008**: El número máximo de miembros permitidos por grupo familiar es de 10 integrantes. El backend DEBE rechazar nuevas incorporaciones al alcanzar este límite.
 
 #### Gestión de Roles y Permisos
-- **FR-009**: Al unirse mediante código, el usuario DEBE ingresar con el rol familiar que corresponda; si es Padre o Madre recibe automáticamente el rol Administrador, y en caso contrario ingresa como Miembro con su etiqueta de parentesco (ej. hijo/hija).
+- **FR-009**: Al unirse mediante código, el usuario DEBE ingresar con el rol familiar declarado en el código (padre, madre, hijo, hija, tío, abuelo u otro); si es Padre o Madre recibe automáticamente el rol Administrador, y en caso contrario ingresa como Miembro. Cuando el rol es Otro, el vínculo familiar es obligatorio.
 - **FR-010**: Los usuarios con rol de Administrador (Padre/Madre) DEBEN tener facultades exclusivas para: generar y compartir el código de invitación, promover a otros miembros al rol de Administrador, y expulsar o dar de baja a miembros del grupo.
 
 #### Autenticación móvil nativa
@@ -161,7 +161,7 @@ Como Administrador o integrante, quiero gestionar a los integrantes del grupo (h
 
 - **Usuario (User)**: Representa a una persona autenticada. Atributos: id, google_id, nombre_visualizacion, foto_avatar, fecha_creacion. Relación: pertenece a un Grupo Familiar a través de una membresía.
 - **Grupo Familiar (Family)**: Núcleo familiar. Atributos: id, nombre, moneda_local, fecha_creacion, creado_por (user_id), estado (activo|eliminado), fecha_eliminacion (opcional). Límite máximo de 10 miembros activos. La eliminación es lógica (soft delete) y conserva el historial.
-- **Membresía (Membership)**: Relación entre Usuario y Grupo Familiar con roles y metadatos. Atributos: id, user_id, family_id, rol_familiar (padre|madre|hijo|hija), rol_permiso (admin|member), parentesco (opcional), fecha_union (`created_at`), estado (activo/inactivo). El `created_at` más antiguo determina la reasignación de Administrador.
+- **Membresía (Membership)**: Relación entre Usuario y Grupo Familiar con roles y metadatos. Atributos: id, user_id, family_id, rol_familiar (padre|madre|hijo|hija|tio|abuelo|otro), rol_permiso (admin|member), parentesco (opcional; obligatorio cuando `rol_familiar` es `otro`), fecha_union (`created_at`), estado (activo/inactivo). Solo padre y madre implican rol_permiso admin; el resto son member. El `created_at` más antiguo determina la reasignación de Administrador.
 - **Invitación (Invitation)**: Código de invitación generado por un Administrador. Atributos: id, family_id, codigo, generado_por, fecha_creacion, expira_en (creación + 7 días), usado (boolean), fecha_uso (opcional), estado. Cada código es de un solo uso; la UI expone únicamente el código, no un enlace.
 - **Perfil individual**: Cuenta de usuario sin grupo familiar activo tras un soft delete; conserva historial y acceso.
 

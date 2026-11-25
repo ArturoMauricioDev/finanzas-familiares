@@ -10,6 +10,7 @@ EXPO_CMD="${EXPO_CMD:-pnpm exec expo start --dev-client --tunnel ngrok}"
 TUNNEL_ATTEMPTS="${TUNNEL_ATTEMPTS:-3}"
 START_DOCKER=1
 START_EXPO=0
+CLEAR_CACHE=0
 
 PID_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 PID_FILE="$PID_DIR/kitho-cloudflared.pid"
@@ -25,6 +26,8 @@ EXPO_PUBLIC_API_URL en frontend-mobile/.env con la URL generada.
 Opciones:
   --no-docker          No levanta Docker ni espera a /health.
   --expo               Inicia Metro/Expo tras actualizar .env.
+  --clear              Igual que --expo, pero limpia la caché de Metro
+                       (equivale a `expo start --clear`).
   --url URL            URL local a exponer (por defecto http://localhost:8000).
   --env-file RUTA      Archivo .env a actualizar (por defecto frontend-mobile/.env).
   --stop               Detiene un túnel que haya quedado en ejecución.
@@ -73,6 +76,10 @@ while [ $# -gt 0 ]; do
       ;;
     --expo)
       START_EXPO=1
+      ;;
+    --clear)
+      START_EXPO=1
+      CLEAR_CACHE=1
       ;;
     --url)
       BACKEND_URL="${2:?Falta el valor de --url}"
@@ -325,6 +332,9 @@ echo
 
 if [ "$START_EXPO" -eq 1 ]; then
   read -r -a expo_argv <<< "$EXPO_CMD" || true
+  if [ "$CLEAR_CACHE" -eq 1 ]; then
+    expo_argv+=(--clear)
+  fi
   echo "Iniciando Expo: ${expo_argv[*]}"
   (cd "$ROOT_DIR/frontend-mobile" && "${expo_argv[@]}")
 else

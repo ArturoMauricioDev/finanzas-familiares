@@ -1,6 +1,6 @@
 # Data Model — Ciclo de vida de la familia (B2)
 
-**Fecha**: 2026-11-19
+**Fecha**: 2026-11-20
 **Alcance**: solo lo que cambia o se fija con B2. Persona, Familia y Membresía existen; se documentan
 para trazabilidad de las reglas.
 
@@ -26,8 +26,9 @@ para trazabilidad de las reglas.
 
 | Campo | Regla |
 | --- | --- |
-| Rol familiar | `padre` \| `madre` \| `hijo` \| `hija`; nulo solo en códigos heredados |
-| Permiso | Derivado: `padre`/`madre` → administrador; `hijo`/`hija` o nulo → miembro |
+| Rol familiar | `padre` \| `madre` \| `hijo` \| `hija` \| `tio` \| `abuelo` \| `otro`; nulo solo en códigos heredados |
+| Permiso | Derivado: `padre`/`madre` → administrador; `hijo`/`hija`/`tio`/`abuelo`/`otro` o nulo → miembro |
+| Vínculo familiar (`parentesco`) | Obligatorio solo si el rol es `otro`; en el resto debe ser nulo |
 | Estado | `activo` \| `inactivo` |
 | Inmutabilidad | El rol no se cambia en esta etapa (fuera de alcance) |
 
@@ -46,15 +47,22 @@ para trazabilidad de las reglas.
 | `expira_en` | Fecha-hora | Creación + 7 días |
 | `usado` | Booleano | Un solo uso; pasa a verdadero al completar la unión |
 | `fecha_uso` | Fecha-hora | Nula hasta el uso |
-| **`rol_familiar`** | **Enum, nullable** | **Nuevo. `padre` \| `madre` \| `hijo` \| `hija`. Nulo solo en códigos anteriores a B2** |
-| **`parentesco`** | **Texto(80), nullable** | **Nuevo. Opcional, informativo; no altera permisos** |
+| **`rol_familiar`** | **Enum, nullable** | **`padre` \| `madre` \| `hijo` \| `hija` \| `tio` \| `abuelo` \| `otro`. Nulo solo en códigos anteriores a B2** |
+| **`parentesco`** | **Texto(80), nullable** | **Vínculo familiar. Obligatorio si y solo si `rol_familiar = otro`; en el resto debe ser nulo** |
 
 **Índices**: los existentes (`family_id, usado` y `codigo, usado`) se mantienen; no hace falta uno
 nuevo porque el acceso sigue siendo por `codigo` o `token`.
 
-**Migración**: una revisión Alembic que añade las dos columnas como nullable. No rellena datos: los
-códigos existentes quedan con `rol_familiar = null` (ver R4 en `research.md`). Reversible: elimina
-las dos columnas.
+**Migraciones**:
+
+- `005_invitation_family_role`: añade las columnas nullable `rol_familiar` y `parentesco` (ya
+  aplicada).
+- **Nueva** revisión Alembic (`006_family_role_extra_values`): `ALTER TYPE familyroleenum ADD VALUE
+  IF NOT EXISTS 'tio'`, `'abuelo'`, `'otro'`. En PostgreSQL el alta de valores de enum no es
+  reversible de forma limpia; `downgrade()` documenta la limitación y no elimina valores en uso.
+
+No se rellena ningún dato: los códigos existentes quedan con `rol_familiar = null` (ver R4 en
+`research.md`).
 
 ## Transiciones de estado
 
@@ -68,16 +76,25 @@ Invitación
 Unión
   persona sin familia + código válido
     → membresía activa con rol = invitación.rol_familiar
-      ├─ padre|madre → permiso administrador
-      ├─ hijo|hija   → permiso miembro
-      └─ null        → permiso miembro, rol familiar nulo (código heredado)
+      ├─ padre|madre                    → permiso administrador
+      ├─ hijo|hija|tio|abuelo|otro      → permiso miembro
+      └─ null                           → permiso miembro, rol familiar nulo (código heredado)
+```
+
+### Invariante del vínculo
+
+```text
+rol_familiar = otro  ⇔  parentesco no vacío (≤ 80)
+rol_familiar ≠ otro  ⇔  parentesco nulo
 ```
 
 ## Reglas de validación (derivadas de la spec)
 
 | Regla | Origen | Respuesta esperada |
 | --- | --- | --- |
-| Rol obligatorio al crear la invitación | FR-011 | 422 si falta o no es uno de los cuatro |
+| Rol obligatorio al crear la invitación | FR-011 | 422 si falta o no es uno de los siete |
+| Vínculo obligatorio si el rol es `otro` | FR-031 | 422 si falta o está vacío |
+| Vínculo prohibido si el rol no es `otro` | FR-031 | 422 si llega con valor; el cliente debe omitirlo |
 | Solo administradores crean invitaciones | FR-015 / D4 | 403 |
 | Código inexistente | FR-010 | 400 con motivo "no válido" |
 | Código usado | FR-010 | 400 con motivo "ya utilizado" |
@@ -86,3 +103,10 @@ Unión
 | Persona ya en una familia | R2 | 400 |
 | Unión simultánea con el mismo código | Edge case | La primera gana; la segunda recibe 400/409 sin dejar estado parcial |
 | Rol elegido por quien se une | FR-009/FR-012 | No se acepta: se ignora el campo y manda la invitación |
+
+## Entrada (sin cambios de datos)
+
+La puerta de entrada (FR-034/FR-035) es de navegación: no añade entidades ni columnas. El código de
+invitación pendiente vive en el cliente (`getPendingInviteCode`) y se consume al unirse; el backend
+sigue exigiendo token y su contrato no cambia. La secuencia login → perfil mínimo (solo si falta) →
+ciclo de familia → Home no altera el modelo.

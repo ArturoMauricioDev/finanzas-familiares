@@ -175,6 +175,47 @@ describe("web onboarding flows", () => {
     await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/invite"));
   });
 
+  it("keeps the first-run order and never lands on Home before there is a family", async () => {
+    const nextSession = buildSession({ needs_profile_setup: true, needs_family_setup: true });
+    mockAuth.signInWithGoogle.mockResolvedValue({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: nextSession.user,
+      needs_profile_setup: true,
+      needs_family_setup: true,
+    });
+    mockSession.applyTokenResponse.mockReturnValue(nextSession);
+
+    render(<LoginPage />);
+    fireEvent.click(screen.getByText("Google login"));
+
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/profile/setup"));
+    expect(mockRouter.push).not.toHaveBeenCalledWith("/");
+    expect(mockRouter.push).not.toHaveBeenCalledWith("/family/select");
+  });
+
+  it("preserves the pending invitation code through login and skips family selection", async () => {
+    const nextSession = buildSession({ needs_family_setup: true });
+    mockAuth.signInWithGoogle.mockResolvedValue({
+      access_token: "access",
+      refresh_token: "refresh",
+      token_type: "bearer",
+      user: nextSession.user,
+      needs_profile_setup: false,
+      needs_family_setup: true,
+    });
+    mockSession.applyTokenResponse.mockReturnValue(nextSession);
+    mockSession.getPendingInviteCode.mockReturnValue("invite-code");
+
+    render(<LoginPage />);
+    fireEvent.click(screen.getByText("Google login"));
+
+    await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/invite"));
+    expect(mockSession.getPendingInviteCode).toHaveBeenCalled();
+    expect(mockRouter.push).not.toHaveBeenCalledWith("/family/select");
+  });
+
   it("sends users who already have a family to Home", async () => {
     const nextSession = buildSession();
     mockAuth.signInWithGoogle.mockResolvedValue({
@@ -287,7 +328,7 @@ describe("web onboarding flows", () => {
     fireEvent.change(screen.getByLabelText(/Moneda local/), {
       target: { value: "EUR" },
     });
-    fireEvent.click(screen.getByText("Crear grupo"));
+    fireEvent.click(screen.getByRole("button", { name: "Crear familia" }));
 
     await waitFor(() =>
       expect(mockApi.createFamily).toHaveBeenCalledWith({
@@ -400,11 +441,67 @@ describe("web onboarding flows", () => {
 
     fireEvent.click(screen.getByText("Promover"));
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
+    expect(await screen.findByText("Miembro promovido a administrador.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Expulsar"));
     expect(screen.getByText("¿Dar de baja a Luis del grupo?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
+  });
+
+  it("shows the kinship field only for the Other role and requires it", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+    mockApi.createInvitation.mockResolvedValue({
+      invitation_id: "invitation-1",
+      codigo: "ABCD1234",
+      rol_familiar: "otro",
+      parentesco: "Cuñada",
+      usado: false,
+      expira_en: "2026-11-02T00:00:00Z",
+    });
+
+    render(<FamilyMembersPage />);
+    await screen.findByText("Familia Pérez");
+
+    const roleSelect = screen.getByLabelText("Rol de la persona que invitas");
+    expect(screen.getByRole("option", { name: "Tío" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Abuelo" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Vínculo familiar")).not.toBeInTheDocument();
+
+    fireEvent.change(roleSelect, { target: { value: "otro" } });
+    const kinshipField = screen.getByLabelText("Vínculo familiar");
+
+    fireEvent.click(screen.getByText("Generar invitación"));
+    await waitFor(() => expect(mockApi.createInvitation).not.toHaveBeenCalled());
+    expect(
+      screen.getByText("Indica el vínculo familiar para continuar."),
+    ).toBeInTheDocument();
+
+    fireEvent.change(kinshipField, { target: { value: "Cuñada" } });
+    fireEvent.click(screen.getByText("Generar invitación"));
+    await waitFor(() =>
+      expect(mockApi.createInvitation).toHaveBeenCalledWith({
+        rolFamiliar: "otro",
+        parentesco: "Cuñada",
+      }),
+    );
+
+    fireEvent.change(roleSelect, { target: { value: "hijo" } });
+    expect(screen.queryByLabelText("Vínculo familiar")).not.toBeInTheDocument();
   });
 
   it("explains why a member cannot invite", async () => {
@@ -475,6 +572,11 @@ describe("web onboarding flows", () => {
     const { container } = render(<FamilyMembersPage />);
     await screen.findByText("Familia Pérez");
 
+    fireEvent.change(screen.getByLabelText("Rol de la persona que invitas"), {
+      target: { value: "otro" },
+    });
+    expect(screen.getByLabelText("Vínculo familiar")).toBeInTheDocument();
+
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);
   });
@@ -508,8 +610,8 @@ describe("web onboarding flows", () => {
     render(<FamilyMembersPage />);
     await screen.findByText("Familia Pérez");
 
-    expect(screen.getByText(/Rol familiar: Miembro/)).toBeInTheDocument();
-    expect(screen.queryByText(/Rol familiar: hija/)).not.toBeInTheDocument();
+    expect(screen.getByText("Miembro")).toBeInTheDocument();
+    expect(screen.queryByText("hija")).not.toBeInTheDocument();
   });
 
   it("deletes the family when it has one member", async () => {
