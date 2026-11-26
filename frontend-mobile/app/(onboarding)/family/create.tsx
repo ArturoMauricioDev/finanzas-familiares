@@ -66,9 +66,10 @@ export default function FamilyCreateScreen() {
 
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
+      reset();
       router.replace("/");
     }
-  }, [ready, session, router]);
+  }, [ready, session, router, reset]);
 
   useEffect(() => {
     let active = true;
@@ -117,6 +118,7 @@ export default function FamilyCreateScreen() {
 
   const nombreValid = nombre.trim().length >= 1 && nombre.trim().length <= 120;
   const monedaValid = isValidCurrencyCode(moneda);
+  const hasDraft = nombre.trim().length > 0;
 
   const handleExit = () => {
     reset();
@@ -177,10 +179,6 @@ export default function FamilyCreateScreen() {
           announce={announce}
         />
 
-        <ErrorMessage
-          message={error ? errorDescriptorText(error, t, t("family.createFailed")) : null}
-        />
-
         <Text
           ref={headingRef}
           accessibilityRole="header"
@@ -189,6 +187,10 @@ export default function FamilyCreateScreen() {
         >
           {stepTitles[step - 1]}
         </Text>
+
+        <ErrorMessage
+          message={error ? errorDescriptorText(error, t, t("family.createFailed")) : null}
+        />
 
         {step === 1 ? (
           <Field
@@ -274,7 +276,7 @@ export default function FamilyCreateScreen() {
         <Button
           title={t("family.wizardExit")}
           variant="text"
-          onPress={() => setExitOpen(true)}
+          onPress={() => (hasDraft ? setExitOpen(true) : handleExit())}
           disabled={saving}
         />
       </Card>

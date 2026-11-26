@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/errors";
 import {
   clearSession,
   clearStalePendingInvite,
+  capturePendingInviteFromUrl,
   getPendingInviteCode,
   getSession,
   reconcileFamilyFlag,
@@ -38,6 +39,12 @@ export function useAuthGuard(requireFamily = false) {
     };
 
     const resolveSession = async () => {
+      // Captura el código de un enlace de invitación antes de decidir el
+      // destino, para que sobreviva al login (FR-030).
+      if (typeof window !== "undefined") {
+        capturePendingInviteFromUrl(window.location.search);
+      }
+
       let current = getSession();
 
       if (!current?.access_token) {

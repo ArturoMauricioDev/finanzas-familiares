@@ -59,9 +59,10 @@ export default function FamilyCreatePage() {
 
   useEffect(() => {
     if (ready && session && !session.needs_family_setup) {
+      reset();
       router.replace("/");
     }
-  }, [ready, session, router]);
+  }, [ready, session, router, reset]);
 
   useEffect(() => {
     let active = true;
@@ -101,6 +102,7 @@ export default function FamilyCreatePage() {
 
   const nombreValid = nombre.trim().length >= 1 && nombre.trim().length <= 120;
   const monedaValid = isValidCurrencyCode(moneda);
+  const hasDraft = nombre.trim().length > 0;
 
   const handleExit = () => {
     reset();
@@ -162,10 +164,6 @@ export default function FamilyCreatePage() {
             announce={announce}
           />
 
-          <ErrorMessage
-            message={error ? errorDescriptorText(error, t, t("family.createFailed")) : null}
-          />
-
           <h2
             ref={headingRef}
             tabIndex={-1}
@@ -173,6 +171,10 @@ export default function FamilyCreatePage() {
           >
             {stepTitles[step - 1]}
           </h2>
+
+          <ErrorMessage
+            message={error ? errorDescriptorText(error, t, t("family.createFailed")) : null}
+          />
 
           {step === 1 ? (
             <Field
@@ -247,7 +249,11 @@ export default function FamilyCreatePage() {
                 {t("family.createFamily")}
               </Button>
             )}
-            <Button variant="text" onClick={() => setExitOpen(true)} disabled={saving}>
+            <Button
+              variant="text"
+              onClick={() => (hasDraft ? setExitOpen(true) : handleExit())}
+              disabled={saving}
+            >
               {t("family.wizardExit")}
             </Button>
           </div>

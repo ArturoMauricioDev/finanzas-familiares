@@ -470,3 +470,27 @@ con el enlace de privacidad. **UX-04** (Miembros) es el siguiente trabajo de la 
 siguen abiertos. **UX-16** (salida al login desde el ciclo de familia) queda abierto como deuda
 explícita de este corte: se cerrará con la acción "Cerrar sesión / Usar otra cuenta" en el ciclo de
 familia y en el login, en web y móvil.
+
+### Convergence (2026-11-26)
+
+Cierre de los hallazgos de `/speckit.converge` (Phase 12 de `tasks.md`):
+
+- **T057 — Captura del código desde el enlace (FR-030/SC-011)**: el código pasa a leerse del enlace
+  de entrada (`?codigo=`/`?code=`/`?token=`) y a persistirse **antes** del login; web lo hace en
+  `useAuthGuard` y en el login, móvil en el layout raíz vía deep link (`expo-linking`). Así, tras
+  autenticarse, la persona llega directo a "Unirme" sin pasar por la elección.
+- **T058 — Promoción de integrantes (justificado, no retirado)**: la spec 001 (`FR-010`, `SC-005`)
+  **exige** que un administrador pueda promover a otros miembros al rol de Administrador, por lo que
+  la acción se conserva. La Assumption de 003 "Roles fijos en esta etapa" aplica al **rol familiar**
+  declarado en la invitación (padre/madre/hijo/hija/tío/abuelo/otro), que sigue sin elegirse al
+  unirse; la promoción solo cambia `rol_permiso` y pertenece a la spec 001.
+- **T059 — Invitación activa tras recarga (FR-027)**: la última invitación creada se persiste en
+  cliente (`kitho_last_invitation`, ligada al `familyId`) y se vuelve a mostrar con rol y caducidad
+  tras una recarga, sin endpoint nuevo (el contrato no lo añade).
+- **T060 — Copy "Crear familia" (FR-032)**: `family.createCta` pasa de "Crear mi familia" a
+  **"Crear familia"** en español e inglés, también en la pantalla de elegir familia.
+- **T061–T063 — Wizard (FR-044/FR-040/FR-043)**: el error de acción se muestra junto al paso que lo
+  origina; "Salir" solo pide confirmación cuando hay datos; el borrador se limpia al redirigir a una
+  persona que ya tiene familia.
+- **T064 — `parentesco` con rol ≠ Otro (FR-031)**: el backend responde `422` si se envía `parentesco`
+  (aunque sea solo espacios) con cualquier rol distinto de Otro, según el contrato.

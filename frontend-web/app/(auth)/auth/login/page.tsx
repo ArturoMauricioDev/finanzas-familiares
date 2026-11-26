@@ -17,6 +17,7 @@ import {
 } from "@/lib/errors";
 import {
   applyTokenResponse,
+  capturePendingInviteFromUrl,
   getPendingInviteCode,
   getSession,
   sessionNeedsRefresh,
@@ -35,6 +36,10 @@ export default function LoginPage() {
   const { t } = useI18n();
   const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    capturePendingInviteFromUrl(window.location.search);
+  }, []);
 
   useEffect(() => {
     let active = true;

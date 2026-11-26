@@ -51,6 +51,7 @@ jest.mock("@/lib/session", () => ({
   getPendingInviteCode: jest.fn(() => null),
   savePendingInviteCode: jest.fn(),
   clearPendingInviteCode: jest.fn(),
+  capturePendingInviteFromUrl: jest.fn(() => null),
   applyFamilyLeft: jest.fn(),
 }));
 
@@ -300,7 +301,7 @@ describe("web onboarding flows", () => {
 
     render(<FamilySelectPage />);
 
-    const create = screen.getByRole("link", { name: "Crear mi familia" });
+    const create = screen.getByRole("link", { name: "Crear familia" });
     const invited = screen.getByRole("link", { name: "Tengo un código" });
     expect(create).toHaveAttribute("href", "/family/create");
     expect(invited).toHaveAttribute("href", "/invite");
@@ -315,7 +316,7 @@ describe("web onboarding flows", () => {
     render(<FamilySelectPage />);
 
     const join = screen.getByRole("link", { name: "Unirme con mi código" });
-    const create = screen.getByRole("link", { name: "Crear mi familia" });
+    const create = screen.getByRole("link", { name: "Crear familia" });
     expect(join).toHaveAttribute("href", "/invite");
     expect(create).toHaveAttribute("href", "/family/create");
     expect(join.className).toContain("bg-primary");

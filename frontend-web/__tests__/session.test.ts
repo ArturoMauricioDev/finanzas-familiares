@@ -4,7 +4,9 @@ import {
   applyInvitationJoined,
   applySessionInfo,
   applyTokenResponse,
+  capturePendingInviteFromUrl,
   clearSession,
+  getPendingInviteCode,
   getSession,
   getTokenExpiry,
   sessionNeedsRefresh,
@@ -141,6 +143,29 @@ describe("session state", () => {
         needs_family_setup: true,
       }),
     ).toBeNull();
+  });
+});
+
+describe("web pending invite from link", () => {
+  it("captures and normalizes the code from an invitation link", () => {
+    const code = capturePendingInviteFromUrl("?codigo=ab-cd 12");
+
+    expect(code).toBe("ABCD12");
+    expect(getPendingInviteCode()).toBe("ABCD12");
+  });
+
+  it("supports code and token aliases", () => {
+    expect(capturePendingInviteFromUrl("?code=xyz789")).toBe("XYZ789");
+    expect(getPendingInviteCode()).toBe("XYZ789");
+
+    expect(capturePendingInviteFromUrl("?token=q1w2e3")).toBe("Q1W2E3");
+    expect(getPendingInviteCode()).toBe("Q1W2E3");
+  });
+
+  it("does nothing when the link has no code", () => {
+    expect(capturePendingInviteFromUrl("")).toBeNull();
+    expect(capturePendingInviteFromUrl("?other=1")).toBeNull();
+    expect(getPendingInviteCode()).toBeNull();
   });
 });
 

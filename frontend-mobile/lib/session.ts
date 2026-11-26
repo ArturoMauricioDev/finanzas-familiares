@@ -61,6 +61,37 @@ export async function clearPendingInviteCode(): Promise<void> {
   await storage.deleteItemAsync(PENDING_INVITE_KEY);
 }
 
+/**
+ * Extrae el código de un enlace de invitación (`...?codigo=`/`?code=`/`?token=`).
+ */
+export function parseInviteCodeFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const match = url.match(/[?&](?:codigo|code|token)=([^&#]+)/i);
+  if (!match) return null;
+  let raw = match[1];
+  try {
+    raw = decodeURIComponent(raw);
+  } catch {
+    // conserva el valor tal cual si no es un URI válido
+  }
+  const normalized = raw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return normalized || null;
+}
+
+/**
+ * Guarda como pendiente el código de un enlace de invitación antes del login,
+ * para que tras autenticarse la persona llegue directo a "Unirme" (FR-030).
+ */
+export async function capturePendingInviteFromUrl(
+  url: string | null | undefined,
+): Promise<string | null> {
+  const code = parseInviteCodeFromUrl(url);
+  if (code) {
+    await savePendingInviteCode(code);
+  }
+  return code;
+}
+
 export const savePendingInviteToken = savePendingInviteCode;
 export const getPendingInviteToken = getPendingInviteCode;
 export const clearPendingInviteToken = clearPendingInviteCode;

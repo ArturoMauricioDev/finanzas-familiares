@@ -100,6 +100,18 @@ def test_create_invitation_rejects_kinship_for_other_roles(client, db):
     assert response.status_code == 422
 
 
+def test_create_invitation_rejects_blank_kinship_for_other_roles(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+
+    response = client.post(
+        "/api/v1/families/me/invitations",
+        json={"rol_familiar": "hijo", "parentesco": "   "},
+        headers=auth_headers(admin),
+    )
+    assert response.status_code == 422
+
+
 def test_member_cannot_create_invitation(client, db):
     admin = create_user(db, email="admin@example.com")
     family_id = _create_family(client, admin)

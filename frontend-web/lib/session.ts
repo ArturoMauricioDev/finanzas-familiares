@@ -6,6 +6,7 @@ import type {
   TokenResponse,
   UserAuthInfo,
 } from "./types";
+import { normalizeInvitationCode } from "./invitation";
 
 export interface SessionState {
   access_token: string;
@@ -59,6 +60,29 @@ export function getPendingInviteCode(): string | null {
 export function clearPendingInviteCode(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(PENDING_INVITE_KEY);
+}
+
+/**
+ * Captura el código de un enlace de invitación (`?codigo=`/`?code=`/`?token=`)
+ * y lo guarda como pendiente antes del login, para que tras autenticarse la
+ * persona llegue directo a "Unirme" (FR-030).
+ */
+export function capturePendingInviteFromUrl(
+  search: string | null | undefined,
+): string | null {
+  if (!search) return null;
+  let params: URLSearchParams;
+  try {
+    params = new URLSearchParams(search);
+  } catch {
+    return null;
+  }
+  const raw = params.get("codigo") ?? params.get("code") ?? params.get("token");
+  if (!raw) return null;
+  const normalized = normalizeInvitationCode(raw);
+  if (!normalized) return null;
+  savePendingInviteCode(normalized);
+  return normalized;
 }
 
 export const savePendingInviteToken = savePendingInviteCode;

@@ -432,3 +432,33 @@ sesión; una membresía nueva se refleja al entrar; un fallo de red al validar n
 - [ ] T056 [US1] Cerrar UX-16: acción "Cerrar sesión / Usar otra cuenta" en el layout del ciclo de
       familia y en el login (web y móvil), que limpie sesión y código pendiente y navegue a
       `/auth/login` (**fuera de este corte**).
+
+---
+
+## Phase 12: Convergence
+
+**Goal**: cerrar los huecos detectados entre la spec/plan/contrato y el código del ciclo de vida de
+la familia, sin reescribir tareas previas. Orden: HIGH → MEDIUM → LOW.
+
+- [X] T057 [US1] Capturar el código de invitación desde el enlace de entrada y persistirlo **antes**
+      del login, de modo que tras autenticarse la persona llegue directo a "Unirme" (web: leer el
+      código de la URL en `/invite` o en `useAuthGuard`; móvil: manejar el deep link con
+      `expo-linking`), sin depender de teclearlo en el campo per FR-030 (partial).
+- [X] T058 [US3] Revisar, justificar o retirar la acción "Promover" (`promote_member` en web, móvil y
+      backend) en la pantalla de Miembros, ya que la spec declara los roles fijos tras unirse y esa
+      capacidad fuera de alcance per Assumptions ("Roles fijos en esta etapa") (contradicts).
+- [X] T059 [US3] Persistir en cliente la última invitación creada (sin endpoint nuevo) y mostrarla con
+      rol y caducidad tras una recarga, en vez de caer en "No hay una invitación activa" per FR-027
+      (partial).
+- [X] T060 [US2] Alinear la etiqueta de la acción de crear en la pantalla de elegir familia al literal
+      **"Crear familia"** (hoy `family.createCta` = "Crear mi familia") en web y móvil per FR-032
+      (partial).
+- [X] T061 [US5] Mostrar los errores de acción del wizard junto al paso que los origina, no al inicio
+      del card, conservando el retorno al paso 2 ante error de moneda per FR-044 (partial).
+- [X] T062 [US5] Omitir la confirmación de "Salir" del wizard cuando el borrador esté vacío; pedirla
+      solo cuando haya datos, per FR-040 (partial).
+- [X] T063 [US5] Limpiar el borrador (`kitho_family_draft`) al redirigir fuera del wizard a una persona
+      que ya tiene familia, per FR-043 (partial).
+- [X] T064 [US3] Rechazar con `422` un `parentesco` no vacío (aunque sea solo espacios) enviado con un
+      rol distinto de **Otro**, como indica el contrato de invitaciones, en vez de normalizarlo a
+      `None` per FR-031 (partial).

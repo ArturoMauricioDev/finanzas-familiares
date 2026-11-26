@@ -5,9 +5,12 @@ import {
   applyFamilyLeft,
   applyInvitationJoined,
   applyTokenResponse,
+  capturePendingInviteFromUrl,
   clearSession,
+  getPendingInviteCode,
   getSession,
   getTokenExpiry,
+  parseInviteCodeFromUrl,
   sessionNeedsRefresh,
   updateSession,
   type SessionState,
@@ -104,6 +107,26 @@ describe("mobile session state", () => {
     await applyTokenResponse(tokenResponse);
     await clearSession();
     expect(await getSession()).toBeNull();
+  });
+});
+
+describe("mobile pending invite from link", () => {
+  it("captures and normalizes the code from a deep link", async () => {
+    const code = await capturePendingInviteFromUrl(
+      "finanzasfamiliares://invite?codigo=ab-cd%2012",
+    );
+
+    expect(code).toBe("ABCD12");
+    expect(await getPendingInviteCode()).toBe("ABCD12");
+  });
+
+  it("reads the code from http links and aliases", () => {
+    expect(parseInviteCodeFromUrl("https://kitho.app/invite?code=xyz789")).toBe("XYZ789");
+    expect(parseInviteCodeFromUrl("finanzasfamiliares://invite?token=q1w2e3#frag")).toBe(
+      "Q1W2E3",
+    );
+    expect(parseInviteCodeFromUrl("finanzasfamiliares://invite")).toBeNull();
+    expect(parseInviteCodeFromUrl(null)).toBeNull();
   });
 });
 

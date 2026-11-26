@@ -23,7 +23,11 @@ import { api, ApiError, refreshSession } from "@/lib/api";
 import { errorDescriptorText, toErrorDescriptor, type ErrorDescriptor } from "@/lib/errors";
 import { invitationCode, invitationDaysRemaining, invitationStatus } from "@/lib/invitation";
 import { applyFamilyLeft, clearSession } from "@/lib/session";
-import type { FamilyDetail, FamilyRole, Invitation, Member } from "@/lib/types";
+import {
+  rehydrateLastInvitation,
+  useLastInvitation,
+} from "@/lib/store/invitation";
+import type { FamilyDetail, FamilyRole, Member } from "@/lib/types";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 export default function FamilyMembersPage() {
@@ -31,7 +35,10 @@ export default function FamilyMembersPage() {
   const { t } = useI18n();
   const { session, ready } = useAuthGuard(true);
   const [family, setFamily] = useState<FamilyDetail | null>(null);
-  const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const storedFamilyId = useLastInvitation((state) => state.familyId);
+  const storedInvitation = useLastInvitation((state) => state.invitation);
+  const setStoredInvitation = useLastInvitation((state) => state.setInvitation);
+  const clearStoredInvitation = useLastInvitation((state) => state.clear);
   const [error, setError] = useState<ErrorDescriptor | null>(null);
   const [inviteFeedback, setInviteFeedback] = useState<{
     kind: "success" | "error";
@@ -99,6 +106,13 @@ export default function FamilyMembersPage() {
     }
   }, [ready, session, loadFamily]);
 
+  useEffect(() => {
+    void rehydrateLastInvitation();
+  }, []);
+
+  const invitation =
+    family && storedFamilyId === family.family.id ? storedInvitation : null;
+
   const resolveActionError = useCallback(
     async (err: unknown): Promise<string | null> => {
       if (err instanceof ApiError && err.status === 401) {
@@ -137,7 +151,9 @@ export default function FamilyMembersPage() {
         rolFamiliar: inviteRole,
         parentesco: isOtherRole ? trimmedKinship : undefined,
       });
-      setInvitation(data);
+      if (family) {
+        setStoredInvitation(family.family.id, data);
+      }
       setInviteFeedback({ kind: "success", text: t("family.invitationGenerated") });
     } catch (err) {
       const text = await resolveActionError(err);
@@ -179,6 +195,7 @@ export default function FamilyMembersPage() {
     try {
       const data = await api.leaveFamily();
       applyFamilyLeft(data);
+      clearStoredInvitation();
       router.replace("/family/select");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -197,6 +214,7 @@ export default function FamilyMembersPage() {
     try {
       const data = await api.deleteFamily();
       applyFamilyLeft(data);
+      clearStoredInvitation();
       router.replace("/family/select");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

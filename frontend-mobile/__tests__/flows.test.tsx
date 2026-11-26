@@ -287,8 +287,8 @@ describe("mobile onboarding flows", () => {
     mockSession.getPendingInviteCode.mockResolvedValue(null);
 
     await render(<FamilySelectScreen />);
-    await waitFor(() => expect(screen.getByText("Crear mi familia")).toBeTruthy());
-    await fireEvent.press(screen.getByText("Crear mi familia"));
+    await waitFor(() => expect(screen.getByText("Crear familia")).toBeTruthy());
+    await fireEvent.press(screen.getByText("Crear familia"));
     await fireEvent.press(screen.getByRole("button", { name: "Tengo un código" }));
 
     expect(mockRouter.push).toHaveBeenCalledWith("/family/create");

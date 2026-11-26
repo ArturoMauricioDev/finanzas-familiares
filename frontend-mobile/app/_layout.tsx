@@ -7,12 +7,14 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { Stack } from "expo-router";
+import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 
 import { AppProviders } from "../components/providers/AppProviders";
 import { useTheme } from "../components/providers/ThemeProvider";
+import { capturePendingInviteFromUrl } from "../lib/session";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -41,6 +43,14 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    void Linking.getInitialURL().then((url) => capturePendingInviteFromUrl(url));
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      void capturePendingInviteFromUrl(url);
+    });
+    return () => subscription.remove();
+  }, []);
+
   return (
     <AppProviders>
       <RootNavigator />
