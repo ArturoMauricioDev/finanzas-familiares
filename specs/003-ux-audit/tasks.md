@@ -499,3 +499,19 @@ endpoint de consulta de estado, sin exponer un listado de invitaciones (FR-045, 
       navegación y e2e que fijan el nombre accesible (`frontend-web/__tests__/navigation.test.tsx`,
       `frontend-web/e2e/specs/responsive.spec.ts`, `frontend-web/e2e/specs/a11y-axe.spec.ts`,
       `frontend-web/e2e/lighthouse.mjs`).
+
+---
+
+## Phase 15: Menú de perfil y cierre de sesión
+
+**Goal**: el avatar de la barra superior abre un menú con **Perfil** y **Cerrar sesión** en web; en
+móvil, la pantalla de Perfil ofrece **Cerrar sesión**. El cierre pide confirmación y navega a
+`/auth/login` (FR-047, SC-018, UX-19).
+
+- [X] T071 [US3] Permitir que `Menu` (web) use un `trigger` propio y convertirlo en el menú del
+      avatar en `frontend-web/components/navigation/TopAppBar.tsx`: ítems Perfil (→ `/profile`) y
+      Cerrar sesión (abre `ConfirmDialog`, limpia la sesión y navega a `/auth/login`).
+- [X] T072 [P] [US3] Añadir el botón y el diálogo de **Cerrar sesión** en
+      `frontend-mobile/app/(app)/(tabs)/profile.tsx` reutilizando `settings.logoutConfirm*`.
+- [X] T073 [P] [US3] Cubrir el menú y el cierre de sesión con pruebas en web y móvil (abrir el menú,
+      elegir Perfil, confirmar el cierre y limpiar la sesión).

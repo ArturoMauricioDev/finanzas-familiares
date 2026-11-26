@@ -1,11 +1,13 @@
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useI18n } from "../../../components/providers/LocaleProvider";
 import { useTheme } from "../../../components/providers/ThemeProvider";
-import { Avatar, Button, Card, Loading, Page } from "../../../components/ui";
+import { Avatar, Button, Card, Dialog, Loading, Page } from "../../../components/ui";
 import { useAuthGuard } from "../../../hooks/useAuthGuard";
 import { spacing } from "../../../lib/generated/tokens";
+import { clearSession } from "../../../lib/session";
 import { typeStyle } from "../../../lib/ui-styles";
 
 export default function ProfileScreen() {
@@ -13,11 +15,18 @@ export default function ProfileScreen() {
   const { t } = useI18n();
   const { colors } = useTheme();
   const { session, ready } = useAuthGuard(true);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   if (!ready || !session) return <Loading />;
 
   const user = session.user;
   const roleLabel = user.role === "admin" ? t("family.adminRole") : t("family.memberRole");
+
+  const logout = async () => {
+    setConfirmLogout(false);
+    await clearSession();
+    router.replace("/auth/login");
+  };
 
   return (
     <Page title={t("nav.profile")} subtitle={user.email}>
@@ -57,7 +66,23 @@ export default function ProfileScreen() {
           variant="secondary"
           onPress={() => router.push("/settings")}
         />
+        <Button
+          title={t("common.logout")}
+          variant="danger"
+          onPress={() => setConfirmLogout(true)}
+        />
       </Card>
+      <Dialog
+        open={confirmLogout}
+        title={t("settings.logoutConfirmTitle")}
+        onClose={() => setConfirmLogout(false)}
+        closeLabel={t("common.cancel")}
+      >
+        <Text style={[typeStyle("bodyMedium"), { color: colors.onSurfaceVariant }]}>
+          {t("settings.logoutConfirmBody")}
+        </Text>
+        <Button title={t("common.logout")} variant="danger" onPress={() => void logout()} />
+      </Dialog>
     </Page>
   );
 }

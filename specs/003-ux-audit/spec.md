@@ -34,6 +34,8 @@ el ciclo de vida de la familia."
 
 - Q: ¿Cómo debe dejar de mostrarse a quien invitó un código que ya fue aceptado? → A: con un endpoint de consulta: la pantalla de Miembros vuelve a consultar el estado de la invitación guardada y, si ya fue usada, deja de mostrarla y ofrece generar otra.
 - Q: ¿Cómo se llama la sección de la familia en la interfaz? → A: **Familia** (antes "Miembros"): se cambia la etiqueta de navegación y el acceso desde Home a "Ver familia"; el encabezado interno sigue siendo "Integrantes".
+- Q: ¿Dónde deben estar las acciones de perfil y cierre de sesión? → A: en el menú del avatar de la barra superior (web) con **Perfil** y **Cerrar sesión**; en móvil, **Cerrar sesión** en la pantalla de Perfil (no hay avatar superior).
+- Q: ¿El cierre de sesión desde el menú del avatar pide confirmación? → A: sí, reutiliza el diálogo de confirmación que ya usa Ajustes.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -317,6 +319,9 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
 - **FR-046**: La sección de la familia MUST llamarse **Familia** en la navegación (es y en, incluida
   la etiqueta accesible) y el acceso desde Home MUST rotularse "Ver familia" / "View family"; el
   encabezado interno de la pantalla MUST seguir siendo "Integrantes", sin usar jerga de modelo.
+- **FR-047**: El avatar de la barra superior (web) MUST abrir un menú con **Perfil** y **Cerrar
+  sesión**; en móvil, la pantalla de Perfil MUST ofrecer **Cerrar sesión**. Cerrar sesión MUST pedir
+  confirmación (reutilizando el diálogo de Ajustes), limpiar la sesión y navegar a `/auth/login`.
 
 ### Key Entities
 
@@ -366,6 +371,9 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
   `aria-current`) en las verificaciones automatizadas.
 - **SC-017**: 0 códigos ya aceptados mostrados como activos en la sesión de quien los emitió
   (verificado por prueba automatizada al volver a Miembros).
+- **SC-018**: El menú del avatar ofrece Perfil y Cerrar sesión en web, y la pantalla de Perfil ofrece
+  Cerrar sesión en móvil; 100% de los cierres piden confirmación y terminan en `/auth/login` con la
+  sesión limpia.
 
 ## Assumptions
 

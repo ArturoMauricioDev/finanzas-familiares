@@ -1,17 +1,38 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { BottomNavigation } from "../components/navigation/BottomNavigation";
 import { NavigationRail } from "../components/navigation/NavigationRail";
 import { Sidebar } from "../components/navigation/Sidebar";
+import { TopAppBar } from "../components/navigation/TopAppBar";
 import { navItems, primaryNavItems } from "../components/navigation/nav-items";
+import { clearSession } from "../lib/session";
+import type { UserAuthInfo } from "../lib/types";
 
 let mockPathname = "/family/members";
+const mockRouter = { push: jest.fn(), replace: jest.fn() };
 
 jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
+  useRouter: () => mockRouter,
 }));
 
+jest.mock("../lib/session", () => ({
+  clearSession: jest.fn(),
+}));
+
+const mockClearSession = clearSession as jest.MockedFunction<typeof clearSession>;
+
+const user: UserAuthInfo = {
+  id: "user-1",
+  email: "ana@example.com",
+  nombre_visualizacion: "Ana",
+  foto_avatar: null,
+  family_id: "family-1",
+  role: "admin",
+};
+
 beforeEach(() => {
+  jest.clearAllMocks();
   mockPathname = "/family/members";
 });
 
@@ -55,5 +76,40 @@ describe("web navigation", () => {
 
     expect(screen.getAllByRole("link")).toHaveLength(3);
     expect(screen.queryByRole("link", { name: "Ajustes" })).not.toBeInTheDocument();
+  });
+});
+
+describe("web profile menu", () => {
+  it("opens the avatar menu with Perfil and Cerrar sesión", () => {
+    render(<TopAppBar user={user} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menú de perfil" }));
+
+    expect(screen.getByRole("menuitem", { name: "Perfil" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Cerrar sesión" })).toBeInTheDocument();
+  });
+
+  it("navigates to the profile from the avatar menu", () => {
+    render(<TopAppBar user={user} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menú de perfil" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Perfil" }));
+
+    expect(mockRouter.push).toHaveBeenCalledWith("/profile");
+  });
+
+  it("asks for confirmation before logging out from the avatar menu", () => {
+    render(<TopAppBar user={user} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menú de perfil" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Cerrar sesión" }));
+
+    expect(screen.getByText("¿Quieres cerrar sesión en este dispositivo?")).toBeInTheDocument();
+    expect(mockClearSession).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
+
+    expect(mockClearSession).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login");
   });
 });

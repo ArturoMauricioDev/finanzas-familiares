@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 export interface MenuItem {
   id: string;
@@ -8,7 +8,17 @@ export interface MenuItem {
   onSelect: () => void;
 }
 
-export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
+export function Menu({
+  label,
+  items,
+  trigger,
+  triggerClassName,
+}: {
+  label: string;
+  items: MenuItem[];
+  trigger?: ReactNode;
+  triggerClassName?: string;
+}) {
   const [open, setOpen] = useState(false);
   const containerId = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -33,13 +43,18 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
     <div ref={root} className="relative inline-block">
       <button
         type="button"
+        aria-label={trigger ? label : undefined}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={containerId}
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex min-h-12 items-center rounded-full border border-outline px-4 text-label-large text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className={
+          trigger
+            ? `inline-flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${triggerClassName ?? ""}`
+            : "inline-flex min-h-12 items-center rounded-full border border-outline px-4 text-label-large text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        }
       >
-        {label}
+        {trigger ?? label}
       </button>
       {open ? (
         <div

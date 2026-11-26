@@ -14,6 +14,7 @@ import FamilySelectScreen from "../app/(onboarding)/family/select";
 import FamilyCreateScreen from "../app/(onboarding)/family/create";
 import InviteScreen from "../app/(onboarding)/invite/index";
 import FamilyMembersScreen from "../app/(app)/(tabs)/family/members";
+import ProfileScreen from "../app/(app)/(tabs)/profile";
 
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
 const mockParams: { token?: string } = {};
@@ -789,5 +790,25 @@ describe("mobile onboarding flows", () => {
 
     await waitFor(() => expect(mockRefreshSession).toHaveBeenCalled());
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/family/select"));
+  });
+
+  it("offers logout from the profile with confirmation", async () => {
+    useSession(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+      }),
+    );
+
+    await render(<ProfileScreen />);
+
+    await fireEvent.press(screen.getByText("Cerrar sesión"));
+    expect(screen.getByText("¿Quieres cerrar sesión en este dispositivo?")).toBeTruthy();
+    expect(mockSession.clearSession).not.toHaveBeenCalled();
+
+    const confirmButtons = screen.getAllByRole("button", { name: "Cerrar sesión" });
+    await fireEvent.press(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => expect(mockSession.clearSession).toHaveBeenCalledTimes(1));
+    expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login");
   });
 });
