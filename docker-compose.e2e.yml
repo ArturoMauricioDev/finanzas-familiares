@@ -1,0 +1,52 @@
+# Stack aislado para las pruebas E2E de Playwright.
+#
+# No comparte puerto ni volumen con `docker-compose.yml`: la base de datos no se
+# publica al host y el backend escucha en 8001 para no chocar con el :8000 de
+# desarrollo. Nunca apunta a la base de datos de desarrollo.
+#
+# Uso: `frontend-web/e2e/run.mjs` lo levanta, migra, siembra y apaga.
+
+name: kitho-e2e
+
+services:
+  db-e2e:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: finanzas
+      POSTGRES_PASSWORD: finanzas
+      POSTGRES_DB: kitho_e2e
+    volumes:
+      - e2e_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finanzas -d kitho_e2e"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  backend-e2e:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\"",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    environment:
+      DATABASE_URL: postgresql://finanzas:finanzas@db-e2e:5432/kitho_e2e
+      SECRET_KEY: e2e-only-secret-key-never-use-in-production
+      CORS_ORIGINS: http://127.0.0.1:3100,http://localhost:3100
+      KITHO_E2E_SEED: "1"
+    depends_on:
+      db-e2e:
+        condition: service_healthy
+
+volumes:
+  e2e_postgres_data:

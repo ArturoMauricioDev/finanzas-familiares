@@ -84,6 +84,12 @@ Thumbs.db
 .pytest_cache/
 htmlcov/
 
+# Playwright / E2E
+frontend-web/e2e/.artifacts/
+frontend-web/playwright-report/
+frontend-web/test-results/
+backend/.e2e/
+
 # Misc
 *.bak
 tmp/

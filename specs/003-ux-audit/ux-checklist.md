@@ -127,5 +127,14 @@ web 130 tests y móvil 131 tests. Falta el recorrido manual de los escenarios 2b
 (recorrido manual de los escenarios con cuentas reales) quedan pendientes porque este entorno no
 tiene navegador ni dispositivos. Registro en `audit.md` §8.
 
+**Cobertura web automatizada (2026-11-26)**: la suite Playwright (`frontend-web/e2e`, `pnpm test:e2e`)
+verifica en Chromium los breakpoints 320/375/599/600/768/839/840/1024/1440 px sin scroll horizontal y
+con la navegación correcta, la matriz de estados, la puerta de entrada, tema/idioma, invitación,
+moneda, ciclo de vida de la familia, sesión expirada, `axe` (WCAG A/AA) en Login/Miembros/Ajustes/
+Inicio/unirse/crear familia/diálogo, teclado (salto al contenido, Escape y foco, wizard, radios),
+bundle sin Recharts y Lighthouse de accesibilidad. Sigue siendo **manual**: móvil iOS/Android
+(Maestro), VoiceOver/TalkBack y Accessibility Scanner, zoom real al 200 % y la comparación visual del
+botón oficial de Google.
+
 **Observaciones abiertas**: enlace visible a privacidad/términos (UX-02.2). La jerarquía de la
 pantalla de elegir familia ya está decidida (contextual, FR-029/FR-030) y se verifica en la ronda 1.

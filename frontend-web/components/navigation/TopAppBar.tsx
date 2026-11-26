@@ -25,7 +25,7 @@ export function TopAppBar({ user }: { user: UserAuthInfo }) {
   return (
     <header className="sticky top-0 z-40 border-b border-outline-variant bg-surface/95 backdrop-blur">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center gap-3 px-3 sm:px-6">
-        <Link href="/family/members" aria-label={t("a11y.wordmark")} className="rounded-sm">
+        <Link href="/family/members" className="rounded-sm">
           <Wordmark size="md" className="hidden sm:inline-flex" />
           <Wordmark size="sm" className="sm:hidden" />
         </Link>

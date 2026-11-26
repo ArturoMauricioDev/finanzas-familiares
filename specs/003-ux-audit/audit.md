@@ -360,6 +360,30 @@ Diez hallazgos detectados por `/speckit.converge` y cerrados sin tocar la spec n
 | T040 | Siete claves i18n sin uso eliminadas de `shared/i18n` y del copy deck. | `node scripts/check-shared.mjs` |
 | T041 | Aviso legal reformulado: finanzas y presupuestos "en camino", nunca como capacidad actual. | copy es/en revisado; `check-shared` sincronizado |
 
+### Verificación web automatizada (2026-11-26)
+
+La web pasa a tener una puerta automática en Chromium con Playwright (`frontend-web/e2e`,
+`pnpm test:e2e`), con backend y base de datos E2E aislados (`docker-compose.e2e.yml`, puerto `8001`,
+`kitho_e2e`) y sesión sembrada en `localStorage` (nunca login real con Google).
+
+Cubre, sin sustituir la revisión móvil ni la visual:
+
+- **Escenarios de `quickstart.md` (web)**: 1–4, 9–11, 13, 14, 16–18: tema y persistencia, idioma,
+  responsive 320→1440, estados de carga/error/vacío, accesibilidad, bundle sin Recharts, marca,
+  sesión expirada, invitación por código (usado/caducado/heredado), moneda regional y
+  eliminar/abandonar familia.
+- **Puerta de entrada** (`useAuthGuard`): sin sesión, sin perfil, sin familia, con familia y código
+  pendiente (escenario 0, FR-034/FR-035/SC-012).
+- **Accesibilidad**: `axe` (WCAG 2.1 A/AA) en Login, Miembros, Ajustes, Inicio, unirse, crear familia
+  y diálogo destructivo; teclado (salto al contenido, Escape con retorno de foco, foco del wizard,
+  radios); Lighthouse de accesibilidad `>=95` en Login, Miembros y Ajustes.
+- **T029 (web)**: breakpoints 320/375/599/600/768/839/840/1024/1440 sin scroll horizontal y con
+  sidebar/rail/tabs según ancho.
+
+**Sigue siendo manual** (no bloquea el código): móvil iOS/Android con Maestro, VoiceOver/TalkBack y
+Accessibility Scanner, zoom real al 200 % y la comparación visual del botón oficial de Google
+(escenario 15) y de la paridad web/móvil (escenario 12).
+
 ### Pendiente de verificación manual
 
 Ninguno de estos puntos bloquea el código; todos requieren navegador, dispositivo/emulador o

@@ -131,6 +131,31 @@ docker compose exec backend pytest
 **Resultado esperado**: todos los comandos terminan con éxito; `check-shared` no detecta deriva y
 `check-ui` no detecta imports de gráficos ni literales visuales fuera de las excepciones.
 
+### E2E web con Playwright
+
+La web tiene una suite de integración en Chromium que ejercita los escenarios de esta guía contra un
+backend y una base de datos **aislados** (no usa el backend de desarrollo ni hace login real con
+Google):
+
+```bash
+cd frontend-web
+pnpm test:e2e        # compose E2E + migraciones + seed + next build/start + Playwright
+pnpm test:a11y       # solo axe + teclado
+pnpm test:lighthouse # Lighthouse de accesibilidad >= 95 en Login, Miembros y Ajustes
+```
+
+- `docker-compose.e2e.yml` levanta PostgreSQL y el backend en `:8001` (base `kitho_e2e`); `e2e/run.mjs`
+  aplica migraciones, siembra identidades (`backend/scripts/seed_e2e.py`), compila y arranca
+  `next start`, ejecuta Playwright y apaga el servidor y el stack al terminar.
+- La sesión se inyecta en `localStorage` (`finanzas_familiares_session`). Cada test fabrica sus
+  familias e invitaciones por API con actores desechables del seed; el seed solo crea identidades.
+- La web se sirve con `next build` + `next start` (no `next dev`): evita la compilación por ruta en
+  la primera visita y el websocket de HMR, que impide que `networkidle` se estabilice. Playwright
+  reutiliza ese servidor (`E2E_REUSE_SERVER=1`).
+- Cubre web: escenarios 1–4, 9–11, 13, 14 y 16–18, la puerta de entrada, la matriz de estados, los
+  breakpoints, `axe` (WCAG 2.1 A/AA) y teclado. **No cubre** móvil ni reemplaza la revisión con
+  VoiceOver/TalkBack, el zoom real al 200 % ni la comparación visual del botón de Google.
+
 ### Autenticación nativa de Google (Nitro)
 
 El login móvil usa `react-native-nitro-google-signin` sobre `react-native-nitro-modules`. En Expo
@@ -441,16 +466,32 @@ animaciones de diálogos/selectores cuando el sistema lo indica; los fondos de d
 token `scrim`; Ajustes muestra el aviso legal; las cadenas de `Spinner`, `Loading`, `Dialog` y
 `Breadcrumbs` provienen de i18n.
 
-**Pendiente de validación manual**: auditoría Lighthouse de accesibilidad en Login, Miembros y
-Ajustes; recorrido con teclado, zoom de texto al 200 % y movimiento reducido; revisión con
-VoiceOver/TalkBack y Accessibility Scanner; comprobación visual de breakpoints
-320/600/840/1440 px y paridad web/móvil; re-verificación manual de cancelación y error del login
-con Google móvil (FR-084) en un device Android con development build, ya que el éxito se validó.
-Los escenarios manuales de este documento siguen siendo la referencia para cerrar esas
-comprobaciones.
+**Pendiente de validación manual**: revisión con VoiceOver/TalkBack y Accessibility Scanner; zoom de
+texto real al 200 %; comparación visual de breakpoints y paridad web/móvil; y re-verificación manual
+de cancelación y error del login con Google móvil (FR-084) en un device Android con development
+build, ya que el éxito se validó. Lo que antes era manual en web (Lighthouse, teclado, breakpoints
+320/600/840/1440, estados, tema, idioma, invitación, moneda, familia y sesión expirada) pasa a estar
+cubierto por la suite Playwright de la sección siguiente.
 
 **Nota**: la tabla incluye los cambios de botón de Google, invitación por código, selector de moneda
 con geolocalización y acciones de familia, además de las extensiones de backend de la spec 001
 (código de un solo uso/7 días, soft delete, abandono y reasignación de administrador). Las pruebas
-automatizadas cubren los escenarios 15–18 a nivel de componentes/utilidades y API. La validación
-manual de accesibilidad y breakpoints (T137/T138) sigue pendiente de ejecución humana.
+automatizadas cubren los escenarios 15–18 a nivel de componentes/utilidades y API; la suite E2E
+(abajo) añade la verificación en navegador de los escenarios 1–4, 9–11, 13, 14 y 16–18.
+
+## Resultado de validación E2E web (2026-11-26)
+
+`pnpm test:e2e` ejecuta 68 pruebas en Chromium contra un backend y una base de datos aislados
+(`kitho_e2e` en `:8001`) y un `next build` + `next start` en `:3100`.
+
+| Comando | Resultado |
+|---------|-----------|
+| `pnpm test:e2e` | 66 pruebas correctas, 2 marcadas `fixme` (defecto conocido del `<select>` de moneda, T184; traducción en caliente de un error ya visible, no alcanzable en web y cubierta por pruebas unitarias). |
+| `pnpm test:a11y` | `axe` (WCAG 2.1 A/AA) sin violaciones en Login, Miembros, Ajustes, Inicio, unirse, crear familia y diálogo; teclado (salto al contenido, Escape + foco, wizard, radios) en verde. |
+| `pnpm test:lighthouse` | Accesibilidad `>=95` en Login, Miembros y Ajustes. |
+
+Cobertura: escenarios 1–4 (tema, idioma, responsive 320/375/599/600/768/839/840/1024/1440),
+9–11 (estados, accesibilidad, gráficos fuera del bundle), 13 (marca), 14 (sesión expirada),
+16–18 (invitación, moneda, eliminar/abandonar) y la puerta de entrada (FR-034/FR-035/SC-012).
+Quedan fuera: móvil iOS/Android (Maestro), VoiceOver/TalkBack, zoom real al 200 % y la comparación
+visual del botón oficial de Google (escenario 15) y de la paridad web/móvil (escenario 12).
