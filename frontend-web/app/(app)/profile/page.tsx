@@ -2,22 +2,33 @@
 
 import { Palette, Pencil, Settings } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { useI18n } from "@/components/providers/LocaleProvider";
-import { Avatar, Card, Loading, Page } from "@/components/ui";
+import { Avatar, Button, Card, ConfirmDialog, Loading, Page } from "@/components/ui";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { clearSession } from "@/lib/session";
 
 const actionClass =
   "inline-flex min-h-12 items-center gap-2 rounded-full border border-outline px-5 text-label-large font-semibold text-primary transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { t } = useI18n();
   const { session, ready } = useAuthGuard(true);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   if (!ready || !session) return <Loading />;
 
   const user = session.user;
   const roleLabel = user.role === "admin" ? t("family.adminRole") : t("family.memberRole");
+
+  const logout = () => {
+    setConfirmLogout(false);
+    clearSession();
+    router.replace("/auth/login");
+  };
 
   return (
     <Page title={t("nav.profile")} subtitle={user.email}>
@@ -53,7 +64,23 @@ export default function ProfilePage() {
             {t("nav.settings")}
           </Link>
         </div>
+        <div className="border-t border-outline-variant pt-6">
+          <Button variant="danger" onClick={() => setConfirmLogout(true)}>
+            {t("common.logout")}
+          </Button>
+        </div>
       </Card>
+
+      <ConfirmDialog
+        open={confirmLogout}
+        title={t("settings.logoutConfirmTitle")}
+        description={t("settings.logoutConfirmBody")}
+        confirmLabel={t("common.logout")}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onCancel={() => setConfirmLogout(false)}
+        onConfirm={logout}
+      />
     </Page>
   );
 }

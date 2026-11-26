@@ -6,7 +6,16 @@ import { useState } from "react";
 
 import { useI18n } from "@/components/providers/LocaleProvider";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { Button, Card, ConfirmDialog, Page, RadioGroup, SuccessMessage } from "@/components/ui";
+import {
+  Button,
+  Card,
+  ConfirmDialog,
+  ErrorMessage,
+  Page,
+  RadioGroup,
+  SuccessMessage,
+} from "@/components/ui";
+import { api } from "@/lib/api";
 import { brand } from "@/lib/generated/tokens";
 import type { Locale } from "@/lib/i18n/messages.generated";
 import type { ThemePreference } from "@/lib/preferences";
@@ -19,7 +28,9 @@ export default function SettingsPage() {
   const { t, locale, setLocale } = useI18n();
   const theme = useTheme();
   const [messageKey, setMessageKey] = useState<string | null>(null);
-  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
 
   const changeTheme = (value: string) => {
     theme.setMode(value as ThemePreference);
@@ -31,10 +42,18 @@ export default function SettingsPage() {
     setMessageKey("settings.localeChanged");
   };
 
-  const logout = () => {
-    setConfirmLogout(false);
-    clearSession();
-    router.replace("/auth/login");
+  const deleteAccount = async () => {
+    setDeleting(true);
+    setDeleteFailed(false);
+    try {
+      await api.deleteAccount();
+      clearSession();
+      router.replace("/auth/login");
+    } catch {
+      setDeleteFailed(true);
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
   };
 
   return (
@@ -79,10 +98,11 @@ export default function SettingsPage() {
       <Card variant="outlined" className="space-y-4">
         <div>
           <h2 className="text-title-large text-on-surface">{t("settings.accountHeading")}</h2>
-          <p className="text-body-medium text-on-surface-variant">{t("settings.accountBody")}</p>
-          <Button variant="danger" className="mt-4" onClick={() => setConfirmLogout(true)}>
-            {t("common.logout")}
+          <p className="text-body-medium text-on-surface-variant">{t("settings.deleteAccountBody")}</p>
+          <Button variant="danger" className="mt-4" onClick={() => setConfirmDelete(true)}>
+            {t("settings.deleteAccount")}
           </Button>
+          <ErrorMessage message={deleteFailed ? t("settings.deleteAccountFailed") : null} />
         </div>
       </Card>
 
@@ -121,14 +141,15 @@ export default function SettingsPage() {
       </Card>
 
       <ConfirmDialog
-        open={confirmLogout}
-        title={t("settings.logoutConfirmTitle")}
-        description={t("settings.logoutConfirmBody")}
-        confirmLabel={t("common.logout")}
+        open={confirmDelete}
+        title={t("settings.deleteAccountConfirmTitle")}
+        description={t("settings.deleteAccountConfirmBody")}
+        confirmLabel={t("settings.deleteAccount")}
         cancelLabel={t("common.cancel")}
         destructive
-        onCancel={() => setConfirmLogout(false)}
-        onConfirm={logout}
+        loading={deleting}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => void deleteAccount()}
       />
     </Page>
   );

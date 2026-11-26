@@ -4,7 +4,8 @@ import { Text } from "react-native";
 
 import { useI18n } from "../../components/providers/LocaleProvider";
 import { useTheme } from "../../components/providers/ThemeProvider";
-import { Button, Card, ChoiceGroup, Dialog, Page } from "../../components/ui";
+import { Button, Card, ChoiceGroup, Dialog, ErrorMessage, Page } from "../../components/ui";
+import { api } from "../../lib/api";
 import { clearSession } from "../../lib/session";
 import type { Locale } from "../../lib/i18n/messages.generated";
 import type { ThemePreference } from "../../lib/preferences";
@@ -15,17 +16,27 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { t, locale, setLocale } = useI18n();
   const theme = useTheme();
-  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace("/profile");
   };
 
-  const logout = async () => {
-    setConfirmLogout(false);
-    await clearSession();
-    router.replace("/auth/login");
+  const deleteAccount = async () => {
+    setDeleting(true);
+    setDeleteFailed(false);
+    try {
+      await api.deleteAccount();
+      await clearSession();
+      router.replace("/auth/login");
+    } catch {
+      setDeleteFailed(true);
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
   };
 
   return (
@@ -72,9 +83,14 @@ export default function SettingsScreen() {
           {t("settings.accountHeading")}
         </Text>
         <Text style={[typeStyle("bodyMedium"), { color: theme.colors.onSurfaceVariant }]}>
-          {t("settings.accountBody")}
+          {t("settings.deleteAccountBody")}
         </Text>
-        <Button title={t("common.logout")} variant="danger" onPress={() => setConfirmLogout(true)} />
+        <Button
+          title={t("settings.deleteAccount")}
+          variant="danger"
+          onPress={() => setConfirmDelete(true)}
+        />
+        {deleteFailed ? <ErrorMessage message={t("settings.deleteAccountFailed")} /> : null}
       </Card>
 
       <Card>
@@ -123,15 +139,20 @@ export default function SettingsScreen() {
       </Card>
 
       <Dialog
-        open={confirmLogout}
-        title={t("settings.logoutConfirmTitle")}
-        onClose={() => setConfirmLogout(false)}
+        open={confirmDelete}
+        title={t("settings.deleteAccountConfirmTitle")}
+        onClose={() => setConfirmDelete(false)}
         closeLabel={t("common.cancel")}
       >
         <Text style={[typeStyle("bodyMedium"), { color: theme.colors.onSurfaceVariant }]}>
-          {t("settings.logoutConfirmBody")}
+          {t("settings.deleteAccountConfirmBody")}
         </Text>
-        <Button title={t("common.logout")} variant="danger" onPress={() => void logout()} />
+        <Button
+          title={t("settings.deleteAccount")}
+          variant="danger"
+          loading={deleting}
+          onPress={() => void deleteAccount()}
+        />
       </Dialog>
     </Page>
   );

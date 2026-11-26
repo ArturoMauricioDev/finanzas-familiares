@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token, verify_token
 from app.models.membership import Membership, StatusEnum
-from app.models.user import User
+from app.models.user import User, UserStatusEnum
 
 
 def _google_audiences():
@@ -78,6 +78,12 @@ def authenticate_with_google(db: Session, token: str):
                     detail="A user account with this email already exists",
                 ) from None
 
+    if user.estado == UserStatusEnum.eliminado:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account has been deleted",
+        )
+
     membership = _active_membership(db, user.id)
     needs_profile_setup = not (user.nombre_visualizacion and user.foto_avatar)
     needs_family_setup = membership is None
@@ -116,7 +122,7 @@ def session_info(db: Session, user_id):
     cliente pueda limpiar la sesión persistida.
     """
     user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if not user or user.estado != UserStatusEnum.activo:
         return None
 
     membership = _active_membership(db, user.id)
@@ -150,7 +156,7 @@ def refresh_tokens(db: Session, refresh_token: str):
         return None
 
     user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if not user or user.estado != UserStatusEnum.activo:
         return None
 
     membership = _active_membership(db, user.id)

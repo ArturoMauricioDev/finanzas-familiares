@@ -515,3 +515,32 @@ móvil, la pantalla de Perfil ofrece **Cerrar sesión**. El cierre pide confirma
       `frontend-mobile/app/(app)/(tabs)/profile.tsx` reutilizando `settings.logoutConfirm*`.
 - [X] T073 [P] [US3] Cubrir el menú y el cierre de sesión con pruebas en web y móvil (abrir el menú,
       elegir Perfil, confirmar el cierre y limpiar la sesión).
+
+---
+
+## Phase 16: Eliminar cuenta
+
+**Goal**: Ajustes deja de ofrecer **Cerrar sesión** (que vive en el menú del avatar web y en Perfil
+móvil, FR-047) y pasa a ofrecer **Eliminar cuenta** con confirmación. "Eliminar cuenta" desactiva la
+cuenta sin borrar su fila (soft delete), bloquea el acceso y deja la familia o la membresía en el
+estado correcto (FR-048, FR-049, SC-019, UX-20).
+
+- [X] T074 [US1] Añadir `UserStatusEnum` (`activo`/`eliminado`) y las columnas `estado` y
+      `fecha_eliminacion` a `backend/app/models/user.py`, con la migración
+      `backend/alembic/versions/007_user_status.py` (`upgrade`/`downgrade` reversibles).
+- [X] T075 [US1] Implementar `delete_account` en `backend/app/services/user_service.py` (si es el
+      único integrante activo marca la familia como eliminada; si hay más, inactiva la membresía y
+      reasigna el administrador) y exponer `DELETE /users/me` (204) en `backend/app/api/v1/users.py`.
+- [X] T076 [P] [US1] Bloquear las cuentas eliminadas en `backend/app/services/auth_service.py`
+      (`403` en login; `401` en sesión y refresh) y validar el usuario contra la base de datos en
+      `get_current_user` (`backend/app/core/deps.py`).
+- [X] T077 [P] [US1] Añadir `deleteAccount()` a `frontend-web/lib/api.ts` y
+      `frontend-mobile/lib/api.ts` y las claves `settings.deleteAccount*` en
+      `shared/i18n/{es,en}.json`; regenerar con `node scripts/generate-shared.mjs`.
+- [X] T078 [US1] Web: quitar **Cerrar sesión** de `frontend-web/app/(app)/settings/page.tsx` y añadir
+      **Eliminar cuenta** con `ConfirmDialog` y `ErrorMessage`; añadir **Cerrar sesión** (con
+      confirmación) a `frontend-web/app/(app)/profile/page.tsx`.
+- [X] T079 [P] [US1] Móvil: quitar **Cerrar sesión** de `frontend-mobile/app/(app)/settings.tsx` y
+      añadir **Eliminar cuenta** con `Dialog` y `ErrorMessage`.
+- [X] T080 [P] [US1] Cubrir el flujo con pruebas: `backend/tests/test_account.py` y pruebas de flujo
+      y de cliente en web y móvil (confirmar, fallar sin limpiar sesión, y salir de Perfil).

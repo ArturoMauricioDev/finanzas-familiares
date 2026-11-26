@@ -157,6 +157,10 @@ export const api = {
     });
   },
 
+  deleteAccount(): Promise<void> {
+    return request<void>("/users/me", { method: "DELETE" });
+  },
+
   createFamily(payload: {
     nombre: string;
     moneda_local: string;

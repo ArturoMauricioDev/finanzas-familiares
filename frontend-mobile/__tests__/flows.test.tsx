@@ -15,6 +15,7 @@ import FamilyCreateScreen from "../app/(onboarding)/family/create";
 import InviteScreen from "../app/(onboarding)/invite/index";
 import FamilyMembersScreen from "../app/(app)/(tabs)/family/members";
 import ProfileScreen from "../app/(app)/(tabs)/profile";
+import SettingsScreen from "../app/(app)/settings";
 
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
 const mockParams: { token?: string } = {};
@@ -70,6 +71,7 @@ jest.mock("../lib/api", () => {
     api: {
       signInWithGoogle: jest.fn(),
       updateProfile: jest.fn(),
+      deleteAccount: jest.fn(),
       createFamily: jest.fn(),
       getFamily: jest.fn(),
       createInvitation: jest.fn(),
@@ -810,5 +812,48 @@ describe("mobile onboarding flows", () => {
 
     await waitFor(() => expect(mockSession.clearSession).toHaveBeenCalledTimes(1));
     expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login");
+  });
+});
+
+describe("mobile account settings", () => {
+  it("deletes the account from settings after confirmation", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, family_id: "family-1", role: "admin" } }));
+    mockApi.deleteAccount.mockResolvedValue(undefined);
+
+    await render(<SettingsScreen />);
+
+    expect(screen.queryByText("Cerrar sesión")).toBeNull();
+
+    await fireEvent.press(screen.getByText("Eliminar cuenta"));
+    expect(
+      screen.getByText(
+        "¿Quieres eliminar tu cuenta? Perderás el acceso de inmediato y no podrás deshacerlo.",
+      ),
+    ).toBeTruthy();
+    expect(mockSession.clearSession).not.toHaveBeenCalled();
+
+    const confirmButtons = screen.getAllByRole("button", { name: "Eliminar cuenta" });
+    await fireEvent.press(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => expect(mockApi.deleteAccount).toHaveBeenCalledTimes(1));
+    expect(mockSession.clearSession).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login");
+  });
+
+  it("keeps the session and shows an error when deleting fails", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, family_id: "family-1", role: "admin" } }));
+    mockApi.deleteAccount.mockRejectedValue(new ApiError("boom", 500));
+
+    await render(<SettingsScreen />);
+
+    await fireEvent.press(screen.getByText("Eliminar cuenta"));
+    const confirmButtons = screen.getAllByRole("button", { name: "Eliminar cuenta" });
+    await fireEvent.press(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() =>
+      expect(screen.getByText("No pudimos eliminar tu cuenta. Inténtalo de nuevo.")).toBeTruthy(),
+    );
+    expect(mockSession.clearSession).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });

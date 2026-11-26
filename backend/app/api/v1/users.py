@@ -15,3 +15,11 @@ def update_profile(
     current_user: dict = Depends(get_current_user),
 ):
     return user_service.update_profile(db, current_user["user_id"], request)
+
+
+@router.delete("/me", status_code=204)
+def delete_account(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    user_service.delete_account(db, current_user["user_id"])

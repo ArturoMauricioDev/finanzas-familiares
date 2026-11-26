@@ -36,6 +36,8 @@ el ciclo de vida de la familia."
 - Q: ¿Cómo se llama la sección de la familia en la interfaz? → A: **Familia** (antes "Miembros"): se cambia la etiqueta de navegación y el acceso desde Home a "Ver familia"; el encabezado interno sigue siendo "Integrantes".
 - Q: ¿Dónde deben estar las acciones de perfil y cierre de sesión? → A: en el menú del avatar de la barra superior (web) con **Perfil** y **Cerrar sesión**; en móvil, **Cerrar sesión** en la pantalla de Perfil (no hay avatar superior).
 - Q: ¿El cierre de sesión desde el menú del avatar pide confirmación? → A: sí, reutiliza el diálogo de confirmación que ya usa Ajustes.
+- Q: ¿Qué ocupa el lugar de "Cerrar sesión" en Ajustes? → A: se quita de Ajustes; "Cerrar sesión" queda en el menú del avatar (web) y en Perfil (móvil), y Ajustes pasa a ofrecer **Eliminar cuenta**.
+- Q: ¿Qué hace exactamente "Eliminar cuenta"? → A: **soft delete**: desactiva la cuenta sin borrar su fila (bloquea login, sesión y refresh) y conserva los datos mínimos para no romper las referencias; si es el único integrante activo, la familia se marca como eliminada; si hay más integrantes, la membresía queda inactiva y se reasigna el rol de administrador.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -322,6 +324,15 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
 - **FR-047**: El avatar de la barra superior (web) MUST abrir un menú con **Perfil** y **Cerrar
   sesión**; en móvil, la pantalla de Perfil MUST ofrecer **Cerrar sesión**. Cerrar sesión MUST pedir
   confirmación (reutilizando el diálogo de Ajustes), limpiar la sesión y navegar a `/auth/login`.
+- **FR-048**: La pantalla de Ajustes MUST dejar de ofrecer **Cerrar sesión** y MUST ofrecer **Eliminar
+  cuenta** como única acción destructiva de la sección, separada del resto y con confirmación que
+  nombre la cuenta.
+- **FR-049**: **Eliminar cuenta** MUST desactivar la cuenta sin borrar su fila (soft delete): MUST
+  bloquear el acceso en login, sesión y refresh, y MUST conservar los datos mínimos para no romper
+  las referencias. Si la persona fuera el único integrante activo, la familia MUST marcarse como
+  eliminada; si hubiera más integrantes, la membresía MUST quedar inactiva y el rol de administrador
+  MUST reasignarse. La operación MUST ser idempotente: una segunda solicitud sin sesión válida
+  responde `401`.
 
 ### Key Entities
 
@@ -374,6 +385,9 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
 - **SC-018**: El menú del avatar ofrece Perfil y Cerrar sesión en web, y la pantalla de Perfil ofrece
   Cerrar sesión en móvil; 100% de los cierres piden confirmación y terminan en `/auth/login` con la
   sesión limpia.
+- **SC-019**: 0 pantallas de Ajustes que ofrezcan cerrar sesión; 100% de las eliminaciones de cuenta
+  desactivan el acceso (login, sesión y refresh) y dejan la familia o la membresía en el estado
+  correcto (verificado por prueba automatizada).
 
 ## Assumptions
 
@@ -415,8 +429,9 @@ Checklist completa de la skill `kitho-ux`: [ux-checklist.md](./ux-checklist.md).
   "Salir" con confirmación (FR-036...FR-044).
 - **Acciones secundarias**: unirme con código (frente a crear), volver a la selección, reintentar;
   visualmente distintas de la primaria.
-- **Acciones destructivas**: abandonar/eliminar familia no entra en este corte; cuando aparezca,
-  va separada y con confirmación que nombre la familia.
+- **Acciones destructivas**: **Eliminar cuenta** (Ajustes) va separada del resto y con confirmación
+  que nombre la cuenta; desactiva el acceso sin borrar los datos mínimos (FR-048, FR-049). Abandonar
+  o eliminar la familia sigue viviendo en la sección Familia.
 - **Estados cubiertos**: carga inicial, carga de acción, vacío, error con reintento, error local,
   sin permiso explicado, éxito local, offline/timeout (FR-016).
 - **Accesibilidad**: foco visible, teclado, live regions, estado seleccionado, contraste 4.5:1/3:1,

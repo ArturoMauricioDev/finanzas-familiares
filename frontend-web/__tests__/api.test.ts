@@ -150,6 +150,15 @@ describe("api client", () => {
     expect(fetchMock.mock.calls[2][1].body).toBe(JSON.stringify({ codigo: "ABCD" }));
   });
 
+  it("deletes the account through the users endpoint", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 204, text: async () => "" });
+
+    await api.deleteAccount();
+
+    expect(fetchMock.mock.calls[0][0]).toContain("/users/me");
+    expect(fetchMock.mock.calls[0][1].method).toBe("DELETE");
+  });
+
   it("refreshes the session and retries once after a 401", async () => {
     mockSession.getSession.mockReturnValue({
       access_token: "old-access",

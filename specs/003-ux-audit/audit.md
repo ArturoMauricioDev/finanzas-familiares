@@ -250,6 +250,27 @@ en `/auth/login` con la sesión limpia (FR-047).
 **Estado**: ✅ resuelto (ver §8).
 **Esfuerzo**: S · **Impacto**: medio
 
+#### UX-20 · Ajustes mezcla cierre de sesión y cuenta; no hay forma de eliminar la cuenta
+**Evidencia**: `frontend-web/app/(app)/settings/page.tsx` (el logout vivía en Ajustes),
+`frontend-mobile/app/(app)/settings.tsx` (igual), `backend/app/api/v1/users.py` (sin borrado de cuenta).
+**Qué pasa**: Ajustes ofrecía **Cerrar sesión** —una acción de sesión— y no ofrecía eliminar la
+cuenta; quien quería darse de baja no tenía salida, y la acción de sesión competía con las
+preferencias en la misma pantalla.
+**Recomendación** (implementada): quitar **Cerrar sesión** de Ajustes (vive en el menú del avatar en
+web y en Perfil en móvil, FR-047) y añadir **Eliminar cuenta** como única acción destructiva, con
+confirmación que nombre la cuenta. "Eliminar cuenta" hace **soft delete**: desactiva la cuenta
+(bloquea login, sesión y refresh) conservando los datos mínimos; si es el único integrante activo, la
+familia se marca como eliminada; si hay más, la membresía queda inactiva y el administrador se
+reasigna (FR-048, FR-049).
+**Criterios de aceptación**
+1. Ajustes (web y móvil) no ofrece cerrar sesión y sí **Eliminar cuenta** con confirmación.
+2. Al confirmar, la sesión local se limpia y la persona termina en `/auth/login`.
+3. La cuenta desactivada no puede iniciar sesión (`403`) ni reusar su sesión o refresh (`401`).
+4. Con un único integrante la familia queda eliminada; con varios, la membresía queda inactiva y el
+   administrador se reasigna.
+**Estado**: ✅ resuelto (ver §8).
+**Esfuerzo**: M · **Impacto**: alto
+
 ### S3 — Pulido
 
 | ID | Evidencia | Problema | Recomendación | Esf. |
@@ -350,7 +371,7 @@ manual (T029/T030) descrita en §8.
 ## 8. Estado de implementación
 
 Actualizado: 2026-11-26. Solo se marca lo que está implementado y verificado; el resto del backlog
-sigue abierto. Último corte: el avatar superior abre Perfil y Cerrar sesión (UX-19).
+sigue abierto. Último corte: Ajustes cambia cerrar sesión por eliminar cuenta (UX-20).
 
 ### Implementado
 
@@ -363,6 +384,7 @@ sigue abierto. Último corte: el avatar superior abre Perfil y Cerrar sesión (U
 | UX-17 | Validación de la sesión al entrar: endpoint `GET /auth/session` que resuelve usuario y membresía activa sin rotar tokens (`401` si el usuario ya no existe); `validateSession` en el cliente (una vez por access token, con dedupe y single-flight); el guard valida la entrada y reconcilia flags, limpia la sesión solo ante `401` y conserva el estado local ante fallos de red/5xx. `refreshSession` deja de borrar la sesión en errores de red. | `backend/app/api/v1/auth.py`, `backend/app/services/auth_service.py`, `backend/app/schemas/auth.py`, `backend/tests/test_auth.py`, `backend/scripts/seed_e2e.py`, `frontend-web/lib/api.ts`, `frontend-web/lib/session.ts`, `frontend-web/lib/types.ts`, `frontend-web/hooks/useAuthGuard.ts`, `frontend-web/e2e/fixtures/seed.ts`, `frontend-web/e2e/specs/entry-guard.spec.ts` | Backend 64 passed / 2 skipped (sin token, perfil incompleto, con membresía, usuario inexistente); web 152 tests y `pnpm test:e2e` en verde (identidad `ghost`); `typecheck` y `lint` en verde |
 | UX-18 | El código ya aceptado deja de mostrarse a quien invitó: la pantalla de Miembros consulta `GET /families/me/invitations/{id}` al entrar y limpia la invitación guardada si fue usada (FR-045). | `backend/app/api/v1/invitations.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-web/lib/api.ts`, `frontend-mobile/lib/api.ts`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx` | Backend `pytest` (usado/404/403); flujos web y móvil que ocultan el código usado; typecheck y lint en verde |
 | UX-19 | El avatar de la barra superior abre un menú con **Perfil** y **Cerrar sesión** (web); en móvil, **Cerrar sesión** está en la pantalla de Perfil. El cierre pide confirmación y navega a `/auth/login` (FR-047). | `frontend-web/components/navigation/TopAppBar.tsx`, `frontend-web/components/ui/Menu.tsx`, `frontend-mobile/app/(app)/(tabs)/profile.tsx`, `shared/i18n/{es,en}.json` | Pruebas de flujo del menú y del logout (web y móvil); typecheck y lint en verde |
+| UX-20 | Ajustes deja de ofrecer **Cerrar sesión** (queda en el menú del avatar web y en Perfil móvil) y pasa a ofrecer **Eliminar cuenta** con confirmación. Backend: `estado`/`fecha_eliminacion` en `users` (migración `007`), `DELETE /users/me` que desactiva la cuenta, inactiva o elimina la familia y reasigna admin; `get_current_user` y auth bloquean cuentas eliminadas (FR-048, FR-049). | `backend/app/models/user.py`, `backend/alembic/versions/007_user_status.py`, `backend/app/api/v1/users.py`, `backend/app/services/user_service.py`, `backend/app/core/deps.py`, `backend/app/services/auth_service.py`, `backend/tests/test_account.py`, `frontend-{web,mobile}/lib/api.ts`, `frontend-web/app/(app)/settings/page.tsx`, `frontend-web/app/(app)/profile/page.tsx`, `frontend-mobile/app/(app)/settings.tsx`, `shared/i18n/{es,en}.json` | Backend 73 passed / 2 skipped (soft delete de único integrante y con varios, bloqueo en login/sesión, idempotencia); migración `007` aplicada y revertida; web 164 tests, móvil 155; `check-shared`/`check-ui`/`check-contrast` en verde |
 
 | B2+ | Roles `tío`, `abuelo` y `otro` (miembros) con enum PostgreSQL ampliado; **Vínculo familiar** obligatorio y visible solo con el rol **Otro** (oculto y no enviado en el resto); copys cálidos **Crear familia** y **Agregar integrantes a tu familia**. | `backend/app/models/membership.py`, `backend/alembic/versions/006_family_role_extra_values.py`, `backend/app/schemas/invitation.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-{web,mobile}/lib/types.ts`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `shared/i18n/{es,en}.json` | Backend 58 passed / 2 skipped (tío/abuelo/otro → `member`, `422` en vínculo incoherente); enum `familyroleenum` con 7 valores y migración `006` aplicada/revertida; web 130 tests y móvil 131 (siete roles, campo condicional, copys, `jest-axe` con campo visible) |
 
@@ -546,3 +568,15 @@ Cierre de los hallazgos de `/speckit.converge` (Phase 12 de `tasks.md`):
   menú con **Perfil** y **Cerrar sesión**. En móvil, donde no hay avatar superior, **Cerrar sesión**
   se añade a la pantalla de Perfil. El cierre reutiliza el diálogo de confirmación de Ajustes y
   termina en `/auth/login` con la sesión limpia.
+
+### Eliminar cuenta (2026-11-26)
+
+- **UX-20 — FR-048, FR-049**: Ajustes deja de ofrecer **Cerrar sesión** (que ya vive en el menú del
+  avatar en web y en Perfil en móvil, FR-047) y pasa a ofrecer **Eliminar cuenta** con confirmación.
+  En backend se añade `DELETE /users/me` (204) que hace **soft delete**: `users.estado = eliminado` +
+  `fecha_eliminacion`, y según el caso marca la familia como eliminada (único integrante) o inactiva
+  la membresía y reasigna el administrador (varios). El acceso queda bloqueado en login (`403`),
+  sesión y refresh (`401`); `get_current_user` valida el usuario contra la base de datos. La operación
+  es idempotente: la segunda solicitud sin sesión válida responde `401`. Contrato nuevo: migración
+  `007` (`userstatusenum` + columnas) y endpoint de borrado con cuerpo vacío.
+
