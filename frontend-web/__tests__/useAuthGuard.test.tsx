@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 
-import { refreshSession, setUnauthorizedHandler } from "@/lib/api";
+import { refreshSession, setUnauthorizedHandler, validateSession } from "@/lib/api";
+import { ApiError } from "@/lib/errors";
 import * as session from "@/lib/session";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
@@ -15,11 +16,13 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/lib/api", () => ({
   refreshSession: jest.fn(),
+  validateSession: jest.fn(),
   setUnauthorizedHandler: jest.fn(),
   clearUnauthorizedHandler: jest.fn(),
 }));
 
 const mockRefreshSession = refreshSession as jest.Mock;
+const mockValidateSession = validateSession as jest.Mock;
 const mockSetUnauthorizedHandler = setUnauthorizedHandler as jest.Mock;
 
 function buildSession(overrides: Partial<session.SessionState> = {}): session.SessionState {
@@ -179,5 +182,53 @@ describe("useAuthGuard", () => {
     const handler = mockSetUnauthorizedHandler.mock.calls[0][0] as () => void;
     handler();
     expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login");
+  });
+
+  it("validates the session against the backend and reconciles family flags", async () => {
+    // La sesión local dice "sin familia"; el backend confirma que ya hay una.
+    session.saveSession(buildSession({ needs_family_setup: true }));
+    mockValidateSession.mockResolvedValue(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+        needs_family_setup: false,
+      }),
+    );
+
+    render(<Probe />);
+
+    expect(await screen.findByText("user-1")).toBeInTheDocument();
+    expect(mockValidateSession).toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalledWith("/family/select");
+  });
+
+  it("sends an obsolete session to login when the backend rejects it", async () => {
+    session.saveSession(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+        needs_family_setup: false,
+      }),
+    );
+    mockValidateSession.mockRejectedValue(new ApiError(401, "errors.auth.expiredSession", ""));
+
+    render(<Probe />);
+
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith("/auth/login"));
+    expect(session.getSession()).toBeNull();
+  });
+
+  it("keeps the local session when validation fails due to a network error", async () => {
+    session.saveSession(
+      buildSession({
+        user: { ...buildSession().user, family_id: "family-1", role: "admin" },
+        needs_family_setup: false,
+      }),
+    );
+    mockValidateSession.mockRejectedValue(new ApiError(0, "errors.status.0", ""));
+
+    render(<Probe />);
+
+    expect(await screen.findByText("user-1")).toBeInTheDocument();
+    expect(session.getSession()).not.toBeNull();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });

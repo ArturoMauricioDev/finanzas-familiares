@@ -43,7 +43,14 @@ export interface SessionState {
   needs_family_setup: boolean;
 }
 
-export type Identity = "admin" | "member" | "solo" | "familyless" | "newUser" | "expired";
+export type Identity =
+  | "admin"
+  | "member"
+  | "solo"
+  | "familyless"
+  | "newUser"
+  | "expired"
+  | "ghost";
 
 export interface Seed {
   generatedAt: string;

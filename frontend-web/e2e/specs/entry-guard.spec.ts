@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures/test";
-import { PENDING_INVITE_KEY } from "../fixtures/seed";
+import { PENDING_INVITE_KEY, SESSION_KEY } from "../fixtures/seed";
 
 const CYCLE_PATHS = ["/family/select", "/family/create", "/invite"];
 
@@ -57,5 +57,36 @@ test.describe("Puerta de entrada", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Unirme con un código" }),
     ).toBeVisible();
+  });
+
+  test("con sesión válida, el login reenvía al ciclo de familia", async ({ openAs }) => {
+    const page = await openAs("familyless", { path: "/auth/login" });
+    await expect(page).toHaveURL(/\/family\/select$/, { timeout: 20_000 });
+  });
+
+  test("un usuario inexistente con token vigente se limpia y vuelve al login", async ({
+    openAs,
+  }) => {
+    const page = await openAs("ghost", { path: "/" });
+
+    await expect(page).toHaveURL(/\/auth\/login$/, { timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1, name: "Kitho" })).toBeVisible();
+
+    const stored = await page.evaluate((key) => window.localStorage.getItem(key), SESSION_KEY);
+    expect(stored).toBeNull();
+  });
+
+  test("un fallo de red al validar conserva la sesión y no expulsa al login", async ({
+    openAs,
+  }) => {
+    const page = await openAs("admin");
+    await page.route("**/api/v1/auth/session", (route) => route.abort());
+    await page.goto("/");
+
+    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1, name: "Inicio" })).toBeVisible();
+
+    const stored = await page.evaluate((key) => window.localStorage.getItem(key), SESSION_KEY);
+    expect(stored).not.toBeNull();
   });
 });

@@ -401,3 +401,34 @@ a Home; validaciones bloquean el avance; "Atrás" conserva; "Salir" descarta el 
       el resultado; verificar `check-shared`, `check-ui` y `check-contrast` (FR-019, FR-022).
 - [ ] T049 [US5] Verificación manual del wizard a 375/768/1024/1440, zoom 200% y iOS/Android
       (**requiere navegador/dispositivo**).
+
+---
+
+## Phase 11: Validación de sesión en la entrada (UX-17, FR-034/FR-035)
+
+**Goal**: la entrada no confía solo en el JWT local; valida usuario y membresía contra el backend,
+reconcilia los flags y conserva la sesión ante fallos de red transitorios.
+
+**Independent Test**: un access token vigente de un usuario inexistente lleva al login y limpia la
+sesión; una membresía nueva se refleja al entrar; un fallo de red al validar no expulsa al login.
+
+- [X] T050 [P] [US1] Añadir `GET /api/v1/auth/session` (valida usuario y membresía activa sin rotar
+      tokens; `401` si el usuario no existe) en `backend/app/api/v1/auth.py`,
+      `backend/app/services/auth_service.py` y `backend/app/schemas/auth.py` (FR-034, UX-17).
+- [X] T051 [P] [US1] Cubrir el endpoint en `backend/tests/test_auth.py`: sin token, perfil
+      incompleto, con membresía activa y usuario inexistente (`401`) (SC-012, UX-17).
+- [X] T052 [US1] Implementar `validateSession` (una vez por access token, dedupe y single-flight) y
+      `applySessionInfo` en `frontend-web/lib/api.ts`, `frontend-web/lib/session.ts` y
+      `frontend-web/lib/types.ts`; validar la entrada en `frontend-web/hooks/useAuthGuard.ts`
+      reconciliando flags y limpiando la sesión solo ante `401` (FR-034, FR-035, UX-17).
+- [X] T053 [US1] Ajustar el `catch` de `refreshSession` para limpiar la sesión solo ante `401` y
+      conservar el estado local ante fallos de red/5xx (FR-016, UX-17).
+- [X] T054 [P] [US1] Añadir la identidad `ghost` (token válido para un usuario inexistente) en
+      `backend/scripts/seed_e2e.py` y `frontend-web/e2e/fixtures/seed.ts`, y las pruebas E2E de sesión
+      obsoleta, fallback sin red y login con sesión en
+      `frontend-web/e2e/specs/entry-guard.spec.ts` (SC-012, UX-17).
+- [X] T055 [P] [US1] Registrar UX-17 en `specs/003-ux-audit/audit.md` §4/§8 y dejar **UX-16 abierto**
+      (salida al login desde el ciclo de familia) como deuda explícita de este corte (UX-16, UX-17).
+- [ ] T056 [US1] Cerrar UX-16: acción "Cerrar sesión / Usar otra cuenta" en el layout del ciclo de
+      familia y en el login (web y móvil), que limpie sesión y código pendiente y navegue a
+      `/auth/login` (**fuera de este corte**).

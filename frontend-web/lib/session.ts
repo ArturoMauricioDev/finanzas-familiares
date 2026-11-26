@@ -2,6 +2,7 @@ import type {
   FamilyCreateResponse,
   FamilyLifecycleResponse,
   JoinInvitationResponse,
+  SessionResponse,
   TokenResponse,
   UserAuthInfo,
 } from "./types";
@@ -138,6 +139,24 @@ export function applyTokenResponse(data: TokenResponse): SessionState {
   const session: SessionState = {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
+    user: data.user,
+    needs_profile_setup: data.needs_profile_setup,
+    needs_family_setup: data.needs_family_setup,
+  };
+  saveSession(session);
+  clearStalePendingInvite(session);
+  return session;
+}
+
+/**
+ * Reconciliar los flags de onboarding con el estado devuelto por el backend,
+ * conservando los tokens vigentes. Devuelve `null` si ya no hay sesión local.
+ */
+export function applySessionInfo(data: SessionResponse): SessionState | null {
+  const current = getSession();
+  if (!current) return null;
+  const session: SessionState = {
+    ...current,
     user: data.user,
     needs_profile_setup: data.needs_profile_setup,
     needs_family_setup: data.needs_family_setup,

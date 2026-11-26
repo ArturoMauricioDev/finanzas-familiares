@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import sys
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -88,6 +89,30 @@ def _session(user: User, membership: Membership | None, *, expired: bool = False
         },
         "needs_profile_setup": not (user.nombre_visualizacion and user.foto_avatar),
         "needs_family_setup": membership is None,
+    }
+
+
+def _ghost_session() -> dict:
+    """Sesión con tokens válidos cuyo usuario ya no existe en la base.
+
+    Verifica que la entrada detecta usuarios obsoletos aunque el JWT siga
+    vigente y no los deja atrapados en el ciclo de familia.
+    """
+    ghost_id = str(uuid.uuid4())
+    payload = {"user_id": ghost_id, "family_id": None, "role": None}
+    return {
+        "access_token": create_access_token(payload),
+        "refresh_token": create_refresh_token(payload),
+        "user": {
+            "id": ghost_id,
+            "email": "ghost@e2e.kitho.test",
+            "nombre_visualizacion": "Fantasma",
+            "foto_avatar": None,
+            "family_id": None,
+            "role": None,
+        },
+        "needs_profile_setup": False,
+        "needs_family_setup": True,
     }
 
 
@@ -259,6 +284,7 @@ def seed() -> dict:
                 "familyless": _session(familyless, None),
                 "newUser": _session(new_user, None),
                 "expired": _session(admin, admin_membership, expired=True),
+                "ghost": _ghost_session(),
             },
             "families": {
                 "main": {"id": str(family.id), "name": family.nombre, "currency": family.moneda_local},
@@ -300,7 +326,7 @@ def main() -> None:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"seed_e2e: {len(payload['actors'])} actores y 5 identidades escritos en {output}")
+    print(f"seed_e2e: {len(payload['actors'])} actores y 6 identidades escritos en {output}")
 
 
 if __name__ == "__main__":

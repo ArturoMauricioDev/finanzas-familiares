@@ -27,3 +27,11 @@ class TokenResponse(BaseModel):
     user: UserAuthInfo
     needs_profile_setup: bool = False
     needs_family_setup: bool = False
+
+
+class SessionResponse(BaseModel):
+    """Estado de la sesión sin emitir tokens nuevos."""
+
+    user: UserAuthInfo
+    needs_profile_setup: bool = False
+    needs_family_setup: bool = False

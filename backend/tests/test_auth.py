@@ -1,8 +1,10 @@
 from app.core.config import settings
 from app.core.security import create_access_token, create_refresh_token, verify_token
+from app.models.family import Family
+from app.models.membership import Membership, RoleEnum, StatusEnum
 from app.models.user import User
 from app.services import auth_service
-from tests.conftest import create_user
+from tests.conftest import auth_headers, create_user
 
 
 def test_invalid_google_token_returns_401(client):
@@ -150,3 +152,74 @@ def test_google_login_reuses_existing_user(client, db, monkeypatch):
     assert body["needs_profile_setup"] is False
     assert body["needs_family_setup"] is True
     assert db.query(User).filter(User.google_id == "google-existing").count() == 1
+
+
+def test_session_without_token_returns_401(client):
+    response = client.get("/api/v1/auth/session")
+    assert response.status_code == 401
+
+
+def test_session_with_invalid_token_returns_401(client):
+    response = client.get(
+        "/api/v1/auth/session",
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+    assert response.status_code == 401
+
+
+def test_session_reports_flags_without_family(client, db):
+    user = create_user(db)
+
+    response = client.get("/api/v1/auth/session", headers=auth_headers(user))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["id"] == str(user.id)
+    assert body["user"]["family_id"] is None
+    assert body["user"]["role"] is None
+    assert body["needs_profile_setup"] is False
+    assert body["needs_family_setup"] is True
+
+
+def test_session_reports_incomplete_profile(client, db):
+    user = create_user(db, nombre=None, avatar=None)
+
+    response = client.get("/api/v1/auth/session", headers=auth_headers(user))
+
+    assert response.status_code == 200
+    assert response.json()["needs_profile_setup"] is True
+
+
+def test_session_reports_existing_family(client, db):
+    user = create_user(db, email="session-admin@example.com")
+    family = Family(nombre="Familia Sesión", moneda_local="MXN", creado_por=user.id)
+    db.add(family)
+    db.flush()
+    db.add(
+        Membership(
+            user_id=user.id,
+            family_id=family.id,
+            role=RoleEnum.admin,
+            estado=StatusEnum.activo,
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/auth/session", headers=auth_headers(user))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["family_id"] == str(family.id)
+    assert body["user"]["role"] == "admin"
+    assert body["needs_family_setup"] is False
+
+
+def test_session_unknown_user_returns_401(client, db):
+    token = create_access_token({"user_id": "00000000-0000-0000-0000-0000000000ff"})
+
+    response = client.get(
+        "/api/v1/auth/session",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 401

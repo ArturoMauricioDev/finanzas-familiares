@@ -3,8 +3,15 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { clearUnauthorizedHandler, refreshSession, setUnauthorizedHandler } from "@/lib/api";
 import {
+  clearUnauthorizedHandler,
+  refreshSession,
+  setUnauthorizedHandler,
+  validateSession,
+} from "@/lib/api";
+import { ApiError } from "@/lib/errors";
+import {
+  clearSession,
   clearStalePendingInvite,
   getPendingInviteCode,
   getSession,
@@ -38,16 +45,45 @@ export function useAuthGuard(requireFamily = false) {
         return;
       }
 
+      let validatedByRefresh = false;
+
       if (sessionNeedsRefresh(current)) {
         const refreshed = await refreshSession();
         if (!active) return;
-        if (!refreshed) {
+        if (refreshed) {
+          current = refreshed;
+          validatedByRefresh = true;
+        } else if (!getSession()) {
+          // El refresh token ya no es válido: la sesión se limpió.
           redirect("/auth/login");
           return;
+        } else {
+          // Fallo transitorio de red: se conserva la sesión local como respaldo.
+          current = reconcileFamilyFlag(current);
+          validatedByRefresh = true;
         }
-        current = refreshed;
       } else {
         current = reconcileFamilyFlag(current);
+      }
+
+      // Validar la sesión contra el backend una vez por access token para
+      // detectar usuarios/membresías inexistentes aunque el JWT siga vigente.
+      if (!validatedByRefresh) {
+        try {
+          const validated = await validateSession();
+          if (!active) return;
+          if (validated) {
+            current = validated;
+          }
+        } catch (error) {
+          if (!active) return;
+          if (error instanceof ApiError && error.status === 401) {
+            clearSession();
+            redirect("/auth/login");
+            return;
+          }
+          // Error de red o 5xx: se usa el estado local como respaldo.
+        }
       }
 
       clearStalePendingInvite(current);

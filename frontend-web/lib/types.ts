@@ -16,6 +16,12 @@ export interface TokenResponse {
   needs_family_setup: boolean;
 }
 
+export interface SessionResponse {
+  user: UserAuthInfo;
+  needs_profile_setup: boolean;
+  needs_family_setup: boolean;
+}
+
 export interface UserResponse {
   id: string;
   nombre_visualizacion: string | null;

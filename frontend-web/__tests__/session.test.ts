@@ -2,6 +2,7 @@ import {
   applyFamilyCreated,
   applyFamilyLeft,
   applyInvitationJoined,
+  applySessionInfo,
   applyTokenResponse,
   clearSession,
   getSession,
@@ -103,6 +104,43 @@ describe("session state", () => {
     applyTokenResponse(tokenResponse);
     clearSession();
     expect(getSession()).toBeNull();
+  });
+
+  it("reconciles onboarding flags from a validated session without rotating tokens", () => {
+    applyTokenResponse({
+      ...tokenResponse,
+      user: { ...tokenResponse.user, family_id: "family-1", role: "admin" },
+      needs_family_setup: false,
+    });
+
+    const session = applySessionInfo({
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: null,
+        foto_avatar: null,
+        family_id: null,
+        role: null,
+      },
+      needs_profile_setup: true,
+      needs_family_setup: true,
+    });
+
+    expect(session?.access_token).toBe("access");
+    expect(session?.refresh_token).toBe("refresh");
+    expect(session?.user.family_id).toBeNull();
+    expect(session?.needs_family_setup).toBe(true);
+    expect(getSession()?.needs_family_setup).toBe(true);
+  });
+
+  it("ignores session info when there is no stored session", () => {
+    expect(
+      applySessionInfo({
+        user: tokenResponse.user,
+        needs_profile_setup: true,
+        needs_family_setup: true,
+      }),
+    ).toBeNull();
   });
 });
 

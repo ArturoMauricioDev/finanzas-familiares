@@ -108,6 +108,37 @@ def authenticate_with_google(db: Session, token: str):
     )
 
 
+def session_info(db: Session, user_id):
+    """Estado de la sesión de un usuario existente, sin emitir tokens nuevos.
+
+    Devuelve ``None`` si el usuario ya no existe en la base (por ejemplo, tras
+    reiniciar los datos de desarrollo), para que la capa HTTP responda 401 y el
+    cliente pueda limpiar la sesión persistida.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+
+    membership = _active_membership(db, user.id)
+    family_id = str(membership.family_id) if membership else None
+    role = membership.role.value if membership else None
+
+    from app.schemas.auth import SessionResponse, UserAuthInfo
+
+    return SessionResponse(
+        user=UserAuthInfo(
+            id=str(user.id),
+            email=user.email,
+            nombre_visualizacion=user.nombre_visualizacion,
+            foto_avatar=user.foto_avatar,
+            family_id=family_id,
+            role=role,
+        ),
+        needs_profile_setup=not (user.nombre_visualizacion and user.foto_avatar),
+        needs_family_setup=membership is None,
+    )
+
+
 def refresh_tokens(db: Session, refresh_token: str):
     payload = verify_token(refresh_token)
     if not payload or payload.get("type") != "refresh":

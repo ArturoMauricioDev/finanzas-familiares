@@ -178,6 +178,44 @@ arriba de la pantalla).
 **Criterios**: un cambio de otro miembro se ve sin reiniciar la app.
 **Esfuerzo**: S · **Impacto**: medio
 
+#### UX-16 · Sin salida al login desde el ciclo de familia
+**Evidencia**: `frontend-web/app/(onboarding)/layout.tsx` (solo wordmark, sin salir),
+`frontend-web/app/(app)/settings/page.tsx:34-38` (único "Cerrar sesión", tras
+`useAuthGuard(true)`), `frontend-web/app/(auth)/auth/login/page.tsx:39-55` (reenvía cualquier
+sesión persistida a `nextPath`).
+**Qué pasa**: el único logout vive en Ajustes, que exige familia; con sesión persistida y sin
+familia, Ajustes redirige a `/family/select` y el login devuelve al ciclo. Solo borrando
+`finanzas_familiares_session` a mano en DevTools se vuelve a otra cuenta.
+**Impacto**: quien tiene la sesión "atrapada" no puede cambiar de cuenta ni cerrar sesión; refuerza
+la percepción de que el token sigue roto.
+**Recomendación**: añadir "Cerrar sesión" / "Usar otra cuenta" en el layout del ciclo de familia y
+en el propio login, que limpien sesión **y** código pendiente y naveguen a `/auth/login`; replicar
+en móvil para paridad.
+**Criterios de aceptación**
+1. Con sesión y sin familia hay una acción visible que cierra sesión y lleva a `/auth/login`.
+2. La acción limpia `finanzas_familiares_session` y `finanzas_familiares_pending_invite`.
+3. El login ofrece "usar otra cuenta" cuando ya hay una sesión.
+**Estado**: ⛔ abierto (punto 1 del plan; fuera de este corte).
+**Esfuerzo**: S · **Impacto**: alto
+
+#### UX-17 · La entrada no valida la sesión contra el backend
+**Evidencia**: `frontend-web/hooks/useAuthGuard.ts` (solo leía el JWT y los flags de
+`localStorage`), `frontend-web/lib/session.ts:20-28` (`getSession`),
+`frontend-web/app/(onboarding)/family/select/page.tsx` (sin llamadas a la API).
+**Qué pasa**: la entrada confiaba solo en el token local. Si el usuario o su membresía ya no
+existían (p. ej. base reiniciada) pero el access token seguía vigente, la app lo dejaba en
+`/family/select` sin corregirse. Además, un fallo de red al refrescar limpiaba la sesión y expulsaba
+al login aunque los datos siguieran siendo válidos.
+**Recomendación** (implementada): validar la sesión al entrar con `GET /auth/session` —valida
+usuario y membresía sin rotar tokens— una vez por access token; limpiar la sesión **solo** ante
+401 y conservar el estado local ante fallos de red o 5xx.
+**Criterios de aceptación**
+1. Un access token vigente de un usuario inexistente lleva al login y limpia la sesión.
+2. Una membresía creada/eliminada en otro dispositivo se reconcilia al entrar (flags del backend).
+3. Un fallo de red al validar no borra la sesión ni expulsa al login (respaldo local).
+**Estado**: ✅ resuelto (ver §8).
+**Esfuerzo**: S · **Impacto**: medio
+
 ### S3 — Pulido
 
 | ID | Evidencia | Problema | Recomendación | Esf. |
@@ -277,8 +315,8 @@ manual (T029/T030) descrita en §8.
 
 ## 8. Estado de implementación
 
-Actualizado: 2026-11-19. Solo se marca lo que está implementado y verificado; el resto del backlog
-sigue abierto.
+Actualizado: 2026-11-26. Solo se marca lo que está implementado y verificado; el resto del backlog
+sigue abierto. Último corte: validación de la sesión en la entrada (UX-17).
 
 ### Implementado
 
@@ -288,6 +326,7 @@ sigue abierto.
 | UX-07 | `ErrorMessage` acepta acción opcional; "Reintentar" conectado en Home y en Miembros (web + móvil). | `frontend-web/components/ui/InlineBanner.tsx`, `frontend-mobile/components/ui/InlineBanner.tsx`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx` | Prueba de reintento con segunda respuesta exitosa (web) y prueba del componente (móvil y web) |
 | B1 | Promesa de organización (no finanzas), 3 puntos de valor y nota de confianza en login; copy de perfil mínimo; jerarquía y consecuencias en crear/unirse; consecuencia de moneda antes de crear; formulario de unirse reducido a un campo (sin rol ni parentesco). | `shared/i18n/{es,en}.json`, `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(onboarding)/{invite,family/create,family/select}/page.tsx`, `frontend-mobile/app/(auth)/auth/login.tsx`, `frontend-mobile/app/(onboarding)/{invite/index,family/create,family/select}.tsx`, `specs/003-ux-audit/copy-deck-b.md` | `check-shared` sincronizado; typecheck, lint y tests en verde en web (127) y móvil (128); pruebas de flujo actualizadas (unirse envía solo `codigo`) |
 | B2 | Rol declarado en la invitación: columnas `rol_familiar`/`parentesco` en `invitations`, el rol de la membresía se deriva de la invitación al unirse, selector de rol (inicio en `hijo`) y parentesco opcional al invitar, "Invitación para: …" en el código, aviso explicado para quien no administra, y jerarquía contextual de `family/select` (con código → unirme; sin código → crear) con guard que devuelve a Home a quien ya tiene familia. | `backend/app/models/invitation.py`, `backend/alembic/versions/005_invitation_family_role.py`, `backend/app/schemas/invitation.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-{web,mobile}/lib/api.ts`, `frontend-{web,mobile}/lib/types.ts`, `frontend-web/app/(onboarding)/family/select/page.tsx`, `frontend-mobile/app/(onboarding)/family/select.tsx`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `frontend-{web,mobile}/components/family/InviteCode.tsx`, `frontend-{web,mobile}/hooks/useAuthGuard.ts`, `shared/i18n/{es,en}.json`, `specs/003-ux-audit/copy-deck-b.md` | Backend 55 passed / 2 skipped (rol heredado, rol del cuerpo ignorado, código heredado → `member`, `422` sin rol, `403` no admin); migración `005` aplicada y revertida (`downgrade -1` + `upgrade head`); web 127 tests, móvil 128 (jerarquía contextual, selector, no-admin, `jest-axe`); `check-ui` 105 archivos; `check-shared` sincronizado |
+| UX-17 | Validación de la sesión al entrar: endpoint `GET /auth/session` que resuelve usuario y membresía activa sin rotar tokens (`401` si el usuario ya no existe); `validateSession` en el cliente (una vez por access token, con dedupe y single-flight); el guard valida la entrada y reconcilia flags, limpia la sesión solo ante `401` y conserva el estado local ante fallos de red/5xx. `refreshSession` deja de borrar la sesión en errores de red. | `backend/app/api/v1/auth.py`, `backend/app/services/auth_service.py`, `backend/app/schemas/auth.py`, `backend/tests/test_auth.py`, `backend/scripts/seed_e2e.py`, `frontend-web/lib/api.ts`, `frontend-web/lib/session.ts`, `frontend-web/lib/types.ts`, `frontend-web/hooks/useAuthGuard.ts`, `frontend-web/e2e/fixtures/seed.ts`, `frontend-web/e2e/specs/entry-guard.spec.ts` | Backend 64 passed / 2 skipped (sin token, perfil incompleto, con membresía, usuario inexistente); web 152 tests y `pnpm test:e2e` en verde (identidad `ghost`); `typecheck` y `lint` en verde |
 
 | B2+ | Roles `tío`, `abuelo` y `otro` (miembros) con enum PostgreSQL ampliado; **Vínculo familiar** obligatorio y visible solo con el rol **Otro** (oculto y no enviado en el resto); copys cálidos **Crear familia** y **Agregar integrantes a tu familia**. | `backend/app/models/membership.py`, `backend/alembic/versions/006_family_role_extra_values.py`, `backend/app/schemas/invitation.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-{web,mobile}/lib/types.ts`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `shared/i18n/{es,en}.json` | Backend 58 passed / 2 skipped (tío/abuelo/otro → `member`, `422` en vínculo incoherente); enum `familyroleenum` con 7 valores y migración `006` aplicada/revertida; web 130 tests y móvil 131 (siete roles, campo condicional, copys, `jest-axe` con campo visible) |
 
@@ -321,6 +360,19 @@ Los 5 warnings de lint móvil son `react-hooks/set-state-in-effect` en pantallas
 (`profile/setup`, `profile/edit`, `login`, `(tabs)/index`, `family/members`); ninguno es un error y
 no cambian el comportamiento.
 
+### Verificación de cierre (2026-11-26) · Validación de sesión
+
+```bash
+docker compose exec -T backend pytest -q                             # 64 passed, 2 skipped
+cd frontend-web && pnpm run typecheck && pnpm run lint && pnpm test  # 152 tests
+cd frontend-web && pnpm test:e2e                                     # suite completa en verde
+```
+
+Cubre el hallazgo UX-17: `GET /auth/session` responde `401` para un usuario inexistente aunque el
+access token siga vigente; el guard limpia la sesión solo ante `401` y usa el estado local ante
+fallos de red. La identidad E2E `ghost` (token válido para un usuario que no existe) y la
+interceptación de `/auth/session` verifican ambos caminos.
+
 ### Criterios de aceptación comprobados
 
 - UX-01.1: `/` y el tab Inicio renderizan contenido; no queda `Loading` permanente.
@@ -342,6 +394,15 @@ no cambian el comportamiento.
   primaria y el login lleva directo a `/invite`; sin código lo es "crear" (FR-029, FR-030).
 - B2.5: quien ya tiene familia no vuelve al ciclo: `/family/select`, `/family/create` e `/invite`
   redirigen a `/` (FR-004), cubierto por `it.each` en ambos `useAuthGuard.test`.
+- UX-17.1: un access token vigente de un usuario inexistente lleva al login y limpia
+  `finanzas_familiares_session` (`test_session_unknown_user_returns_401` en backend; "un usuario
+  inexistente con token vigente se limpia y vuelve al login" en E2E con la identidad `ghost`).
+- UX-17.2: una membresía creada/eliminada se reconcilia al entrar con los flags del backend
+  (`test_session_reports_existing_family`; "validates the session against the backend and reconciles
+  family flags" en `useAuthGuard.test`).
+- UX-17.3: un fallo de red al validar no borra la sesión ni expulsa al login
+  ("keeps the local session when validation fails due to a network error" y "un fallo de red al
+  validar conserva la sesión y no expulsa al login" en E2E).
 
 ### Convergencia (Phase 8, 2026-11-19)
 
@@ -372,8 +433,9 @@ Cubre, sin sustituir la revisión móvil ni la visual:
   responsive 320→1440, estados de carga/error/vacío, accesibilidad, bundle sin Recharts, marca,
   sesión expirada, invitación por código (usado/caducado/heredado), moneda regional y
   eliminar/abandonar familia.
-- **Puerta de entrada** (`useAuthGuard`): sin sesión, sin perfil, sin familia, con familia y código
-  pendiente (escenario 0, FR-034/FR-035/SC-012).
+- **Puerta de entrada** (`useAuthGuard`): sin sesión, sin perfil, sin familia, con familia, código
+  pendiente, sesión persistida sin familia, usuario inexistente (`ghost`) y fallback ante fallo de
+  red al validar (escenario 0, FR-034/FR-035/SC-012, UX-17).
 - **Accesibilidad**: `axe` (WCAG 2.1 A/AA) en Login, Miembros, Ajustes, Inicio, unirse, crear familia
   y diálogo destructivo; teclado (salto al contenido, Escape con retorno de foco, foco del wizard,
   radios); Lighthouse de accesibilidad `>=95` en Login, Miembros y Ajustes.
@@ -405,4 +467,6 @@ D1–D5 están decididas (`decision-day-one.md`), así que ya nada de S1 espera 
 resuelto con jerarquía contextual + rol en la invitación (B2 cerrado en código) y UX-02 quedó cerrado
 con el enlace de privacidad. **UX-04** (Miembros) es el siguiente trabajo de la opción D, coherente con D4
 (solo admin invita) y con el selector de rol que ya vive ahí. UX-05, UX-06, UX-08, UX-09 y UX-10
-siguen abiertos.
+siguen abiertos. **UX-16** (salida al login desde el ciclo de familia) queda abierto como deuda
+explícita de este corte: se cerrará con la acción "Cerrar sesión / Usar otra cuenta" en el ciclo de
+familia y en el login, en web y móvil.

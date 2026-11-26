@@ -1,10 +1,11 @@
-import { api, ApiError, getApiBaseUrl } from "../lib/api";
+import { api, ApiError, getApiBaseUrl, validateSession } from "../lib/api";
 import * as sessionModule from "../lib/session";
 
 jest.mock("../lib/session", () => ({
   getAccessToken: jest.fn(() => "test-token"),
   getSession: jest.fn(() => null),
   applyTokenResponse: jest.fn(),
+  applySessionInfo: jest.fn(),
   clearSession: jest.fn(),
 }));
 
@@ -16,6 +17,7 @@ beforeEach(() => {
   global.fetch = fetchMock as unknown as typeof fetch;
   mockSession.getSession.mockReturnValue(null);
   mockSession.applyTokenResponse.mockReset();
+  mockSession.applySessionInfo.mockReset();
   mockSession.clearSession.mockReset();
 });
 
@@ -247,5 +249,114 @@ describe("api client", () => {
     expect(fetchMock.mock.calls[2][0]).toContain("/auth/refresh");
     expect(fetchMock.mock.calls[3][0]).toContain("/families/me");
     expect(mockSession.applyTokenResponse).toHaveBeenCalled();
+  });
+
+  it("validates the session against the backend", async () => {
+    const current = {
+      access_token: "validate-token-a",
+      refresh_token: "refresh-a",
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: "Ana",
+        foto_avatar: null,
+        family_id: null,
+        role: null,
+      },
+      needs_profile_setup: false,
+      needs_family_setup: true,
+    };
+    const reconciled = { ...current, needs_family_setup: false };
+    mockSession.getSession.mockReturnValue(current);
+    mockSession.applySessionInfo.mockReturnValue(reconciled);
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        user: { ...current.user, family_id: "family-1", role: "admin" },
+        needs_profile_setup: false,
+        needs_family_setup: false,
+      }),
+    );
+
+    const result = await validateSession();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain("/auth/session");
+    expect(mockSession.applySessionInfo).toHaveBeenCalled();
+    expect(result).toBe(reconciled);
+  });
+
+  it("validates only once per access token", async () => {
+    const current = {
+      access_token: "validate-token-b",
+      refresh_token: "refresh-b",
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: "Ana",
+        foto_avatar: null,
+        family_id: "family-1",
+        role: "admin",
+      },
+      needs_profile_setup: false,
+      needs_family_setup: false,
+    };
+    mockSession.getSession.mockReturnValue(current);
+    mockSession.applySessionInfo.mockReturnValue(current);
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        user: current.user,
+        needs_profile_setup: false,
+        needs_family_setup: false,
+      }),
+    );
+
+    await validateSession();
+    await validateSession();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the session when validation fails on the network", async () => {
+    mockSession.getSession.mockReturnValue({
+      access_token: "validate-token-c",
+      refresh_token: "refresh-c",
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: "Ana",
+        foto_avatar: null,
+        family_id: "family-1",
+        role: "admin",
+      },
+      needs_profile_setup: false,
+      needs_family_setup: false,
+    });
+    fetchMock.mockRejectedValue(new TypeError("Network request failed"));
+
+    await expect(validateSession()).rejects.toMatchObject({ status: 0 });
+    expect(mockSession.clearSession).not.toHaveBeenCalled();
+  });
+
+  it("clears the session when the backend rejects it with 401", async () => {
+    mockSession.getSession.mockReturnValue({
+      access_token: "validate-token-d",
+      refresh_token: "refresh-d",
+      user: {
+        id: "user-1",
+        email: "ana@example.com",
+        nombre_visualizacion: "Ana",
+        foto_avatar: null,
+        family_id: "family-1",
+        role: "admin",
+      },
+      needs_profile_setup: false,
+      needs_family_setup: false,
+    });
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ detail: "User no longer exists" }, 401))
+      .mockResolvedValueOnce(jsonResponse({ detail: "Invalid refresh token" }, 401));
+
+    await expect(validateSession()).rejects.toMatchObject({ status: 401 });
+    expect(mockSession.clearSession).toHaveBeenCalled();
   });
 });

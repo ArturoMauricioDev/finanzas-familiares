@@ -1,5 +1,6 @@
 import { ApiError, ConfigurationError, resolveError } from "./errors";
 import {
+  applySessionInfo,
   applyTokenResponse,
   clearSession,
   getAccessToken,
@@ -13,6 +14,7 @@ import type {
   FamilyRole,
   Invitation,
   JoinInvitationResponse,
+  SessionResponse,
   TokenResponse,
   UserResponse,
 } from "./types";
@@ -83,11 +85,23 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    const detail =
+      typeof data === "object" && data !== null && "detail" in data
+        ? (data as { detail: unknown }).detail
+        : undefined;
+    const descriptor = resolveError(response.status, detail);
+
     if (response.status === 401 && authenticated && allowRefresh) {
       const refreshed = await refreshSession();
       if (refreshed) {
         return request<T>(path, options, authenticated, false);
       }
+      // `refreshSession` solo limpia la sesión ante un 401 definitivo; ante un
+      // fallo de red transitorio la conserva, así que no la descartamos aquí.
+      if (!getSession()) {
+        notifyUnauthorized();
+      }
+      throw new ApiError(response.status, descriptor.key, descriptor.fallback);
     }
 
     if (response.status === 401 && authenticated) {
@@ -95,11 +109,6 @@ async function request<T>(
       notifyUnauthorized();
     }
 
-    const detail =
-      typeof data === "object" && data !== null && "detail" in data
-        ? (data as { detail: unknown }).detail
-        : undefined;
-    const descriptor = resolveError(response.status, detail);
     throw new ApiError(response.status, descriptor.key, descriptor.fallback);
   }
 
@@ -112,7 +121,7 @@ export function refreshSession(): Promise<SessionState | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
-        const session = await getSession();
+        const session = getSession();
         if (!session?.refresh_token) {
           clearSession();
           return null;
@@ -125,8 +134,13 @@ export function refreshSession(): Promise<SessionState | null> {
           false,
         );
         return applyTokenResponse(data);
-      } catch {
-        clearSession();
+      } catch (error) {
+        // Un 401 significa que el refresh token ya no es válido: la sesión
+        // persistida quedó obsoleta y se limpia. Un fallo de red o 5xx es
+        // transitorio y conserva la sesión para poder reintentar.
+        if (error instanceof ApiError && error.status === 401) {
+          clearSession();
+        }
         return null;
       }
     })().finally(() => {
@@ -135,6 +149,40 @@ export function refreshSession(): Promise<SessionState | null> {
   }
 
   return refreshPromise;
+}
+
+let sessionValidationPromise: Promise<SessionState | null> | null = null;
+let lastValidatedToken: string | null = null;
+
+/**
+ * Valida la sesión vigente contra `GET /auth/session` una vez por access token.
+ *
+ * Detecta usuarios o membresías que ya no existen aunque el JWT siga vigente,
+ * reconcilia los flags de onboarding y conserva la sesión ante fallos de red
+ * transitorios (el llamador decide si usa el estado local como respaldo).
+ */
+export function validateSession(): Promise<SessionState | null> {
+  const current = getSession();
+  if (!current?.access_token) {
+    return Promise.resolve(null);
+  }
+
+  if (lastValidatedToken === current.access_token) {
+    return Promise.resolve(current);
+  }
+
+  if (!sessionValidationPromise) {
+    const token = current.access_token;
+    sessionValidationPromise = (async () => {
+      const data = await request<SessionResponse>("/auth/session", { method: "GET" });
+      lastValidatedToken = token;
+      return applySessionInfo(data);
+    })().finally(() => {
+      sessionValidationPromise = null;
+    });
+  }
+
+  return sessionValidationPromise;
 }
 
 export const api = {
