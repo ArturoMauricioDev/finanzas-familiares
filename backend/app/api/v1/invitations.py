@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -20,6 +22,17 @@ def create_invitation(
     current_user: dict = Depends(get_current_user),
 ):
     return invitation_service.create_invitation(db, current_user["user_id"], request)
+
+
+@router.get("/families/me/invitations/{invitation_id}", response_model=InvitationResponse)
+def get_invitation(
+    invitation_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return invitation_service.get_invitation(
+        db, current_user["user_id"], invitation_id
+    )
 
 
 @router.post("/invitations/join", response_model=JoinInvitationResponse)

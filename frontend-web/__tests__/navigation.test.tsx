@@ -41,7 +41,7 @@ describe("web navigation", () => {
   it("marks the current destination with aria-current", () => {
     render(<Sidebar />);
 
-    expect(screen.getByRole("link", { name: "Miembros" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Familia" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Inicio" })).not.toHaveAttribute("aria-current");
   });
 

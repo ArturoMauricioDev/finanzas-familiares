@@ -13,7 +13,7 @@ export const messages = {
   "nav": {
     "primary": "Navegación principal",
     "home": "Inicio",
-    "members": "Miembros",
+    "members": "Familia",
     "profile": "Perfil",
     "settings": "Ajustes"
   },
@@ -301,7 +301,7 @@ export const messages = {
     "title": "Inicio",
     "subtitle": "Resumen de tu grupo familiar.",
     "welcome": "Hola, {name}.",
-    "membersCta": "Ver miembros",
+    "membersCta": "Ver familia",
     "settingsCta": "Abrir ajustes",
     "profileCta": "Editar perfil",
     "financeSoonTitle": "Finanzas en camino",
@@ -395,7 +395,7 @@ export const messages = {
   "nav": {
     "primary": "Primary navigation",
     "home": "Home",
-    "members": "Members",
+    "members": "Family",
     "profile": "Profile",
     "settings": "Settings"
   },
@@ -683,7 +683,7 @@ export const messages = {
     "title": "Home",
     "subtitle": "Your family group at a glance.",
     "welcome": "Hi, {name}.",
-    "membersCta": "View members",
+    "membersCta": "View family",
     "settingsCta": "Open settings",
     "profileCta": "Edit profile",
     "financeSoonTitle": "Finances coming soon",

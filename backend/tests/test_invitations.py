@@ -439,3 +439,70 @@ def test_join_as_extended_roles_stays_member(client, db):
         assert membership is not None
         assert membership.role == RoleEnum.member
         assert membership.rol_familiar == FamilyRoleEnum(role)
+
+
+def test_get_invitation_reports_used_status(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+    invitation = _create_invitation(client, admin)
+
+    pending = client.get(
+        f"/api/v1/families/me/invitations/{invitation['invitation_id']}",
+        headers=auth_headers(admin),
+    )
+    assert pending.status_code == 200
+    assert pending.json()["usado"] is False
+
+    invited = create_user(db, email="invited@example.com")
+    assert (
+        client.post(
+            "/api/v1/invitations/join",
+            json={"codigo": invitation["codigo"]},
+            headers=auth_headers(invited),
+        ).status_code
+        == 200
+    )
+
+    used = client.get(
+        f"/api/v1/families/me/invitations/{invitation['invitation_id']}",
+        headers=auth_headers(admin),
+    )
+    assert used.status_code == 200
+    assert used.json()["usado"] is True
+
+
+def test_get_invitation_from_another_family_is_not_found(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+    invitation = _create_invitation(client, admin)
+
+    outsider = create_user(db, email="outsider@example.com")
+    _create_family(client, outsider)
+
+    response = client.get(
+        f"/api/v1/families/me/invitations/{invitation['invitation_id']}",
+        headers=auth_headers(outsider),
+    )
+    assert response.status_code == 404
+
+
+def test_member_cannot_get_invitation(client, db):
+    admin = create_user(db, email="admin@example.com")
+    _create_family(client, admin)
+    invitation = _create_invitation(client, admin)
+
+    invited = create_user(db, email="invited@example.com")
+    assert (
+        client.post(
+            "/api/v1/invitations/join",
+            json={"codigo": invitation["codigo"]},
+            headers=auth_headers(invited),
+        ).status_code
+        == 200
+    )
+
+    response = client.get(
+        f"/api/v1/families/me/invitations/{invitation['invitation_id']}",
+        headers=auth_headers(invited),
+    )
+    assert response.status_code == 403

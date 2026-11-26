@@ -10,7 +10,7 @@
   "nav": {
     "primary": "Navegación principal",
     "home": "Inicio",
-    "members": "Miembros",
+    "members": "Familia",
     "profile": "Perfil",
     "settings": "Ajustes"
   },
@@ -298,7 +298,7 @@
     "title": "Inicio",
     "subtitle": "Resumen de tu grupo familiar.",
     "welcome": "Hola, {name}.",
-    "membersCta": "Ver miembros",
+    "membersCta": "Ver familia",
     "settingsCta": "Abrir ajustes",
     "profileCta": "Editar perfil",
     "financeSoonTitle": "Finanzas en camino",

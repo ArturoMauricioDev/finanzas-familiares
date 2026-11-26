@@ -30,6 +30,11 @@ el ciclo de vida de la familia."
 - Q: ¿Se conserva el borrador entre recargas? → A: sí, con **zustand + `persist`** (piloto de la decisión de estado para spec 004); se limpia al crear o al descartar.
 - Q: ¿Cambia el contrato backend? → A: no; `POST /families` se llama una sola vez al confirmar el último paso.
 
+### Session 2026-11-26
+
+- Q: ¿Cómo debe dejar de mostrarse a quien invitó un código que ya fue aceptado? → A: con un endpoint de consulta: la pantalla de Miembros vuelve a consultar el estado de la invitación guardada y, si ya fue usada, deja de mostrarla y ofrece generar otra.
+- Q: ¿Cómo se llama la sección de la familia en la interfaz? → A: **Familia** (antes "Miembros"): se cambia la etiqueta de navegación y el acceso desde Home a "Ver familia"; el encabezado interno sigue siendo "Integrantes".
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Entrar y entender para qué sirve Kitho (Priority: P1)
@@ -168,6 +173,8 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
 ### Edge Cases
 
 - Código inexistente, ya usado o caducado: mensaje específico y salida (corregir o volver).
+- Código ya aceptado: para quien lo emitió deja de mostrarse como activo en cuanto vuelve a la
+  pantalla; se le ofrece generar uno nuevo.
 - Código válido pero la familia ya tiene 10 integrantes activos: se impide la unión y se explica.
 - Persona que ya pertenece a una familia intenta unirse con un código: se impide con mensaje claro.
 - Doble envío (doble toque/doble clic) al crear o unirse: la acción se ejecuta una sola vez.
@@ -304,6 +311,12 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
   MUST NOT contener secretos ni datos de servidor.
 - **FR-044**: Los errores de acción MUST mostrarse junto al paso que los origina; un error de
   validación de moneda MUST devolver al paso de la moneda conservando el resto.
+- **FR-045**: Un código ya aceptado MUST dejar de mostrarse a la persona que lo emitió: la pantalla
+  de invitación MUST volver a consultar el estado del código guardado al entrar y, si ya fue usado,
+  MUST ocultarlo y volver al estado sin código activo (FR-027), sin permitir copiarlo ni compartirlo.
+- **FR-046**: La sección de la familia MUST llamarse **Familia** en la navegación (es y en, incluida
+  la etiqueta accesible) y el acceso desde Home MUST rotularse "Ver familia" / "View family"; el
+  encabezado interno de la pantalla MUST seguir siendo "Integrantes", sin usar jerga de modelo.
 
 ### Key Entities
 
@@ -351,6 +364,8 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
   persistidos.
 - **SC-016**: 0 violaciones de accesibilidad (foco al paso, live region de progreso,
   `aria-current`) en las verificaciones automatizadas.
+- **SC-017**: 0 códigos ya aceptados mostrados como activos en la sesión de quien los emitió
+  (verificado por prueba automatizada al volver a Miembros).
 
 ## Assumptions
 

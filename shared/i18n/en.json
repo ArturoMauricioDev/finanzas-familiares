@@ -10,7 +10,7 @@
   "nav": {
     "primary": "Primary navigation",
     "home": "Home",
-    "members": "Members",
+    "members": "Family",
     "profile": "Profile",
     "settings": "Settings"
   },
@@ -298,7 +298,7 @@
     "title": "Home",
     "subtitle": "Your family group at a glance.",
     "welcome": "Hi, {name}.",
-    "membersCta": "View members",
+    "membersCta": "View family",
     "settingsCta": "Open settings",
     "profileCta": "Edit profile",
     "financeSoonTitle": "Finances coming soon",

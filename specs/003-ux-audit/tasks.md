@@ -462,3 +462,40 @@ la familia, sin reescribir tareas previas. Orden: HIGH → MEDIUM → LOW.
 - [X] T064 [US3] Rechazar con `422` un `parentesco` no vacío (aunque sea solo espacios) enviado con un
       rol distinto de **Otro**, como indica el contrato de invitaciones, en vez de normalizarlo a
       `None` per FR-031 (partial).
+
+---
+
+## Phase 13: Invitación ya aceptada
+
+**Goal**: que un código de invitación ya aceptado deje de mostrarse a quien lo emitió, con un
+endpoint de consulta de estado, sin exponer un listado de invitaciones (FR-045, SC-017, UX-18).
+
+- [X] T065 [US3] Añadir `GET /families/me/invitations/{invitation_id}` en
+      `backend/app/api/v1/invitations.py` y `get_invitation` en
+      `backend/app/services/invitation_service.py`: solo administradores (`403`), `404` si la
+      invitación no existe o no pertenece a la familia, `200` con `InvitationResponse` (incluye
+      `usado`).
+- [X] T066 [P] [US3] Añadir pruebas backend del endpoint en `backend/tests/test_invitations.py`:
+      estado tras aceptar, `404` de otra familia y `403` de miembro.
+- [X] T067 [US3] Añadir `api.getInvitation(id)` en `frontend-web/lib/api.ts` y
+      `frontend-mobile/lib/api.ts`.
+- [X] T068 [US3] En Miembros (web y móvil), al entrar, consultar el estado de la invitación guardada
+      (`kitho_last_invitation`) y limpiarla si `usado` es `true`, volviendo al estado sin código
+      activo (FR-045).
+- [X] T069 [P] [US3] Cubrir el ocultado con pruebas de flujo en web y móvil: un código usado deja de
+      mostrarse y el fallo de la consulta no rompe la pantalla.
+
+---
+
+## Phase 14: Sección "Familia"
+
+**Goal**: renombrar la sección de la familia en la interfaz: la etiqueta de navegación pasa de
+"Miembros" a "Familia" (es/en, incluida la accesible) y el acceso desde Home pasa de "Ver miembros" a
+"Ver familia" (FR-046). El encabezado interno sigue siendo "Integrantes".
+
+- [X] T070 [P] [US3] Cambiar `nav.members` a "Familia"/"Family" y `dashboard.membersCta` a
+      "Ver familia"/"View family" en `shared/i18n/es.json` y `shared/i18n/en.json`; regenerar
+      `messages.generated.ts` con `node scripts/generate-shared.mjs` y actualizar las aserciones de
+      navegación y e2e que fijan el nombre accesible (`frontend-web/__tests__/navigation.test.tsx`,
+      `frontend-web/e2e/specs/responsive.spec.ts`, `frontend-web/e2e/specs/a11y-axe.spec.ts`,
+      `frontend-web/e2e/lighthouse.mjs`).

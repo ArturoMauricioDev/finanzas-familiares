@@ -232,6 +232,10 @@ export const api = {
     });
   },
 
+  getInvitation(invitationId: string): Promise<Invitation> {
+    return request<Invitation>(`/families/me/invitations/${encodeURIComponent(invitationId)}`);
+  },
+
   joinFamilyByCode(payload: { codigo: string }): Promise<JoinInvitationResponse> {
     return request<JoinInvitationResponse>("/invitations/join", {
       method: "POST",

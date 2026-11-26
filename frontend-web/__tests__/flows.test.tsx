@@ -6,6 +6,7 @@ import { api, ApiError, refreshSession } from "@/lib/api";
 import * as auth from "@/lib/auth";
 import * as session from "@/lib/session";
 import { useFamilyDraft } from "@/lib/store/familyDraft";
+import { useLastInvitation } from "@/lib/store/invitation";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 import LoginPage from "@/app/(auth)/auth/login/page";
@@ -66,6 +67,7 @@ jest.mock("@/lib/api", () => {
       createFamily: jest.fn(),
       getFamily: jest.fn(),
       createInvitation: jest.fn(),
+      getInvitation: jest.fn(),
       joinInvitation: jest.fn(),
       joinFamilyByCode: jest.fn(),
       leaveFamily: jest.fn(),
@@ -118,6 +120,13 @@ const family = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  useLastInvitation.setState({ familyId: null, invitation: null, hydrated: false });
+  mockApi.getInvitation.mockResolvedValue({
+    invitation_id: "invitation-default",
+    codigo: "DEFAULT1",
+    usado: false,
+    expira_en: "2026-12-03T00:00:00Z",
+  });
   mockSearchParams.delete("token");
   mockSession.getPendingInviteCode.mockReturnValue(null);
   mockSession.getPendingInviteCode.mockReturnValue(null);
@@ -513,6 +522,85 @@ describe("web onboarding flows", () => {
     expect(screen.getByText("¿Dar de baja a Luis del grupo?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
+  });
+
+  it("hides an invitation code once it has been accepted", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    useLastInvitation.setState({
+      familyId: "family-1",
+      invitation: {
+        invitation_id: "invitation-1",
+        codigo: "ABCD1234",
+        rol_familiar: "hijo",
+        usado: false,
+        expira_en: "2026-12-03T00:00:00Z",
+      },
+      hydrated: true,
+    });
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+    mockApi.getInvitation.mockResolvedValue({
+      invitation_id: "invitation-1",
+      codigo: "ABCD1234",
+      rol_familiar: "hijo",
+      usado: true,
+      expira_en: "2026-12-03T00:00:00Z",
+    });
+
+    render(<FamilyMembersPage />);
+
+    await waitFor(() => expect(mockApi.getInvitation).toHaveBeenCalledWith("invitation-1"));
+    expect(
+      await screen.findByText("No hay una invitación activa. Genera un código para invitar."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("ABCD-1234")).not.toBeInTheDocument();
+  });
+
+  it("keeps the invitation visible when the status check fails", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    useLastInvitation.setState({
+      familyId: "family-1",
+      invitation: {
+        invitation_id: "invitation-1",
+        codigo: "ABCD1234",
+        rol_familiar: "hijo",
+        usado: false,
+        expira_en: "2026-12-03T00:00:00Z",
+      },
+      hydrated: true,
+    });
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+    mockApi.getInvitation.mockRejectedValue(new ApiError(500, "errors.details.serverError"));
+
+    render(<FamilyMembersPage />);
+
+    await waitFor(() => expect(mockApi.getInvitation).toHaveBeenCalledWith("invitation-1"));
+    expect(screen.getByText("ABCD-1234")).toBeInTheDocument();
   });
 
   it("shows the kinship field only for the Other role and requires it", async () => {

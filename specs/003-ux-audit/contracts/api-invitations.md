@@ -117,10 +117,28 @@ membresía activa por persona + bloqueo de la invitación).
 
 ---
 
-## 3. Mostrar el código en la interfaz
+## 3. Consultar una invitación
 
-No hay endpoint nuevo: la pantalla de invitación usa la respuesta de creación (código, rol,
-caducidad) y la lista de miembros muestra el rol aplicado.
+`GET /families/me/invitations/{invitation_id}`
+
+**Quién**: solo una membresía activa con permiso de administrador (D4). Cualquier otra → `403`.
+**Para qué**: que la pantalla de invitación sepa si el código guardado ya fue aceptado y deje de
+mostrarlo (FR-045), sin exponer un listado de invitaciones.
+
+**Respuesta `200`**: el mismo cuerpo que la creación (`InvitationResponse`), con `usado` en `true`
+cuando la invitación ya se consumió.
+
+**Errores**: `403` no administrador · `404` invitación inexistente o de otra familia · `422` id con
+formato inválido.
+
+---
+
+## 4. Mostrar el código en la interfaz
+
+La pantalla de invitación usa la respuesta de creación (código, rol, caducidad) y la lista de
+miembros muestra el rol aplicado. Para que un código ya aceptado deje de mostrarse (FR-045), la
+pantalla vuelve a consultar su estado con el endpoint de §3 al entrar; un código usado se oculta y se
+ofrece generar otro. No se expone un listado de invitaciones.
 
 **Copy requerido** (`shared/i18n/{es,en}.json`):
 

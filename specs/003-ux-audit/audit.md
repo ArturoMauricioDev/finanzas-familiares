@@ -216,6 +216,23 @@ usuario y membresía sin rotar tokens— una vez por access token; limpiar la se
 **Estado**: ✅ resuelto (ver §8).
 **Esfuerzo**: S · **Impacto**: medio
 
+#### UX-18 · El código ya aceptado sigue visible para quien invitó
+**Evidencia**: `frontend-web/app/(app)/family/members/page.tsx`,
+`frontend-mobile/app/(app)/(tabs)/family/members.tsx`,
+`frontend-{web,mobile}/lib/store/invitation.ts` (`kitho_last_invitation`).
+**Qué pasa**: al generar un código se guarda en el cliente y se vuelve a mostrar tras una recarga
+(T059), pero nunca se refresca su estado: si la persona invitada lo acepta, quien invitó sigue
+viéndolo como **activo** y puede volver a copiarlo o compartirlo.
+**Recomendación** (implementada): consultar el estado del código guardado con
+`GET /families/me/invitations/{id}` al entrar en Miembros; si ya fue usado, ocultarlo y ofrecer
+generar otro (FR-045).
+**Criterios de aceptación**
+1. Con un código aceptado, al volver a Miembros deja de mostrarse el código activo.
+2. El estado se consulta una sola vez por carga y su fallo no rompe la pantalla.
+3. Un código nuevo reemplaza al anterior en el mismo espacio.
+**Estado**: ✅ resuelto (ver §8 y Convergence).
+**Esfuerzo**: S · **Impacto**: medio
+
 ### S3 — Pulido
 
 | ID | Evidencia | Problema | Recomendación | Esf. |
@@ -316,7 +333,7 @@ manual (T029/T030) descrita en §8.
 ## 8. Estado de implementación
 
 Actualizado: 2026-11-26. Solo se marca lo que está implementado y verificado; el resto del backlog
-sigue abierto. Último corte: validación de la sesión en la entrada (UX-17).
+sigue abierto. Último corte: el código ya aceptado deja de mostrarse a quien invitó (UX-18).
 
 ### Implementado
 
@@ -327,6 +344,7 @@ sigue abierto. Último corte: validación de la sesión en la entrada (UX-17).
 | B1 | Promesa de organización (no finanzas), 3 puntos de valor y nota de confianza en login; copy de perfil mínimo; jerarquía y consecuencias en crear/unirse; consecuencia de moneda antes de crear; formulario de unirse reducido a un campo (sin rol ni parentesco). | `shared/i18n/{es,en}.json`, `frontend-web/app/(auth)/auth/login/page.tsx`, `frontend-web/app/(onboarding)/{invite,family/create,family/select}/page.tsx`, `frontend-mobile/app/(auth)/auth/login.tsx`, `frontend-mobile/app/(onboarding)/{invite/index,family/create,family/select}.tsx`, `specs/003-ux-audit/copy-deck-b.md` | `check-shared` sincronizado; typecheck, lint y tests en verde en web (127) y móvil (128); pruebas de flujo actualizadas (unirse envía solo `codigo`) |
 | B2 | Rol declarado en la invitación: columnas `rol_familiar`/`parentesco` en `invitations`, el rol de la membresía se deriva de la invitación al unirse, selector de rol (inicio en `hijo`) y parentesco opcional al invitar, "Invitación para: …" en el código, aviso explicado para quien no administra, y jerarquía contextual de `family/select` (con código → unirme; sin código → crear) con guard que devuelve a Home a quien ya tiene familia. | `backend/app/models/invitation.py`, `backend/alembic/versions/005_invitation_family_role.py`, `backend/app/schemas/invitation.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-{web,mobile}/lib/api.ts`, `frontend-{web,mobile}/lib/types.ts`, `frontend-web/app/(onboarding)/family/select/page.tsx`, `frontend-mobile/app/(onboarding)/family/select.tsx`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `frontend-{web,mobile}/components/family/InviteCode.tsx`, `frontend-{web,mobile}/hooks/useAuthGuard.ts`, `shared/i18n/{es,en}.json`, `specs/003-ux-audit/copy-deck-b.md` | Backend 55 passed / 2 skipped (rol heredado, rol del cuerpo ignorado, código heredado → `member`, `422` sin rol, `403` no admin); migración `005` aplicada y revertida (`downgrade -1` + `upgrade head`); web 127 tests, móvil 128 (jerarquía contextual, selector, no-admin, `jest-axe`); `check-ui` 105 archivos; `check-shared` sincronizado |
 | UX-17 | Validación de la sesión al entrar: endpoint `GET /auth/session` que resuelve usuario y membresía activa sin rotar tokens (`401` si el usuario ya no existe); `validateSession` en el cliente (una vez por access token, con dedupe y single-flight); el guard valida la entrada y reconcilia flags, limpia la sesión solo ante `401` y conserva el estado local ante fallos de red/5xx. `refreshSession` deja de borrar la sesión en errores de red. | `backend/app/api/v1/auth.py`, `backend/app/services/auth_service.py`, `backend/app/schemas/auth.py`, `backend/tests/test_auth.py`, `backend/scripts/seed_e2e.py`, `frontend-web/lib/api.ts`, `frontend-web/lib/session.ts`, `frontend-web/lib/types.ts`, `frontend-web/hooks/useAuthGuard.ts`, `frontend-web/e2e/fixtures/seed.ts`, `frontend-web/e2e/specs/entry-guard.spec.ts` | Backend 64 passed / 2 skipped (sin token, perfil incompleto, con membresía, usuario inexistente); web 152 tests y `pnpm test:e2e` en verde (identidad `ghost`); `typecheck` y `lint` en verde |
+| UX-18 | El código ya aceptado deja de mostrarse a quien invitó: la pantalla de Miembros consulta `GET /families/me/invitations/{id}` al entrar y limpia la invitación guardada si fue usada (FR-045). | `backend/app/api/v1/invitations.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-web/lib/api.ts`, `frontend-mobile/lib/api.ts`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx` | Backend `pytest` (usado/404/403); flujos web y móvil que ocultan el código usado; typecheck y lint en verde |
 
 | B2+ | Roles `tío`, `abuelo` y `otro` (miembros) con enum PostgreSQL ampliado; **Vínculo familiar** obligatorio y visible solo con el rol **Otro** (oculto y no enviado en el resto); copys cálidos **Crear familia** y **Agregar integrantes a tu familia**. | `backend/app/models/membership.py`, `backend/alembic/versions/006_family_role_extra_values.py`, `backend/app/schemas/invitation.py`, `backend/app/services/invitation_service.py`, `backend/tests/test_invitations.py`, `frontend-{web,mobile}/lib/types.ts`, `frontend-web/app/(app)/family/members/page.tsx`, `frontend-mobile/app/(app)/(tabs)/family/members.tsx`, `shared/i18n/{es,en}.json` | Backend 58 passed / 2 skipped (tío/abuelo/otro → `member`, `422` en vínculo incoherente); enum `familyroleenum` con 7 valores y migración `006` aplicada/revertida; web 130 tests y móvil 131 (siete roles, campo condicional, copys, `jest-axe` con campo visible) |
 
@@ -494,3 +512,12 @@ Cierre de los hallazgos de `/speckit.converge` (Phase 12 de `tasks.md`):
   persona que ya tiene familia.
 - **T064 — `parentesco` con rol ≠ Otro (FR-031)**: el backend responde `422` si se envía `parentesco`
   (aunque sea solo espacios) con cualquier rol distinto de Otro, según el contrato.
+
+### Código aceptado deja de mostrarse (2026-11-26)
+
+- **UX-18 — FR-045**: un código ya aceptado deja de mostrarse a quien lo emitió. La pantalla de
+  Miembros consulta `GET /families/me/invitations/{invitation_id}` (nuevo, solo administradores) al
+  entrar y, si la invitación guardada quedó usada, la limpia y vuelve al estado sin código activo.
+  Esto **acota** T059: persistir la última invitación sigue siendo válido, pero ya no se muestra como
+  activa una vez consumida. El contrato de invitaciones pasa de "no hay endpoint nuevo" a exponer
+  este endpoint de lectura (sin listado).

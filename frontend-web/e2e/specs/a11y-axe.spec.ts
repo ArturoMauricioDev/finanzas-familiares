@@ -39,7 +39,7 @@ test.describe("Accesibilidad (axe)", () => {
     await audit(page);
   });
 
-  test("Miembros", async ({ openAs }) => {
+  test("Familia", async ({ openAs }) => {
     const page = await openAs("admin", { path: "/family/members" });
     await expect(page.getByRole("heading", { level: 1, name: "Familia E2E" })).toBeVisible();
     await audit(page);

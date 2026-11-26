@@ -51,7 +51,7 @@ test.describe("Idioma", () => {
     "un error ya visible se traduce sin recargar",
     async () => {
       // No es alcanzable en web: el único selector de idioma está en Ajustes y
-      // las pantallas con errores (Miembros, Invitación) no lo incluyen. La
+      // las pantallas con errores (Familia, Invitación) no lo incluyen. La
       // traducción en caliente de un error ya renderizado queda cubierta por
       // `frontend-web/__tests__/i18n.test.ts` y `locale.test.tsx`.
     },

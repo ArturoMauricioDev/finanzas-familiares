@@ -2,7 +2,7 @@
 /**
  * Lighthouse (solo accesibilidad) sobre el build de producción.
  *
- * 002 · Escenario 10: Login, Miembros y Ajustes deben puntuar >= 95 en la
+ * 002 · Escenario 10: Login, Familia y Ajustes deben puntuar >= 95 en la
  * categoría de accesibilidad, sin violaciones críticas.
  *
  * Por qué un script y no `lighthouse` a secas:
@@ -32,7 +32,7 @@ const THRESHOLD = 0.95;
 
 const ROUTES = [
   { path: "/auth/login", label: "Login", authenticated: false },
-  { path: "/family/members", label: "Miembros", authenticated: true },
+  { path: "/family/members", label: "Familia", authenticated: true },
   { path: "/settings", label: "Ajustes", authenticated: true },
 ];
 

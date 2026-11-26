@@ -108,6 +108,40 @@ def create_invitation(db: Session, user_id, request):
     )
 
 
+def get_invitation(db: Session, user_id, invitation_id):
+    membership = _active_membership(db, user_id)
+    if not membership or membership.role != RoleEnum.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can view invitations",
+        )
+
+    invitation = (
+        db.query(Invitation)
+        .filter(
+            Invitation.id == invitation_id,
+            Invitation.family_id == membership.family_id,
+        )
+        .first()
+    )
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found",
+        )
+
+    from app.schemas.invitation import InvitationResponse
+
+    return InvitationResponse(
+        invitation_id=str(invitation.id),
+        codigo=invitation.codigo,
+        rol_familiar=invitation.rol_familiar,
+        parentesco=invitation.parentesco,
+        expira_en=invitation.expira_en,
+        usado=invitation.usado,
+    )
+
+
 def join_invitation(db: Session, user_id, request):
     if _active_membership(db, user_id):
         raise HTTPException(

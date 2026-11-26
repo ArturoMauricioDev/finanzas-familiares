@@ -37,7 +37,7 @@ test.describe("Navegación responsive", () => {
 
       const current = page.locator('a[aria-current="page"]:visible');
       await expect(current).toHaveCount(1);
-      await expect(current).toHaveAccessibleName("Miembros");
+      await expect(current).toHaveAccessibleName("Familia");
     });
   }
 
@@ -50,7 +50,7 @@ test.describe("Navegación responsive", () => {
     await expect(bottom.getByRole("link")).toHaveCount(3);
     await expect(bottom.getByRole("link", { name: "Ajustes" })).toHaveCount(0);
     await expect(bottom.getByRole("link", { name: "Inicio" })).toBeVisible();
-    await expect(bottom.getByRole("link", { name: "Miembros" })).toBeVisible();
+    await expect(bottom.getByRole("link", { name: "Familia" })).toBeVisible();
     await expect(bottom.getByRole("link", { name: "Perfil" })).toBeVisible();
   });
 

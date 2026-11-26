@@ -113,6 +113,26 @@ export default function FamilyMembersPage() {
   const invitation =
     family && storedFamilyId === family.family.id ? storedInvitation : null;
 
+  useEffect(() => {
+    if (!invitation) return;
+    if (invitation.usado) {
+      clearStoredInvitation();
+      return;
+    }
+    let active = true;
+    void api
+      .getInvitation(invitation.invitation_id)
+      .then((fresh) => {
+        if (active && fresh.usado) clearStoredInvitation();
+      })
+      .catch(() => {
+        // Sin conexión no se rompe la pantalla: se conserva el código mostrado.
+      });
+    return () => {
+      active = false;
+    };
+  }, [family, invitation, clearStoredInvitation]);
+
   const resolveActionError = useCallback(
     async (err: unknown): Promise<string | null> => {
       if (err instanceof ApiError && err.status === 401) {
