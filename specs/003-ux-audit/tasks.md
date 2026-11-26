@@ -544,3 +544,15 @@ estado correcto (FR-048, FR-049, SC-019, UX-20).
       añadir **Eliminar cuenta** con `Dialog` y `ErrorMessage`.
 - [X] T080 [P] [US1] Cubrir el flujo con pruebas: `backend/tests/test_account.py` y pruebas de flujo
       y de cliente en web y móvil (confirmar, fallar sin limpiar sesión, y salir de Perfil).
+
+---
+
+## Phase 17: Convergence
+
+**Goal**: cerrar el hueco detectado entre SC-019/FR-049 y las pruebas: la especificación exige que
+una cuenta eliminada no pueda reusar su **refresh token**, y que ese bloqueo quede verificado por
+prueba automatizada. La implementación ya existe; falta la cobertura.
+
+- [X] T081 [US1] Añadir en `backend/tests/test_account.py` una prueba de que un refresh token vigente
+      de una cuenta eliminada responde `401` en `POST /api/v1/auth/refresh`, usando
+      `create_refresh_token({"user_id": ...})` tras `DELETE /users/me`, per FR-049/SC-019 (partial).

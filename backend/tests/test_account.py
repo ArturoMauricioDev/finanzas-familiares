@@ -1,5 +1,6 @@
 import uuid
 
+from app.core.security import create_refresh_token
 from app.models.family import Family, FamilyStatusEnum
 from app.models.membership import Membership, RoleEnum, StatusEnum
 from app.models.user import User, UserStatusEnum
@@ -103,6 +104,18 @@ def test_deleted_account_session_is_rejected(client, db):
     assert client.delete("/api/v1/users/me", headers=headers).status_code == 204
 
     response = client.get("/api/v1/auth/session", headers=headers)
+
+    assert response.status_code == 401
+
+
+def test_deleted_account_refresh_token_is_rejected(client, db):
+    user = create_user(db, email="refresh@example.com")
+    refresh_token = create_refresh_token({"user_id": str(user.id)})
+    assert (
+        client.delete("/api/v1/users/me", headers=auth_headers(user)).status_code == 204
+    )
+
+    response = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
 
     assert response.status_code == 401
 
