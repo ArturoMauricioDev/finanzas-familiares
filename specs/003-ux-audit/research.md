@@ -191,3 +191,37 @@ entre el login y la unión evita que la garantía de FR-030 se rompa por el paso
 `/family/select`, `/family/create`, `/invite` exigen sesión); el login resuelve el destino con
 `nextPath`/`redirectFromSession`; el código pendiente se lee de `lib/session` en ambas plataformas.
 La verificación se hace con pruebas de guard (`useAuthGuard.test`) y de flujo, no con backend.
+
+## R13 · Wizard de creación vs formulario único
+
+**Decisión (2026-11-25)**: tres pasos (Nombre → Moneda → Rol + resumen) en ruta única.
+
+**Rationale**: el formulario único no guía las dos consecuencias críticas (moneda irreversible y
+padre/madre = administrador). El wizard las secuencia y mantiene una acción primaria por paso
+(FR-036...FR-040), sin tocar el backend.
+
+**Alternativas consideradas**:
+
+- *Formulario único mejorado*: menor fricción, pero menos guía; se pospone.
+- *Dos pasos (nombre+moneda / rol+resumen)*: menos toques, pero mezcla dos consecuencias en un paso.
+- *Sub-rutas por paso*: URL/back reales, pero exige compartir borrador y más archivos; se descarta a
+  favor de la ruta única.
+
+## R14 · Borrador con zustand persist
+
+**Decisión (2026-11-25)**: `zustand` + `persist` para el borrador del wizard, en ruta única. Web
+`localStorage`; móvil adapter sobre `lib/storage.ts`.
+
+**Rationale**: sobrevivir a recargas y servir de piloto de la decisión de estado de cliente para la
+spec 004. Evita introducir dos mecanismos de persistencia y mantiene el borrador fuera del estado de
+servidor.
+
+**Alternativas consideradas**:
+
+- *Estado local en memoria*: se pierde al recargar; contradice FR-043.
+- *`sessionStorage` a mano*: reimplementa lo que `persist` ya da.
+- *Reservar `zustand` solo para la spec 004*: retrasa el piloto; se prefiere validarlo aquí.
+
+**Implementación**: store `{step, nombre, moneda, rolFamiliar, setField, next, back, reset}` bajo
+`kitho_family_draft`; `reset` al crear o descartar; en web `skipHydration`/`rehydrate` para evitar
+mismatch SSR. No contiene secretos ni datos de servidor.

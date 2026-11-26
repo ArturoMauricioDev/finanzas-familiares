@@ -19,6 +19,7 @@ export { Page } from "./Page";
 export { SearchField } from "./SearchField";
 export { Select } from "./Select";
 export { Spinner } from "./Spinner";
+export { Stepper } from "./Stepper";
 export { Switch } from "./Switch";
 export { Tabs } from "./Tabs";
 export { Wordmark } from "./Wordmark";

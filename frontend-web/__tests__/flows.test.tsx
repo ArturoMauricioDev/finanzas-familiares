@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { api, ApiError, refreshSession } from "@/lib/api";
 import * as auth from "@/lib/auth";
 import * as session from "@/lib/session";
+import { useFamilyDraft } from "@/lib/store/familyDraft";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 import LoginPage from "@/app/(auth)/auth/login/page";
@@ -120,6 +121,14 @@ beforeEach(() => {
   mockSession.getPendingInviteCode.mockReturnValue(null);
   mockSession.getPendingInviteCode.mockReturnValue(null);
   window.confirm = jest.fn(() => true);
+  window.localStorage.clear();
+  useFamilyDraft.setState({
+    step: 1,
+    nombre: "",
+    moneda: "",
+    rolFamiliar: "padre",
+    hydrated: false,
+  });
 });
 
 describe("web onboarding flows", () => {
@@ -313,7 +322,7 @@ describe("web onboarding flows", () => {
     expect(create.className).toContain("border-outline");
   });
 
-  it("creates a family and stores the refreshed tokens", async () => {
+  it("creates a family stepping through the wizard and stores the refreshed tokens", async () => {
     useSession(buildSession({ needs_family_setup: true }));
     mockApi.createFamily.mockResolvedValue({
       family,
@@ -322,12 +331,17 @@ describe("web onboarding flows", () => {
     });
 
     render(<FamilyCreatePage />);
-    fireEvent.change(screen.getByLabelText("Nombre de la familia"), {
-      target: { value: "Familia Pérez" },
-    });
-    fireEvent.change(screen.getByLabelText(/Moneda local/), {
+
+    const nameField = await screen.findByLabelText("Nombre de la familia");
+    fireEvent.change(nameField, { target: { value: "Familia Pérez" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    fireEvent.change(await screen.findByLabelText(/Moneda local/), {
       target: { value: "EUR" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByText("Revisa antes de crear")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Crear familia" }));
 
     await waitFor(() =>
@@ -340,6 +354,57 @@ describe("web onboarding flows", () => {
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
     expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/");
+  });
+
+  it("blocks the wizard step until the name is valid and keeps values when going back", async () => {
+    useSession(buildSession({ needs_family_setup: true }));
+
+    render(<FamilyCreatePage />);
+
+    const nameField = await screen.findByLabelText("Nombre de la familia");
+    const continueButton = screen.getByRole("button", { name: "Continuar" });
+    expect(continueButton).toBeDisabled();
+
+    fireEvent.change(nameField, { target: { value: "Familia Pérez" } });
+    expect(continueButton).toBeEnabled();
+    fireEvent.click(continueButton);
+
+    fireEvent.change(await screen.findByLabelText(/Moneda local/), {
+      target: { value: "EUR" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(await screen.findByText("Revisa antes de crear")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Atrás" }));
+    expect(screen.getByLabelText(/Moneda local/)).toHaveValue("EUR");
+    fireEvent.click(screen.getByRole("button", { name: "Atrás" }));
+    expect(screen.getByLabelText("Nombre de la familia")).toHaveValue("Familia Pérez");
+  });
+
+  it("has no detectable accessibility violations across the wizard steps", async () => {
+    useSession(buildSession({ needs_family_setup: true }));
+
+    const { container } = render(<FamilyCreatePage />);
+    await screen.findByLabelText("Nombre de la familia");
+
+    let results = await axe(container);
+    expect(results.violations).toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText("Nombre de la familia"), {
+      target: { value: "Familia Pérez" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await screen.findByLabelText(/Moneda local/);
+
+    results = await axe(container);
+    expect(results.violations).toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText(/Moneda local/), { target: { value: "EUR" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    await screen.findByText("Revisa antes de crear");
+
+    results = await axe(container);
+    expect(results.violations).toHaveLength(0);
   });
 
   it("joins a family with an invitation code", async () => {

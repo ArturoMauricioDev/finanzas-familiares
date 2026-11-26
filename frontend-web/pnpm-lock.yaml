@@ -190,6 +190,9 @@ importers:
       recharts:
         specifier: ^3.10.1
         version: 3.10.1(@types/react@19.3.0)(react-dom@19.0.0-rc-66855b96-20241106(react@19.0.0-rc-66855b96-20241106))(react-is@19.3.1)(react@19.0.0-rc-66855b96-20241106)(redux@5.0.1)
+      zustand:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/react@19.3.0)(immer@11.2.9)(react@19.0.0-rc-66855b96-20241106)(use-sync-external-store@1.7.0(react@19.0.0-rc-66855b96-20241106))
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.3.4
@@ -3656,6 +3659,24 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zustand@5.1.0:
+    resolution: {integrity: sha512-ciJZlP48M1PTQbVQq81CGVFxHTLpZNrFjKqwjtCU34AWuXTZT/jrF3p9+fI84Cf1eSCMLapxqBy/SNTfwOBuqA==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
 
 snapshots:
 
@@ -7540,3 +7561,10 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  zustand@5.1.0(@types/react@19.3.0)(immer@11.2.9)(react@19.0.0-rc-66855b96-20241106)(use-sync-external-store@1.7.0(react@19.0.0-rc-66855b96-20241106)):
+    optionalDependencies:
+      '@types/react': 19.3.0
+      immer: 11.2.9
+      react: 19.0.0-rc-66855b96-20241106
+      use-sync-external-store: 1.7.0(react@19.0.0-rc-66855b96-20241106)

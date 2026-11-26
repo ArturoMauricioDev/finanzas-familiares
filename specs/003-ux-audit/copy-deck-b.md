@@ -91,6 +91,30 @@ usa el término canónico **familia**, nunca "grupo".
 | `dashboard.checkInvite` | Agregar integrantes a tu familia | Add members to your family |
 | `dashboard.checkInviteDone` | Ya son {count} en la familia | You are already {count} in the family |
 
+## 4c. Crear familia (wizard)
+
+| Clave | Español | Inglés |
+| --- | --- | --- |
+| `family.wizardProgress` | Paso {current} de {total} | Step {current} of {total} |
+| `family.wizardStepAnnounce` | Paso {current} de {total}: {title} | Step {current} of {total}: {title} |
+| `family.wizardStepNameTitle` | ¿Cómo se llama tu familia? | What is your family called? |
+| `family.wizardStepNameHint` | Entre 1 y 120 caracteres. | Between 1 and 120 characters. |
+| `family.wizardStepCurrencyTitle` | Elige la moneda de la familia | Choose the family currency |
+| `family.wizardStepRoleTitle` | Tu rol en la familia | Your role in the family |
+| `family.wizardRoleHint` | Padre y madre administran con los mismos permisos. | Father and mother administer with the same permissions. |
+| `family.wizardSummaryTitle` | Revisa antes de crear | Review before creating |
+| `family.wizardSummaryName` | Familia: {name} | Family: {name} |
+| `family.wizardSummaryCurrency` | Moneda: {currency} | Currency: {currency} |
+| `family.wizardContinue` | Continuar | Continue |
+| `family.wizardBack` | Atrás | Back |
+| `family.wizardExit` | Salir | Exit |
+| `family.wizardExitConfirmTitle` | Descartar la creación | Discard creation |
+| `family.wizardExitConfirmBody` | Se perderán los datos que has introducido. | The information you entered will be lost. |
+| `family.wizardExitConfirm` | Descartar | Discard |
+
+El paso 2 reutiliza `family.createSubtitle` (consecuencia de la moneda) y las claves `family.currency*`;
+el botón final sigue siendo `family.createFamily` ("Crear familia").
+
 ## 5. Unirme con un código
 
 | Clave | Español | Inglés |

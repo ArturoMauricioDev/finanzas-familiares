@@ -295,7 +295,8 @@ Foundational (T007–T011) + US3 (T020–T027) + US2 de verificación (T017–T0
 - Las tareas de UI no están hechas sin la matriz de estados de `docs/ux-playbook.md` §5 y la
   Definición de Hecho §10 (8 estados, copy es/en, tokens, teclado, `jest-axe`, 4 anchos).
 - El campo de vínculo condicional añade un estado nuevo a la matriz (`ux-checklist.md`).
-- No se introduce ninguna dependencia nueva ni se toca la moneda única.
+- Se introduce **una** dependencia de cliente: `zustand` ^5 (borrador del wizard, R14; piloto de la
+  decisión de estado global de la spec 004). No se toca la moneda única.
 - Finanzas y presupuestos siguen fuera de alcance (spec 004): solo se anuncian como "en camino".
 - **Estado al 2026-11-20**: T001–T031 y T034 completadas. Backend 58 passed / 2 skipped; web 130
   tests; móvil 131 tests; typecheck y lint sin errores (5 warnings previos de `set-state-in-effect`
@@ -313,6 +314,12 @@ Foundational (T007–T011) + US3 (T020–T027) + US2 de verificación (T017–T0
   ("Padre · Administrador · Tú") y el feedback de acciones (invitar, promover, dar de baja) es local
   al control; claves i18n sin uso `roleFamilyLabel`, `rolePermissionLabel` y `memberStatusActive`
   eliminadas. Web 130 tests y móvil 131 en verde; `check-shared`/`check-ui`/`check-contrast` OK.
+- **Wizard de crear familia (2026-11-25)**: T041–T048 completadas (T049 manual pendiente).
+  `zustand` 5.1.0 en web y móvil; `Stepper` en `components/ui` por app; borrador
+  `kitho_family_draft` con `skipHydration` + rehidratación en cliente; tests del store aislado y
+  flujo por pasos. Web 143 tests y móvil 147 en verde; typecheck y lint sin errores (5 warnings
+  previos de `set-state-in-effect` en móvil); `jest-axe` sin violaciones en los tres pasos;
+  `check-shared` sincronizado, `check-ui` 109 archivos y `check-contrast` 38 pares en verde.
 
 ---
 
@@ -358,3 +365,39 @@ invitación sin sesión, tras autenticarse, llega directo a `/invite`.
 
 **Checkpoint**: la puerta de entrada queda verificada; sin sesión no hay acceso al ciclo y el orden
 login → perfil → ciclo → Home se cumple con el código pendiente preservado.
+
+---
+
+## Phase 10: Wizard de crear familia (FR-036...FR-044, SC-013...SC-016) — US5
+
+**Goal**: alta de familia en 3 pasos guiados, en ruta única, con borrador persistido en cliente.
+
+**Independent Test**: completar el wizard con valores válidos crea la familia una sola vez y llega
+a Home; validaciones bloquean el avance; "Atrás" conserva; "Salir" descarta el borrador.
+
+- [X] T041 [P] [US5] Añadir `zustand@^5` a `frontend-web/package.json` y
+      `frontend-mobile/package.json` y crear `frontend-web/lib/store/familyDraft.ts` y
+      `frontend-mobile/lib/store/familyDraft.ts` (`{step, nombre, moneda, rolFamiliar, setField,
+      next, back, reset}`) con `persist` (`kitho_family_draft`); web con `localStorage` +
+      `skipHydration`/`rehydrate`, móvil con adapter sobre `lib/storage.ts`. Revisar `audit.md` §4 y
+      registrar cualquier hueco de onboarding con un ID `UX-xx` nuevo (FR-043, R14).
+- [X] T042 [P] [US5] Crear `frontend-web/components/ui/Stepper.tsx` y
+      `frontend-mobile/components/ui/Stepper.tsx` (progressbar, `aria-current`/estado, live region
+      "Paso n de 3"), tokens-only, y exportarlos en `components/ui/index.ts` (FR-042).
+- [X] T043 [P] [US5] Añadir las claves `family.wizard*` en `shared/i18n/{es,en}.json`
+      (copy-deck §4c) y regenerar con `node scripts/generate-shared.mjs` (FR-017, SC-007).
+- [X] T044 [US5] Reescribir `frontend-web/app/(onboarding)/family/create/page.tsx` como wizard de
+      tres pasos con el store y `Stepper`: validación por paso, "Atrás", "Salir" con confirmación,
+      foco al encabezado y anuncio de progreso; rol con `RadioGroup` (FR-036...FR-040, FR-042).
+- [X] T045 [US5] Replicar el wizard en `frontend-mobile/app/(onboarding)/family/create.tsx` con la
+      misma lógica y accesibilidad; rol con `ChoiceGroup` (FR-036...FR-042).
+- [X] T046 [US5] Enviar `POST /families` solo al confirmar el paso 3, conservar
+      `applyFamilyCreated` + `clearPendingInviteCode` + `router.replace("/")`, limpiar el borrador y
+      mapear errores por paso (moneda → paso 2) (FR-041, FR-044, SC-013).
+- [X] T047 [US5] Reescribir los tests de `create` en `frontend-web/__tests__/flows.test.tsx` y
+      `frontend-mobile/__tests__/flows.test.tsx` como recorrido por pasos; añadir tests del store
+      aislado y `jest-axe` por paso (SC-014, SC-016).
+- [X] T048 [P] [US5] Actualizar `specs/003-ux-audit/ux-checklist.md` §8 y `copy-deck-b.md` §4c con
+      el resultado; verificar `check-shared`, `check-ui` y `check-contrast` (FR-019, FR-022).
+- [ ] T049 [US5] Verificación manual del wizard a 375/768/1024/1440, zoom 200% y iOS/Android
+      (**requiere navegador/dispositivo**).

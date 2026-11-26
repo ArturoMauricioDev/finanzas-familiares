@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { api, ApiError, refreshSession } from "../lib/api";
 import * as auth from "../lib/auth";
 import * as session from "../lib/session";
+import { useFamilyDraft } from "../lib/store/familyDraft";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { useIdTokenAuthRequest } from "expo-auth-session/providers/google";
 
@@ -121,13 +122,21 @@ const family = {
   fecha_creacion: "2026-10-29T00:00:00Z",
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   delete mockParams.token;
   mockSession.getSession.mockResolvedValue(null);
   mockSession.getPendingInviteCode.mockResolvedValue(null);
   mockSession.getPendingInviteCode.mockResolvedValue(null);
   mockUseIdTokenAuthRequest.mockReturnValue([{}, null, jest.fn()]);
+  await useFamilyDraft.persist.clearStorage();
+  useFamilyDraft.setState({
+    step: 1,
+    nombre: "",
+    moneda: "",
+    rolFamiliar: "padre",
+    hydrated: false,
+  });
 });
 
 describe("mobile onboarding flows", () => {
@@ -297,7 +306,7 @@ describe("mobile onboarding flows", () => {
     expect(mockRouter.push).toHaveBeenCalledWith("/invite");
   });
 
-  it("creates a family and stores the refreshed tokens", async () => {
+  it("creates a family stepping through the wizard and stores the refreshed tokens", async () => {
     useSession(buildSession({ needs_family_setup: true }));
     mockApi.createFamily.mockResolvedValue({
       family,
@@ -306,7 +315,16 @@ describe("mobile onboarding flows", () => {
     });
 
     await render(<FamilyCreateScreen />);
-    await fireEvent.changeText(screen.getByPlaceholderText("Ej. Familia Pérez"), "Familia Pérez");
+
+    const name = await screen.findByPlaceholderText("Ej. Familia Pérez");
+    await fireEvent.changeText(name, "Familia Pérez");
+    await fireEvent.press(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => expect(screen.getByText("Moneda local (ISO 4217)")).toBeTruthy());
+    await waitFor(() => expect(useFamilyDraft.getState().moneda).not.toBe(""));
+    await fireEvent.press(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => expect(screen.getByText("Revisa antes de crear")).toBeTruthy());
     await fireEvent.press(screen.getByRole("button", { name: "Crear familia" }));
 
     await waitFor(() =>
@@ -319,6 +337,27 @@ describe("mobile onboarding flows", () => {
     expect(mockSession.applyFamilyCreated).toHaveBeenCalled();
     expect(mockSession.clearPendingInviteCode).toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith("/");
+  });
+
+  it("keeps the wizard values when going back", async () => {
+    useSession(buildSession({ needs_family_setup: true }));
+
+    await render(<FamilyCreateScreen />);
+
+    const name = await screen.findByPlaceholderText("Ej. Familia Pérez");
+    await fireEvent.changeText(name, "Familia Pérez");
+    await fireEvent.press(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByText("Moneda local (ISO 4217)")).toBeTruthy());
+    await waitFor(() => expect(useFamilyDraft.getState().moneda).not.toBe(""));
+    await fireEvent.press(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(screen.getByText("Revisa antes de crear")).toBeTruthy());
+
+    await fireEvent.press(screen.getByRole("button", { name: "Atrás" }));
+    await waitFor(() => expect(screen.getByText("Moneda local (ISO 4217)")).toBeTruthy());
+    await fireEvent.press(screen.getByRole("button", { name: "Atrás" }));
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("Ej. Familia Pérez").props.value).toBe("Familia Pérez"),
+    );
   });
 
   it("joins a family with an invitation code", async () => {

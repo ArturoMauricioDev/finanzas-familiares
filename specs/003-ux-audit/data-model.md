@@ -110,3 +110,10 @@ La puerta de entrada (FR-034/FR-035) es de navegación: no añade entidades ni c
 invitación pendiente vive en el cliente (`getPendingInviteCode`) y se consume al unirse; el backend
 sigue exigiendo token y su contrato no cambia. La secuencia login → perfil mínimo (solo si falta) →
 ciclo de familia → Home no altera el modelo.
+
+## Borrador de creación (cliente, sin persistencia de servidor)
+
+El wizard no añade entidades ni columnas. El borrador vive solo en el cliente:
+`{step, nombre, moneda, rolFamiliar}`, persistido bajo `kitho_family_draft` y limpiado al crear
+(FR-041) o descartar. No contiene secretos ni datos de servidor. En el éxito se reutiliza
+`FamilyCreateResponse` (`family_id`, `tokens`, `membership`).

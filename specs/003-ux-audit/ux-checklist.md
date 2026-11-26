@@ -92,6 +92,25 @@ revisan como regresión.
 - [ ] Aprobado con observaciones
 - [ ] Rechazado
 
+## 8. Crear familia (wizard) — *(US5, implementado 2026-11-25)*
+
+- [x] Objetivo: crear la familia en tres pasos entendiendo consecuencias
+- [x] Acción primaria por paso: "Continuar" (1–2) y "Crear familia" (3)
+- [x] Secundarias: "Atrás" (sin pérdida), "Salir" (confirmación que nombre el objeto)
+- [x] Estados: carga inicial (detección), carga de acción, error de carga (selección manual), error
+      local por paso, éxito, offline/timeout; vacío y sin permiso n/a justificados
+- [x] Progreso anunciado ("Paso n de 3"), `aria-current`/estado y foco al encabezado del paso
+- [x] Copy es/en; sin jerga; consecuencia de la moneda antes del control
+- [x] Tokens-only; `Stepper` en `components/ui`; sin cards dentro de cards
+- [ ] Métricas: entrada (paso 1), éxito (`family_created`), abandono por paso (sin PII) —
+      **diferido**: la instrumentación (Umami) sigue pendiente a nivel global (`audit.md` §5)
+
+**Re-verificado tras el wizard (2026-11-25)**: `zustand` 5.1.0 añadido en web y móvil; `Stepper`
+reutilizado de `components/ui`; borrador persistido (`kitho_family_draft`) con `skipHydration` y
+rehidratación en el cliente. Web 143 tests y móvil 147 en verde; typecheck y lint sin errores (5
+warnings previos de `set-state-in-effect` en móvil); `jest-axe` sin violaciones en los tres pasos;
+`check-shared` sincronizado, `check-ui` 109 archivos y `check-contrast` 38 pares en verde.
+
 **Referencia automatizada (2026-11-19)**: backend 55 passed / 2 skipped; web 127 tests; móvil 128
 tests; typecheck y lint sin errores (5 warnings previos de `set-state-in-effect` en móvil);
 `check-ui` 105 archivos; `check-shared` sincronizado; migración `005` aplicada y revertida;

@@ -24,6 +24,12 @@ el ciclo de vida de la familia."
 - Q: Cuando alguien abre un enlace de invitación sin tener sesión, ¿cuál debe ser el orden correcto de entrada? → A: Login primero conservando el código; tras autenticarse va directo a **Unirme**, sin pasar por la elección de familia.
 - Q: En el primer acceso, ¿dónde debe colocarse el perfil mínimo dentro de la secuencia de entrada? → A: Antes del ciclo de familia, solo si falta (login → perfil → ciclo de familia → Home).
 
+### Session 2026-11-25
+
+- Q: ¿Cómo se guía la creación de familia? → A: wizard de **3 pasos** (Nombre → Moneda → Rol + resumen), una sola acción primaria por paso; sigue siendo una **ruta única** con estado en cliente.
+- Q: ¿Se conserva el borrador entre recargas? → A: sí, con **zustand + `persist`** (piloto de la decisión de estado para spec 004); se limpia al crear o al descartar.
+- Q: ¿Cambia el contrato backend? → A: no; `POST /families` se llama una sola vez al confirmar el último paso.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Entrar y entender para qué sirve Kitho (Priority: P1)
@@ -127,6 +133,38 @@ de familia.
 
 ---
 
+### User Story 5 - Crear la familia en pasos guiados (Priority: P2)
+
+Una persona con sesión y sin familia elige crear. En lugar de un único formulario, avanza en tres
+pasos: pone el nombre, elige la moneda (y entiende que no se puede cambiar) y confirma su rol con un
+resumen antes de crear. Puede volver atrás sin perder lo escrito o salir descartando el borrador.
+
+**Why this priority**: es una refinación del alta de familia (no un camino nuevo); guía las dos
+consecuencias que más se malentienden —moneda única e irreversible, y rol padre/madre = administrador—
+y reduce errores, pero el formulario único ya cumple el objetivo.
+
+**Independent Test**: completar el wizard con nombre vacío (bloquea en el paso 1), moneda inválida
+(bloquea en el paso 2) y confirmar el rol; el resultado crea la familia y llega a Home.
+
+**Acceptance Scenarios**:
+
+1. **Given** una persona sin familia en el alta, **When** abre crear familia, **Then** ve el paso 1
+   (nombre) con la única acción primaria "Continuar", y el progreso "Paso 1 de 3".
+2. **Given** el paso 1, **When** el nombre está vacío o supera 120, **Then** "Continuar" está
+   deshabilitado y, si se fuerza, aparece error local.
+3. **Given** el paso 2, **When** entra, **Then** ve la consecuencia "no se puede cambiar" antes del
+   control y, si la detección automática falla, puede elegir la moneda manualmente.
+4. **Given** el paso 3, **When** confirma, **Then** ve el resumen (nombre y moneda), elige padre/madre
+   y la acción final **Crear familia** crea la familia una sola vez y lleva a Home.
+5. **Given** cualquier paso > 1, **When** pulsa "Atrás", **Then** vuelve al paso anterior con los
+   valores intactos.
+6. **Given** un borrador con datos, **When** pulsa "Salir", **Then** se pide confirmación y, al
+   aceptar, el borrador se descarta.
+7. **Given** una recarga a mitad del wizard, **When** vuelve, **Then** retoma el paso y los valores
+   guardados.
+
+---
+
 ### Edge Cases
 
 - Código inexistente, ya usado o caducado: mensaje específico y salida (corregir o volver).
@@ -141,6 +179,13 @@ de familia.
 - Familia cuyo único administrador abandona: la familia conserva al menos un administrador.
 - Persona sin sesión que abre directamente una pantalla del ciclo (enlace o historial): se le lleva
   al login; si traía un código de invitación, se conserva y, tras entrar, va a "Unirme".
+- Detección de moneda lenta o fallida en el wizard: no bloquea; permite elegir la moneda manualmente
+  y reintentar.
+- Recarga a mitad del wizard de creación: reanuda el paso y los valores persistidos; un borrador
+  corrupto se ignora y se arranca en el paso 1.
+- Familia creada en otra pestaña o sesión durante el wizard: el alta responde 409/400 y se redirige
+  a Home.
+- Sesión caducada a mitad del wizard: se refresca y, si falla, se va al login conservando el borrador.
 
 ## Requirements *(mandatory)*
 
@@ -238,6 +283,28 @@ de familia.
 - **FR-035**: La secuencia de entrada MUST respetar el orden login → perfil mínimo (solo si falta) →
   ciclo de familia → Home; el perfil MUST resolverse antes de elegir, crear o unirse.
 
+**Crear familia (wizard)**
+
+- **FR-036**: La creación de familia MUST presentarse como un wizard de **tres pasos**
+  (Nombre → Moneda → Rol + resumen), en **una sola ruta**, y MUST mostrar una **única acción
+  primaria por paso**.
+- **FR-037**: El paso del nombre MUST validar entre 1 y 120 caracteres y MUST bloquear "Continuar"
+  mientras el valor sea inválido.
+- **FR-038**: El paso de la moneda MUST explicar, **antes** del control, que no se puede cambiar
+  después, y MUST ofrecer detección automática con estado de carga y selección manual si falla.
+- **FR-039**: El último paso MUST confirmar el rol entre padre y madre y MUST mostrar un **resumen**
+  (nombre y moneda) antes de la acción final.
+- **FR-040**: El wizard MUST permitir volver al paso anterior sin perder lo introducido y salir
+  descartando el borrador, con confirmación cuando haya datos.
+- **FR-041**: La creación MUST seguir enviando `POST /families` **una sola vez**, al confirmar el
+  último paso; el contrato backend MUST NOT cambiar.
+- **FR-042**: El progreso MUST anunciarse a tecnologías de asistencia ("Paso {n} de 3"), el paso
+  actual MUST exponerse (`aria-current`/estado), y el foco MUST moverse al encabezado del paso.
+- **FR-043**: El borrador MUST persistirse en el cliente y MUST limpiarse al crear o al descartar;
+  MUST NOT contener secretos ni datos de servidor.
+- **FR-044**: Los errores de acción MUST mostrarse junto al paso que los origina; un error de
+  validación de moneda MUST devolver al paso de la moneda conservando el resto.
+
 ### Key Entities
 
 - **Persona**: quien usa Kitho. Se identifica con su cuenta de Google y tiene un nombre visible.
@@ -276,6 +343,14 @@ de familia.
 - **SC-012**: 100% de las pantallas del ciclo de familia redirigen al login cuando no hay sesión
   (0 accesos sin sesión) y el 100% de los primeros accesos sigue el orden login → perfil (si falta) →
   ciclo de familia → Home.
+- **SC-013**: 100% de las creaciones pasan por los tres pasos y envían
+  `{nombre, moneda_local, rol_familiar}` una sola vez.
+- **SC-014**: 0 avances de paso con el campo del paso inválido; 100% de los errores de moneda
+  devuelven al paso 2 con mensaje local.
+- **SC-015**: El borrador sobrevive a una recarga y se limpia al crear o descartar; 0 secretos
+  persistidos.
+- **SC-016**: 0 violaciones de accesibilidad (foco al paso, live region de progreso,
+  `aria-current`) en las verificaciones automatizadas.
 
 ## Assumptions
 
@@ -297,6 +372,11 @@ de familia.
 - **Línea base**: hasta que la medición esté activa, los objetivos se contrastan con la ronda 1 de
   pruebas con 5 personas (`usability-test.md`).
 - **Idiomas**: español por defecto, inglés completo; no se admiten claves sin traducir.
+- **Wizard**: es de cliente; no añade entidades ni columnas, y no cambia el contrato backend.
+- **Estado**: se adopta `zustand` con `persist` como borrador del wizard; es el piloto de la decisión
+  de estado global prevista para la spec 004. Web con `localStorage`; móvil con el adaptador de
+  `lib/storage.ts`.
+- **Navegación**: ruta única; el botón "atrás" del navegador abandona el alta (documentado).
 
 ## UX Gate *(mandatory for any feature touching UI)*
 
@@ -306,7 +386,10 @@ Checklist completa de la skill `kitho-ux`: [ux-checklist.md](./ux-checklist.md).
   menos de dos minutos.
 - **Se cumple en <10 s**: sí en cada pantalla (promesa → acción; crear/unirse → consecuencia).
 - **Acción primaria**: una por pantalla, contextual en la elección de familia (FR-029): acceder con
-  Google; **con código pendiente → unirme**; **sin código → crear familia**; generar invitación.
+  Google; **con código pendiente → unirme**; **sin código → crear familia**; generar invitación. En
+  el wizard, "Continuar" (pasos 1–2) y "Crear familia" (paso 3).
+- **Wizard**: tres pasos con progreso anunciado, foco al encabezado del paso, "Atrás" sin pérdida y
+  "Salir" con confirmación (FR-036...FR-044).
 - **Acciones secundarias**: unirme con código (frente a crear), volver a la selección, reintentar;
   visualmente distintas de la primaria.
 - **Acciones destructivas**: abandonar/eliminar familia no entra en este corte; cuando aparezca,
