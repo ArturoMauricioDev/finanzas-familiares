@@ -1,5 +1,6 @@
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
+import { ArrowUpCircle, Pencil, X } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Share, StyleSheet, Text, View } from "react-native";
 
@@ -13,6 +14,7 @@ import {
   EmptyState,
   ErrorMessage,
   Field,
+  IconButton,
   Loading,
   Page,
   Select,
@@ -380,27 +382,48 @@ export default function FamilyMembersScreen() {
                   </View>
                 </View>
 
-                {isAdmin && member.user_id !== session.user.id ? (
-                  <View style={styles.memberActions}>
-                    {(member.rol_permiso ?? member.role) !== "admin" ? (
-                      <Button
-                        title={t("family.promote")}
-                        variant="tonal"
+                <View style={styles.memberActions}>
+                  {member.user_id === session.user.id ? (
+                    <IconButton
+                      label={t("family.editMe")}
+                      tone="primary"
+                      onPress={() => router.push("/profile/edit")}
+                    >
+                      <Pencil color={colors.primary} size={20} />
+                    </IconButton>
+                  ) : null}
+
+                  {isAdmin && member.user_id !== session.user.id ? (
+                    <>
+                      {(member.rol_permiso ?? member.role) !== "admin" ? (
+                        <IconButton
+                          label={t("family.promote")}
+                          tone="primary"
+                          loading={
+                            memberAction?.type === "promote" &&
+                            memberAction.userId === member.user_id
+                          }
+                          disabled={Boolean(memberAction)}
+                          onPress={() => void promote(member.user_id)}
+                        >
+                          <ArrowUpCircle color={colors.primary} size={20} />
+                        </IconButton>
+                      ) : null}
+                      <IconButton
+                        label={t("family.remove")}
+                        tone="danger"
                         loading={
-                          memberAction?.type === "promote" && memberAction.userId === member.user_id
+                          memberAction?.type === "remove" &&
+                          memberAction.userId === member.user_id
                         }
                         disabled={Boolean(memberAction)}
-                        onPress={() => void promote(member.user_id)}
-                      />
-                    ) : null}
-                    <Button
-                      title={t("family.remove")}
-                      variant="danger"
-                      disabled={Boolean(memberAction)}
-                      onPress={() => setPendingRemoval(member.user_id)}
-                    />
-                  </View>
-                ) : null}
+                        onPress={() => setPendingRemoval(member.user_id)}
+                      >
+                        <X color={colors.error} size={20} />
+                      </IconButton>
+                    </>
+                  ) : null}
+                </View>
               </View>
             ))
           )}
@@ -553,6 +576,8 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   memberActions: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing[2],
   },
   invitation: {

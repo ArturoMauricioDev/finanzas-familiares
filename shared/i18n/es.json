@@ -221,6 +221,7 @@
     "inviteShareMessage": "Únete a mi grupo familiar con el código: {code}",
     "promote": "Promover",
     "remove": "Expulsar",
+    "editMe": "Editar mi perfil",
     "promoteSuccess": "Miembro promovido a administrador.",
     "removeSuccess": "Miembro dado de baja.",
     "removeConfirmTitle": "Dar de baja",

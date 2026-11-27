@@ -38,6 +38,7 @@ el ciclo de vida de la familia."
 - Q: ¿El cierre de sesión desde el menú del avatar pide confirmación? → A: sí, reutiliza el diálogo de confirmación que ya usa Ajustes.
 - Q: ¿Qué ocupa el lugar de "Cerrar sesión" en Ajustes? → A: se quita de Ajustes; "Cerrar sesión" queda en el menú del avatar (web) y en Perfil (móvil), y Ajustes pasa a ofrecer **Eliminar cuenta**.
 - Q: ¿Qué hace exactamente "Eliminar cuenta"? → A: **soft delete**: desactiva la cuenta sin borrar su fila (bloquea login, sesión y refresh) y conserva los datos mínimos para no romper las referencias; si es el único integrante activo, la familia se marca como eliminada; si hay más integrantes, la membresía queda inactiva y se reasigna el rol de administrador.
+- Q: ¿Cómo se presentan las acciones sobre integrantes en la lista? → A: **Promover** y **Expulsar** pasan a ser controles solo-icono con nombre accesible (flecha ascendente y cruz); la fila de la propia persona muestra un lápiz que abre **Editar perfil**.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -333,6 +334,10 @@ y reduce errores, pero el formulario único ya cumple el objetivo.
   eliminada; si hubiera más integrantes, la membresía MUST quedar inactiva y el rol de administrador
   MUST reasignarse. La operación MUST ser idempotente: una segunda solicitud sin sesión válida
   responde `401`.
+- **FR-050**: En la lista de **Integrantes**, las acciones sobre otras personas MUST ser controles
+  solo-icono con nombre accesible: **Promover** con una flecha ascendente y **Expulsar** con una
+  cruz, conservando la confirmación destructiva que nombra a la persona. La fila de la propia
+  persona MUST ofrecer un lápiz que abre **Editar perfil**.
 
 ### Key Entities
 

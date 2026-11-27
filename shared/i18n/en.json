@@ -221,6 +221,7 @@
     "inviteShareMessage": "Join my family group with the code: {code}",
     "promote": "Promote",
     "remove": "Remove",
+    "editMe": "Edit my profile",
     "promoteSuccess": "Member promoted to administrator.",
     "removeSuccess": "Member removed.",
     "removeConfirmTitle": "Remove member",

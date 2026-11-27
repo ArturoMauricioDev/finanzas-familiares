@@ -479,14 +479,38 @@ describe("mobile onboarding flows", () => {
     ).toBe("polite");
     expect(screen.queryByText(/invite\?token=/)).toBeNull();
 
-    await fireEvent.press(screen.getByText("Promover"));
+    await fireEvent.press(screen.getByRole("button", { name: "Promover" }));
     await waitFor(() => expect(mockApi.promoteMember).toHaveBeenCalledWith("user-2"));
     expect(await screen.findByText("Miembro promovido a administrador.")).toBeTruthy();
 
-    await fireEvent.press(screen.getByText("Expulsar"));
+    await fireEvent.press(screen.getByRole("button", { name: "Expulsar" }));
     expect(screen.getByText("¿Dar de baja a Luis del grupo?")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Dar de baja" }));
     await waitFor(() => expect(mockApi.removeMember).toHaveBeenCalledWith("user-2"));
+  });
+
+  it("links your own member row to edit your profile", async () => {
+    useSession(buildSession({ user: { ...buildSession().user, role: "admin" } }));
+    mockApi.getFamily.mockResolvedValue({
+      family,
+      members: [
+        {
+          user_id: "user-1",
+          nombre_visualizacion: "Ana",
+          foto_avatar: null,
+          role: "admin",
+          parentesco: null,
+          estado: "activo",
+        },
+      ],
+      member_count: 1,
+    });
+
+    await render(<FamilyMembersScreen />);
+
+    await screen.findByText("Familia Pérez");
+    await fireEvent.press(screen.getByRole("button", { name: "Editar mi perfil" }));
+    expect(mockRouter.push).toHaveBeenCalledWith("/profile/edit");
   });
 
   it("hides an invitation code once it has been accepted", async () => {

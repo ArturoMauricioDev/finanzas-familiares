@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowUpCircle, Pencil, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -13,6 +15,7 @@ import {
   ConfirmDialog,
   EmptyState,
   ErrorMessage,
+  IconButton,
   Loading,
   Page,
   Select,
@@ -29,6 +32,9 @@ import {
 } from "@/lib/store/invitation";
 import type { FamilyDetail, FamilyRole, Member } from "@/lib/types";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+
+const iconLinkClass =
+  "inline-flex min-h-12 min-w-12 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 export default function FamilyMembersPage() {
   const router = useRouter();
@@ -374,12 +380,22 @@ export default function FamilyMembersPage() {
                     </div>
                   </div>
 
+                  {member.user_id === session.user.id ? (
+                    <Link
+                      href="/profile/edit"
+                      aria-label={t("family.editMe")}
+                      className={iconLinkClass}
+                    >
+                      <Pencil size={20} aria-hidden="true" />
+                    </Link>
+                  ) : null}
+
                   {isAdmin && member.user_id !== session.user.id ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {(member.rol_permiso ?? member.role) !== "admin" ? (
-                        <Button
-                          size="sm"
-                          variant="tonal"
+                        <IconButton
+                          label={t("family.promote")}
+                          tone="primary"
                           loading={
                             memberAction?.type === "promote" &&
                             memberAction.userId === member.user_id
@@ -387,17 +403,21 @@ export default function FamilyMembersPage() {
                           disabled={Boolean(memberAction)}
                           onClick={() => void promote(member.user_id)}
                         >
-                          {t("family.promote")}
-                        </Button>
+                          <ArrowUpCircle size={20} aria-hidden="true" />
+                        </IconButton>
                       ) : null}
-                      <Button
-                        size="sm"
-                        variant="danger"
+                      <IconButton
+                        label={t("family.remove")}
+                        tone="danger"
+                        loading={
+                          memberAction?.type === "remove" &&
+                          memberAction.userId === member.user_id
+                        }
                         disabled={Boolean(memberAction)}
                         onClick={() => setPendingRemoval(member.user_id)}
                       >
-                        {t("family.remove")}
-                      </Button>
+                        <X size={20} aria-hidden="true" />
+                      </IconButton>
                     </div>
                   ) : null}
                 </li>

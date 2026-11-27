@@ -12,6 +12,7 @@ export { Divider, List, ListItem } from "./List";
 export { EmptyState } from "./EmptyState";
 export { Field, TextField } from "./Field";
 export { GoogleSignInButton } from "./GoogleSignInButton";
+export { IconButton } from "./IconButton";
 export { ErrorMessage, InlineBanner, SuccessMessage } from "./InlineBanner";
 export { Loading } from "./Loading";
 export { Menu } from "./Menu";

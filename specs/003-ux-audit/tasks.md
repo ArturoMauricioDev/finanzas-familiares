@@ -556,3 +556,18 @@ prueba automatizada. La implementación ya existe; falta la cobertura.
 - [X] T081 [US1] Añadir en `backend/tests/test_account.py` una prueba de que un refresh token vigente
       de una cuenta eliminada responde `401` en `POST /api/v1/auth/refresh`, usando
       `create_refresh_token({"user_id": ...})` tras `DELETE /users/me`, per FR-049/SC-019 (partial).
+
+---
+
+## Phase 18: Acciones de integrantes con iconos
+
+**Goal**: sustituir los botones de texto de la lista de **Integrantes** por controles solo-icono
+accesibles y añadir un acceso de edición en la fila propia, per FR-050.
+
+**Independent Test**: en Familia → Integrantes, un administrador ve flecha y cruz como únicos
+controles sobre otras personas; su propia fila muestra un lápiz que abre **Editar perfil**.
+
+- [X] T082 [US3] Web y móvil: convertir **Promover** y **Expulsar** en `IconButton` solo-icono
+      (`ArrowUpCircle` / `X`) con nombre accesible y conservar el diálogo de confirmación; añadir el
+      lápiz (`Pencil`) en la fila propia hacia `/profile/edit`; crear `IconButton` en móvil y
+      extender el de web con tono y carga; cubrir con pruebas de flujo (FR-050).
