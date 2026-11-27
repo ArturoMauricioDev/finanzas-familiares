@@ -95,25 +95,6 @@ export default function SettingsScreen() {
 
       <Card>
         <Text style={[typeStyle("titleLarge"), { color: theme.colors.onSurface }]}>
-          {t("nav.profile")}
-        </Text>
-        <Text style={[typeStyle("bodyMedium"), { color: theme.colors.onSurfaceVariant }]}>
-          {t("settings.accountBody")}
-        </Text>
-        <Button
-          title={t("profile.editTitle")}
-          variant="secondary"
-          onPress={() => router.push("/profile/edit")}
-        />
-        <Button
-          title={t("profile.editAvatar")}
-          variant="secondary"
-          onPress={() => router.push("/profile/avatar")}
-        />
-      </Card>
-
-      <Card>
-        <Text style={[typeStyle("titleLarge"), { color: theme.colors.onSurface }]}>
           {t("settings.aboutHeading")}
         </Text>
         <Text style={[typeStyle("bodyMedium"), { color: theme.colors.onSurfaceVariant }]}>

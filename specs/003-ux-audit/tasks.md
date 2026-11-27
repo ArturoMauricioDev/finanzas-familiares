@@ -571,3 +571,16 @@ controles sobre otras personas; su propia fila muestra un lápiz que abre **Edit
       (`ArrowUpCircle` / `X`) con nombre accesible y conservar el diálogo de confirmación; añadir el
       lápiz (`Pencil`) en la fila propia hacia `/profile/edit`; crear `IconButton` en móvil y
       extender el de web con tono y carga; cubrir con pruebas de flujo (FR-050).
+
+---
+
+## Phase 19: Ajustes sin duplicar Perfil
+
+**Goal**: dejar en Ajustes solo lo que le corresponde, retirando la tarjeta que duplicaba las
+acciones de Perfil, per FR-051.
+
+**Independent Test**: en Ajustes no aparecen "Editar perfil" ni "Editar avatar"; esos accesos
+siguen disponibles en Perfil y en el lápiz de Integrantes.
+
+- [X] T083 Móvil y web: retirar de Ajustes la tarjeta de **Perfil** con "Editar perfil" y "Editar
+      avatar"; eliminar la clave i18n `settings.accountBody` y regenerar los mensajes (FR-051).
