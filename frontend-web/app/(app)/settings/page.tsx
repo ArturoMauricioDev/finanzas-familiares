@@ -106,21 +106,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card variant="outlined" className="space-y-4">
-        <div>
-          <h2 className="text-title-large text-on-surface">{t("nav.profile")}</h2>
-          <p className="text-body-medium text-on-surface-variant">{t("settings.accountBody")}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => router.push("/profile/edit")}>
-              {t("profile.editTitle")}
-            </Button>
-            <Button variant="secondary" onClick={() => router.push("/profile/avatar")}>
-              {t("profile.editAvatar")}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
       <Card variant="filled" className="space-y-2">
         <h2 className="text-title-large text-on-surface">{t("settings.aboutHeading")}</h2>
         <p className="text-body-medium text-on-surface-variant">{t("settings.aboutBody")}</p>
